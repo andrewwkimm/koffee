@@ -1,0 +1,14 @@
+# Absolute paths
+/.coverage
+/.pytest_cache
+/.venv
+/dist
+/venv
+/scratch/*
+
+# Patterns
+__pycache__
+.DS_Store
+
+# Exclusions
+!/scratch/README.md
