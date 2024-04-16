@@ -1,3 +1,3 @@
 # koffee
 
-A Korean<>English audio file translator.
+**koffee** is a tool that automates the translation and subtitling of Korean<>English videos.
