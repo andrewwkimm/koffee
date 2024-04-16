@@ -1,0 +1,8 @@
+{
+    "cucumber.features": [
+        "test_acceptance/koffee/features/*.feature"
+    ],
+    "cucumber.glue": [
+        "features/**/*.py"
+    ]
+}
