@@ -8,6 +8,7 @@ RUN \
     apt-get upgrade \
     && apt-get update \
     && apt-get install -y bash-completion curl \
+    && apt-get install -y ffmpeg \
     && pip install pre-commit
 
 # Coding only for vscode user and not root
