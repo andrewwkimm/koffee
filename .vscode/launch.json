@@ -14,6 +14,27 @@
                 "PYTHONPATH": "."
             },
             "justMyCode": true,
-        }
+        },
+        {
+            "name": "Behave",
+            "type": "python",
+            "request": "launch",
+            "module": "behave",
+            "console": "integratedTerminal",
+            "args": [
+                "--stop",
+            ]
+        },
+        {
+            "name": "Behave: Current File",
+            "type": "python",
+            "request": "launch",
+            "module": "behave",
+            "console": "integratedTerminal",
+            "args": [
+                "${file}",
+                "--stop",
+            ]
+        },
     ]
 }
