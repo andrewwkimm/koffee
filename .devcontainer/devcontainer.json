@@ -41,6 +41,6 @@
 		"redhat.vscode-yaml"
 	],
 	// Set project folder as safe directory and changes ownership of it to vscode.
-	"postCreateCommand": "git config --global --add safe.directory ${containerWorkspaceFolder} && sudo chown -R vscode:vscode ${containerWorkspaceFolder} && git config --global user.email \"andrewkimka@gmail.com\" && git config --global user.name \"Andrew Kim\" && make setup",
+	"postCreateCommand": "bash ./.devcontainer/setup.sh",
 	"remoteUser": "vscode"
 }
