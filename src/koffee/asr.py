@@ -8,27 +8,27 @@ import whisperx
 
 def transcribe_text(
     video_file: Union[Path, str],
-    batch_size: int = 16,
-    device: str = "cpu",
-    compute_type: str = "float32",
-    whisper_arch: str = "large-v3",
+    batch_size: int,
+    device: str,
+    compute_type: str,
+    whisper_arch: str,
 ) -> dict:
     """Transcribes text from a video file."""
     model = whisperx.load_model(
         whisper_arch=whisper_arch, device=device, compute_type=compute_type
     )
     audio = whisperx.load_audio(video_file)
-    transcription = model.transcribe(audio, batch_size=batch_size)
+    transcript = model.transcribe(audio, batch_size=batch_size)
 
     model_a, metadata = whisperx.load_align_model(
-        language_code=transcription["language"], device=device
+        language_code=transcript["language"], device=device
     )
-    aligned_transcription = whisperx.align(
-        transcription["segments"],
+    aligned_transcript = whisperx.align(
+        transcript["segments"],
         model_a,
         metadata,
         audio,
         device,
         return_char_alignments=False,
     )
-    return aligned_transcription
+    return aligned_transcript
