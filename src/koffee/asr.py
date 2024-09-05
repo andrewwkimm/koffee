@@ -8,10 +8,10 @@ import whisperx
 
 def transcribe_text(
     video_file: Union[Path, str],
-    batch_size=16,
-    device="cpu",
-    compute_type="float32",
-    whisper_arch="large-v3",
+    batch_size: int = 16,
+    device: str = "cpu",
+    compute_type: str = "float32",
+    whisper_arch: str = "large-v3",
 ) -> dict:
     """Transcribes text from a video file."""
     model = whisperx.load_model(
