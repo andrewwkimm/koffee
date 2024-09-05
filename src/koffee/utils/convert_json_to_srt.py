@@ -7,7 +7,7 @@ from typing import Optional, Union
 
 def convert_json_to_srt(
     translated_text: list, output_file_path: Optional[Union[Path, str]] = None
-) -> Path:
+) -> Union[Path, str]:
     """Converts translated JSON to SRT."""
     if output_file_path is None:
         output_file_path = Path("scratch/tmp/translated_text.srt")
