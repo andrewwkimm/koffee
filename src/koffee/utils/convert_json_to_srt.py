@@ -1,16 +1,14 @@
 """Utility to convert JSON to SRT."""
 
 from datetime import timedelta
+import os
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 
-def convert_json_to_srt(
-    translated_text: list, output_file_path: Optional[Union[Path, str]] = None
-) -> Union[Path, str]:
+def convert_json_to_srt(translated_text: list) -> Union[Path, str]:
     """Converts translated JSON to SRT."""
-    if output_file_path is None:
-        output_file_path = Path("scratch/tmp/translated_text.srt")
+    output_file_path = Path(f"{os.getcwd()}/translated_text.srt")
 
     with open(output_file_path, "w", encoding="utf-8") as file:
         for idx, subtitle in enumerate(translated_text, 1):
