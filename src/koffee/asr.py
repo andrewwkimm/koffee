@@ -31,4 +31,5 @@ def transcribe_text(
         device,
         return_char_alignments=False,
     )
+    aligned_transcript["language"] = transcript["language"]
     return aligned_transcript
