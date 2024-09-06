@@ -3,16 +3,16 @@
 from transformers import MarianMTModel, MarianTokenizer
 
 
-def translate_transcription(transcription: dict) -> list:
+def translate_transcript(transcript: dict) -> list:
     """Gets a translated JSON file."""
-    language = transcription["language"]
-    for i in range(len(transcription["segments"])):
-        text = transcription["segments"][i]["text"]
+    language = transcript["language"]
+    for i in range(len(transcript["segments"])):
+        text = transcript["segments"][i]["text"]
         translated_text = translate_text(text, language)
-        transcription["segments"][i]["text"] = translated_text
+        transcript["segments"][i]["text"] = translated_text
 
-    translated_transcription = transcription["segments"]
-    return translated_transcription
+    translated_transcript = transcript["segments"]
+    return translated_transcript
 
 
 def translate_text(text: str, language: str) -> str:
