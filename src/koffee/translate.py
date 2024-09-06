@@ -14,8 +14,8 @@ def translate(
     batch_size: int = 16,
     device: str = "cpu",
     compute_type: str = "float32",
+    model: str = "large-v3",
     output_path: Optional[Union[Path, str]] = None,
-    whisper_arch: str = "large-v3",
 ) -> Union[Path, str]:
     """Processes a video file for translation and subtitle overlay."""
     video_file_path = Path(video_file_path)
@@ -25,7 +25,7 @@ def translate(
         output_path = video_file_path.parent / file_name
 
     transcript = transcribe_text(
-        video_file_path, batch_size, device, compute_type, whisper_arch
+        video_file_path, batch_size, device, compute_type, model
     )
     translated_transcript = translate_transcript(transcript)
     translated_srt_file = convert_json_to_srt(translated_transcript)
