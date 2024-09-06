@@ -1,3 +1,10 @@
 """The koffee package."""
 
-__version__ = "0.1.0"
+from importlib.metadata import version
+
+from .translate import translate
+
+
+__all__ = ["translate"]
+
+__version__ = version("koffee")
