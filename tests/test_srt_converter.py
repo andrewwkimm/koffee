@@ -5,16 +5,16 @@ from pathlib import Path
 from koffee.utils.text_to_srt_converter import convert_text_to_srt, convert_to_timestamp
 
 
-sample_text = [
-    {"start": 10.5, "end": 15.0, "text": "Hello, world!"},
-    {"start": 20.0, "end": 25.3, "text": "This is a subtitle."},
-]
-
-
 def test_convert_text_to_srt() -> None:
     """Tests that the text is converted to SRT."""
+    sample_text = [
+        {"start": 10.5, "end": 15.0, "text": "Hello, world!"},
+        {"start": 20.0, "end": 25.3, "text": "This is a subtitle."},
+    ]
+
     output_path = Path("scratch/tmp/sample_srt_file.srt")
-    srt_file_path = convert_text_to_srt(sample_text, output_path)
+
+    srt_file_path = Path(convert_text_to_srt(sample_text, output_path))
     assert srt_file_path.exists()
 
     with open(srt_file_path, "r") as f:

@@ -5,7 +5,7 @@ from pathlib import Path
 from koffee.asr import transcribe_text
 
 
-def remove_word_segments(transcript: list) -> list:
+def remove_word_segments(transcript: dict) -> dict:
     """Removes word segments from transcript."""
     cleaned_transcript = {
         "segments": [
