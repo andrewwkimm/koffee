@@ -9,8 +9,8 @@ import whisperx
 def transcribe_text(
     video_file: Union[Path, str],
     batch_size: int,
-    device: str,
     compute_type: str,
+    device: str,
     model: str,
 ) -> dict:
     """Transcribes text from a video file."""
