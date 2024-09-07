@@ -1,5 +1,6 @@
 """The koffee API."""
 
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Union
 
@@ -15,14 +16,11 @@ def translate(
     compute_type: str = "float32",
     device: str = "cpu",
     model: str = "large-v3",
-    output_path: Optional[Union[Path, str]] = None,
+    output_dir: Optional[Path] = None,
+    output_name: Optional[str] = None,
 ) -> Union[Path, str]:
     """Processes a video file for translation and subtitle overlay."""
-    video_file_path = Path(video_file_path)
-
-    if output_path is None:
-        file_name = f"{video_file_path.stem}_translated{video_file_path.suffix}"
-        output_path = video_file_path.parent / file_name
+    output_path = get_output_path(video_file_path, output_dir, output_name)
 
     transcript = transcribe_text(
         video_file_path, batch_size, compute_type, device, model
@@ -32,4 +30,24 @@ def translate(
 
     overlay_subtitles(video_file_path, translated_srt_file, output_path)
 
+    return output_path
+
+
+def get_output_path(
+    video_file_path: Union[Path, str],
+    output_dir: Optional[Path],
+    output_name: Optional[str],
+) -> Path:
+    """Gets the output path for the translated video file."""
+    file_path = Path(video_file_path)
+
+    if output_dir is None:
+        file_dir = file_path.parent
+
+    if output_name is None:
+        file_name = f'{file_path.stem}_{datetime.today().strftime("%m-%d-%Y")}'
+
+    file_ext = file_path.suffix
+
+    output_path = file_dir / (file_name + file_ext)
     return output_path

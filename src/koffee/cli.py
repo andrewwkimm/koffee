@@ -25,32 +25,44 @@ def main() -> None:
 
 @app.default
 def cli(
-    video_file_path: str,
-    batch_size: Optional[int] = 16,
-    compute_type: Optional[str] = "float32",
-    device: Optional[str] = "cpu",
-    model: Optional[str] = "large-v3",
-    output_path: Optional[Path] = None,
+    *file_path: Path,
+    batch_size: int = 16,
+    compute_type: str = "float32",
+    device: str = "cpu",
+    model: str = "large-v3",
+    output_dir: Optional[Path] = None,
+    output_name: Optional[str] = None,
 ) -> None:
     """Automatic video translation and subtitling tool.
 
     Parameters
     ----------
-    video_file_path: Path
-        The path to the video file.
+    file_path: Path
+        Path to the video file.
     batch_size: str
-        The batch size used when transcribing the audio.
+        Batch size used when transcribing the audio.
     compute_type: str
-        Compute type used for the model.
+        Device used to load the model.
     device: str
-        The device used to load the model.
+        Compute type used for the model.
     model: str
         The Whisper model instance to use.
-    output_path: Path
-        The directory path for the translated video file.
+    output_dir: Path
+        Directory for the output file.
+    output_name: str
+        Name of the output file.
     """
     try:
-        translate(video_file_path, batch_size, compute_type, device, model, output_path)
+        for video in file_path:
+            translate(
+                video,
+                batch_size,
+                compute_type,
+                device,
+                model,
+                output_dir,
+                output_name,
+            )
     except InvalidVideoFileError:
         print("Inputted path is not a valid video file.")
 
