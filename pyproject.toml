@@ -16,7 +16,7 @@ ffmpeg-python = "^0.2.0"
 torch = "^2.2.2"
 accelerate = "^0.29.3"
 bitsandbytes = "^0.43.1"
-click = "^8.1.7"
+cyclopts = "^2.9.9"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.1.3"

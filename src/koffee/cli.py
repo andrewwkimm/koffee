@@ -1,61 +1,59 @@
 """The koffee CLI."""
 
-import click
+from pathlib import Path
 
+import koffee
 from koffee.translate import translate
 from koffee.exceptions import InvalidVideoFileError
 
+from cyclopts import App
+from typing import Optional
 
-@click.command()
-@click.argument("video_file_path", nargs=-1, required=True)
-@click.option(
-    "--batch_size",
-    "-b",
-    default=16,
-    help="The batch size used when transcribing the audio.",
-)
-@click.option(
-    "--device", "-d", default="cpu", help="The device used to load the model."
-)
-@click.option(
-    "--compute_type", "-c", default="float32", help="Compute type used for the model."
-)
-@click.option(
-    "--model",
-    "-m",
-    default="large-v3",
-    help="The Whisper model instance to use.",
-)
-@click.option(
-    "--output_path",
-    "-o",
-    type=click.Path(),
-    default=None,
-    help="Path for the directory of the output file.",
-)
-def main(
+
+app = App(name="koffee", version=koffee.__version__)
+
+
+def main() -> None:
+    """Wraps app() so that it is accessible to poetry.
+
+    Poetry's `scripts` configuration expects the entry point to be
+    a callable function directly accessible from the module specified,
+    but since main is decorated, that is not possible.
+    """
+    app()
+
+
+@app.default
+def cli(
     video_file_path: str,
-    batch_size: int,
-    compute_type: str,
-    device: str,
-    model: str,
-    output_path: str,
+    batch_size: Optional[int] = 16,
+    compute_type: Optional[str] = "float32",
+    device: Optional[str] = "cpu",
+    model: Optional[str] = "large-v3",
+    output_path: Optional[Path] = None,
 ) -> None:
-    """Gets a built video file with overlayed subtitles."""
-    RED = "\033[91m"
-    GREEN = "\033[92m"
-    RESET = "\033[0m"
+    """Automatic video translation and subtitling tool.
 
+    Parameters
+    ----------
+    video_file_path: Path
+        The path to the video file.
+    batch_size: str
+        The batch size used when transcribing the audio.
+    compute_type: str
+        Compute type used for the model.
+    device: str
+        The device used to load the model.
+    model: str
+        The Whisper model instance to use.
+    output_path: Path
+        The directory path for the translated video file.
+    """
     try:
-        click.echo(GREEN + "Processing video(s)..." + RESET)
-
-        for video in video_file_path:
-            translate(video, batch_size, device, compute_type, model, output_path)
-
-        click.echo(GREEN + "Processing successful!" + RESET)
-    except InvalidVideoFileError as excinfo:
-        click.echo(f"{RED}InvalidVideoFileError: {excinfo}{RESET}")
+        translate(video_file_path, batch_size, compute_type, device, model, output_path)
+    except InvalidVideoFileError:
+        print("Inputted path is not a valid video file.")
 
 
 if __name__ == "__main__":
-    main()
+    app()
