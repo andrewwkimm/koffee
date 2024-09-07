@@ -6,14 +6,14 @@ from typing import Optional, Union
 from koffee.asr import transcribe_text
 from koffee.overlay import overlay_subtitles
 from koffee.translator import translate_transcript
-from koffee.utils import convert_json_to_srt
+from koffee.utils.text_to_srt_converter import convert_text_to_srt
 
 
 def translate(
     video_file_path: Union[Path, str],
     batch_size: int = 16,
-    device: str = "cpu",
     compute_type: str = "float32",
+    device: str = "cpu",
     model: str = "large-v3",
     output_path: Optional[Union[Path, str]] = None,
 ) -> Union[Path, str]:
@@ -25,10 +25,10 @@ def translate(
         output_path = video_file_path.parent / file_name
 
     transcript = transcribe_text(
-        video_file_path, batch_size, device, compute_type, model
+        video_file_path, batch_size, compute_type, device, model
     )
     translated_transcript = translate_transcript(transcript)
-    translated_srt_file = convert_json_to_srt(translated_transcript)
+    translated_srt_file = convert_text_to_srt(translated_transcript)
 
     overlay_subtitles(video_file_path, translated_srt_file, output_path)
 
