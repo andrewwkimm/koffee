@@ -9,9 +9,13 @@
 
 **koffee** is a tool that automates the translation and subtitling of Korean<>English videos.
 
+## Dependencies
+
+Python versions >=3.10 are supported. Additionally, [ffmpeg](https://www.ffmpeg.org/download.html) is required for koffee to run.
+
 ## Installation
 
-koffee requires Python 3.10>= and can be installed using `pip`.
+koffee can be installed using `pip`.
 
 ```console
 pip install koffee
