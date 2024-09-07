@@ -12,7 +12,7 @@ def test_convert_text_to_srt() -> None:
         {"start": 20.0, "end": 25.3, "text": "This is a subtitle."},
     ]
 
-    output_path = Path("scratch/tmp/sample_srt_file.srt")
+    output_path = Path("examples/subtitles/sample_srt_file.srt")
 
     srt_file_path = Path(convert_text_to_srt(sample_text, output_path))
     assert srt_file_path.exists()
