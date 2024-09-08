@@ -37,3 +37,28 @@ from koffee import translate
 
 translate("some_dir/some_video_file.mp4")
 ```
+
+## Usage
+
+The koffee CLI has the following structure:
+
+```bash
+koffee COMMAND [ARGS] [OPTIONS]
+```
+
+Refer below for a list of all commands and parameters.
+
+### Commands
+
+    --help, -h                 Display this message and exit.
+    --version, -v              Display application version.
+
+### Parameters
+
+    --file_path               Path to the video file.
+    --batch_size              Batch size used when transcribing the audio.
+    --device                  Device used for PyTorch inference.
+    --compute_type            Compute type used for the model.
+    --model                   The Whisper model instance to use.
+    --output_dir              Directory for the output file.
+    --output_name             Name of the output file.
