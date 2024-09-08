@@ -26,12 +26,16 @@ def main() -> None:
 @app.default
 def cli(
     *file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
-    batch_size: int = 16,
-    compute_type: str = "float32",
-    device: str = "cpu",
-    model: str = "large-v3",
-    output_dir: Optional[Path] = None,
-    output_name: Optional[str] = None,
+    batch_size: Annotated[int, Parameter(name=("--batch-size", "-b"))] = 16,
+    compute_type: Annotated[str, Parameter(name=("--compute-type", "-c"))] = "float32",
+    device: Annotated[str, Parameter(name=("--device", "-d"))] = "cpu",
+    model: Annotated[str, Parameter(name=("--model", "-m"))] = "large-v3",
+    output_dir: Optional[
+        Annotated[Path, Parameter(name=("--output-dir", "-o"))]
+    ] = None,
+    output_name: Optional[
+        Annotated[str, Parameter(name=("--output-dir", "-O"))]
+    ] = None,
 ) -> None:
     """Automatic video translation and subtitling tool.
 
