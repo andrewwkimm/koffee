@@ -21,13 +21,13 @@ def srt_file_path() -> Path:
 @pytest.fixture
 def output_file_path() -> Path:
     """Pytest fixture for the output file path."""
-    return Path("scratch/tmp/output_with_subtitles.mp4")
+    return Path("scratch/output_with_subtitles.mp4")
 
 
 def test_overlay(
     video_file_path: Path, srt_file_path: Path, output_file_path: Path
 ) -> None:
-    """Tests that subtitle has been overlayed onto the video."""
+    """Tests that the subtitle has been overlayed onto the video."""
     overlay_subtitles(video_file_path, srt_file_path, output_file_path)
 
     assert output_file_path.exists()
