@@ -38,6 +38,10 @@ from koffee import translate
 translate("some_dir/some_video_file.mp4")
 ```
 
+Here is an example output using a [sample video](examples/videos/sample_korean_video.mp4) from [examples](examples/videos/sample_korean_video.mp4).
+
+https://github.com/user-attachments/assets/9293dc78-8fa8-464f-b511-238f482dfb5d
+
 ## Usage
 
 The koffee CLI has the following structure:
