@@ -6,8 +6,8 @@ import koffee
 from koffee.translate import translate
 from koffee.exceptions import InvalidVideoFileError
 
-from cyclopts import App
-from typing import Optional
+from cyclopts import App, Parameter, validators
+from typing import Annotated, Optional
 
 
 app = App(name="koffee", version=koffee.__version__, version_flags=["--version", "-v"])
@@ -16,16 +16,16 @@ app = App(name="koffee", version=koffee.__version__, version_flags=["--version",
 def main() -> None:
     """Wraps app() so that it is accessible to poetry.
 
-    Poetry's `scripts` configuration expects the entry point to be
-    a callable function directly accessible from the module specified,
-    but since main is decorated, that is not possible.
+    Poetry's `scripts` configuration expects the entry point to be a callable
+    function directly accessible from the module specified, but since main is
+    decorated, that is not possible.
     """
     app()
 
 
 @app.default
 def cli(
-    *file_path: Path,
+    *file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
     batch_size: int = 16,
     compute_type: str = "float32",
     device: str = "cpu",
