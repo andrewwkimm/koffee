@@ -21,8 +21,9 @@ def translate_text(text: str, language: str) -> str:
     model = MarianMTModel.from_pretrained(model_name)
 
     tokenizer = MarianTokenizer.from_pretrained(model_name)
-    tokenized_text = tokenizer.prepare_seq2seq_batch([text], return_tensors="pt")
+    tokenized_text = tokenizer([text], return_tensors="pt")
 
     translation = model.generate(**tokenized_text)
+
     translated_text = tokenizer.decode(translation[0], skip_special_tokens=True)
     return translated_text
