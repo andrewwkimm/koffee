@@ -8,7 +8,7 @@ from typing import Optional, Union
 
 def convert_text_to_srt(
     translated_text: list, output_file_path: Optional[Path] = None
-) -> Union[Path, str]:
+) -> Path:
     """Converts translated text to SRT format."""
     if output_file_path is None:
         output_file_path = Path(f"{os.getcwd()}/translated_text.srt")
