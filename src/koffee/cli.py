@@ -10,7 +10,7 @@ from cyclopts import App
 from typing import Optional
 
 
-app = App(name="koffee", version=koffee.__version__)
+app = App(name="koffee", version=koffee.__version__, version_flags=["--version", "-v"])
 
 
 def main() -> None:
