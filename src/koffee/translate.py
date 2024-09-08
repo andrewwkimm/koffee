@@ -1,7 +1,6 @@
 """The koffee API."""
 
 from datetime import datetime
-import os
 from pathlib import Path
 from typing import Optional, Union
 
@@ -19,7 +18,7 @@ def translate(
     model: str = "large-v3",
     output_dir: Optional[Path] = None,
     output_name: Optional[str] = None,
-) -> Union[Path, str]:
+) -> Path:
     """Processes a video file for translation and subtitle overlay."""
     output_path = get_output_path(video_file_path, output_dir, output_name)
 
@@ -31,7 +30,7 @@ def translate(
 
     overlay_subtitles(video_file_path, translated_srt_file, output_path)
 
-    os.remove(translated_srt_file)
+    translated_srt_file.unlink()
 
     return output_path
 
