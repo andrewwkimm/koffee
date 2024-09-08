@@ -1,6 +1,7 @@
 """The koffee API."""
 
 from datetime import datetime
+import os
 from pathlib import Path
 from typing import Optional, Union
 
@@ -29,6 +30,8 @@ def translate(
     translated_srt_file = convert_text_to_srt(translated_transcript)
 
     overlay_subtitles(video_file_path, translated_srt_file, output_path)
+
+    os.remove(translated_srt_file)
 
     return output_path
 

@@ -1,6 +1,5 @@
 """Subtitle overlayer."""
 
-import os
 from pathlib import Path
 from typing import Union
 
@@ -19,5 +18,3 @@ def overlay_subtitles(
     ffmpeg.input(video_file_path).output(
         str(video_file_output_path), vf=f"subtitles={srt_path}"
     ).run(overwrite_output=True)
-
-    os.remove(srt_path)
