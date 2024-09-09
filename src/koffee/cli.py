@@ -33,7 +33,7 @@ def cli(
         Annotated[Path, Parameter(name=("--output-dir", "-o"))]
     ] = None,
     output_name: Optional[
-        Annotated[str, Parameter(name=("--output-dir", "-O"))]
+        Annotated[str, Parameter(name=("--output-name", "-n"))]
     ] = None,
 ) -> None:
     """Automatic video translation and subtitling tool.
