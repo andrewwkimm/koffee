@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-import koffee
 from koffee.translate import translate
 from koffee.exceptions import InvalidVideoFileError
 
@@ -10,7 +9,7 @@ from cyclopts import App, Parameter, validators
 from typing import Annotated, Optional
 
 
-app = App(name="koffee", version=koffee.__version__, version_flags=["--version", "-v"])
+app = App(name="koffee", version_flags=["--version", "-v"])
 
 
 def main() -> None:
