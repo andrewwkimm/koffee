@@ -5,24 +5,24 @@ from pathlib import Path
 from koffee.translate import translate
 from koffee.exceptions import InvalidVideoFileError
 
-from cyclopts import App, Parameter, validators
+from cyclopts import App, Group, Parameter, validators
 from typing import Annotated, Optional
 
 
-app = App(name="koffee", version_flags=["--version", "-v"])
+app = App(
+    default_parameter=Parameter(negative=""),
+    group_parameters=Group("Parameters", sort_key=1),
+    name="koffee",
+    version_flags=["--version", "-v"],
+)
+
+options_group = Group("Options", sort_key=2)
+
+app["--help"].group = options_group
+app["--version"].group = options_group
 
 
-def main() -> None:
-    """Wraps app() so that it is accessible to poetry.
-
-    Poetry's `scripts` configuration expects the entry point to be a callable
-    function directly accessible from the module specified, but since main is
-    decorated, that is not possible.
-    """
-    app()
-
-
-@app.default
+@app.default()
 def cli(
     *file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
     batch_size: Annotated[int, Parameter(name=("--batch-size", "-b"))] = 16,
@@ -58,16 +58,26 @@ def cli(
     try:
         for video in file_path:
             translate(
-                video,
-                batch_size,
-                compute_type,
-                device,
-                model,
-                output_dir,
-                output_name,
+                video_file_path=video,
+                batch_size=batch_size,
+                compute_type=compute_type,
+                device=device,
+                model=model,
+                output_dir=output_dir,
+                output_name=output_name,
             )
     except InvalidVideoFileError:
         print("Inputted path is not a valid video file.")
+
+
+def main() -> None:
+    """Wraps app() so that it is accessible to poetry.
+
+    Poetry's `scripts` configuration expects the entry point to be a callable
+    function directly accessible from the module specified, but since main is
+    decorated, that is not possible.
+    """
+    app()
 
 
 if __name__ == "__main__":

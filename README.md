@@ -52,11 +52,6 @@ koffee COMMAND [ARGS] [OPTIONS]
 
 Refer below for a list of all commands and parameters.
 
-### Commands
-
-    --help, -h                 Display this message and exit.
-    --version, -v              Display application version.
-
 ### Parameters
 
     --file_path                Path to the video file.
@@ -66,3 +61,8 @@ Refer below for a list of all commands and parameters.
     --model, -m                The Whisper model instance to use.
     --output_dir, -o           Directory for the output file.
     --output_name, -O          Name of the output file.
+
+### Options
+
+    --help, -h                 Display this message and exit.
+    --version, -v              Display application version.
