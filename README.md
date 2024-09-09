@@ -18,7 +18,7 @@ Python versions >=3.10 are supported. Additionally, [ffmpeg](https://www.ffmpeg.
 koffee can be installed using `pip`.
 
 ```console
-pip install koffee
+pip install git+https://github.com/andrewwkimm/koffee
 ```
 
 ## Quick start
