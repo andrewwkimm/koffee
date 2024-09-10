@@ -14,5 +14,5 @@ git config --global user.name "$git_username"
 sudo cp examples/fonts/NotoSerifCJK-Bold.ttc /usr/share/fonts
 sudo fc-cache -f -v
 
-# Setup environment
-make setup
+# Setup environment and activate poetry's virtual environment
+make setup && poetry shell
