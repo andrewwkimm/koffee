@@ -31,7 +31,8 @@
 			"tests"
 		],
 		"python.terminal.activateEnvironment": true,
-		"python.testing.pytestEnabled": true
+		"python.testing.pytestEnabled": true,
+		"terminal.integrated.defaultProfile.linux": "bash",
 	},
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
