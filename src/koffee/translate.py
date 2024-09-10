@@ -1,6 +1,7 @@
 """The koffee API."""
 
 from datetime import datetime
+import logging
 from pathlib import Path
 from typing import Optional, Union
 
@@ -8,6 +9,9 @@ from koffee.asr import transcribe_text
 from koffee.overlay import overlay_subtitles
 from koffee.translator import translate_transcript
 from koffee.utils.text_to_srt_converter import convert_text_to_srt
+
+
+log = logging.getLogger(__name__)
 
 
 def translate(
@@ -20,6 +24,8 @@ def translate(
     output_name: Optional[str] = None,
 ) -> Path:
     """Processes a video file for translation and subtitle overlay."""
+    log.info("Processing video...")
+
     output_path = get_output_path(video_file_path, output_dir, output_name)
 
     transcript = transcribe_text(

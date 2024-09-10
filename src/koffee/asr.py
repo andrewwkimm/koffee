@@ -1,9 +1,13 @@
 """Text extractor from audio."""
 
+import logging
 from pathlib import Path
 from typing import Union
 
 import whisperx
+
+
+log = logging.getLogger(__name__)
 
 
 def transcribe_text(
@@ -14,6 +18,8 @@ def transcribe_text(
     model: str,
 ) -> dict:
     """Transcribes text from a video file."""
+    log.info("Transcribing text.")
+
     loaded_model = whisperx.load_model(
         whisper_arch=model, device=device, compute_type=compute_type
     )

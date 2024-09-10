@@ -1,10 +1,16 @@
 """Text translator for koffee."""
 
+import logging
+
 from transformers import MarianMTModel, MarianTokenizer
+
+
+log = logging.getLogger(__name__)
 
 
 def translate_transcript(transcript: dict) -> list:
     """Gets a translated JSON file."""
+    log.info("Translating transcript.")
     language = transcript["language"]
     for i in range(len(transcript["segments"])):
         text = transcript["segments"][i]["text"]
