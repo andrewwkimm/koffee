@@ -39,7 +39,9 @@ def cli(
     output_name: Optional[
         Annotated[str, Parameter(name=("--output-name", "-n"))]
     ] = None,
-    verbose: Annotated[bool, Parameter(name=("--verbose", "-V"))] = False
+    verbose: Annotated[
+        bool, Parameter(name=("--verbose", "-V"), group=options_group)
+    ] = False
 ) -> None:
     """Automatic video translation and subtitling tool.
 
