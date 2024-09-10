@@ -1,12 +1,16 @@
 """The koffee CLI."""
 
+import logging
 from pathlib import Path
+
+from cyclopts import App, Group, Parameter, validators
+from typing import Annotated, Optional
 
 from koffee.translate import translate
 from koffee.exceptions import InvalidVideoFileError
 
-from cyclopts import App, Group, Parameter, validators
-from typing import Annotated, Optional
+
+log = logging.getLogger(__name__)
 
 
 app = App(
@@ -35,6 +39,7 @@ def cli(
     output_name: Optional[
         Annotated[str, Parameter(name=("--output-name", "-n"))]
     ] = None,
+    verbose: Annotated[bool, Parameter(name=("--verbose", "-V"))] = False
 ) -> None:
     """Automatic video translation and subtitling tool.
 
@@ -54,7 +59,14 @@ def cli(
         Directory for the output file.
     output_name: str
         Name of the output file.
+    verbose: bool
+        Print debug log messages.
     """
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
     try:
         for video in file_path:
             translate(
