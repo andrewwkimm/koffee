@@ -43,5 +43,6 @@
 	],
 	// Set project folder as safe directory and changes ownership of it to vscode.
 	"postCreateCommand": "bash ./.devcontainer/setup.sh",
+	"postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}",
 	"remoteUser": "vscode"
 }
