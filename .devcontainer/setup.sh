@@ -5,7 +5,6 @@ read -p "Enter your Git username: " git_username
 read -p "Enter your Git email: " git_email
 
 # Configure baseline git settings
-git config --global --add safe.directory "${containerWorkspaceFolder}"
 git config --global user.email "$git_email"
 git config --global user.name "$git_username"
 
