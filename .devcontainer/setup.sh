@@ -11,10 +11,5 @@ read -p "Enter your Git email: " git_email
 git config --global user.email "$git_email"
 git config --global user.name "$git_username"
 
-# Install font that supports East Asian languages
-# Use `fc-list :lang=ko` to verify font is valid outside the container.
-sudo cp examples/fonts/NotoSerifCJK-Bold.ttc /usr/share/fonts
-sudo fc-cache -f -v
-
 # Setup environment and activate poetry's virtual environment
 make setup && poetry shell
