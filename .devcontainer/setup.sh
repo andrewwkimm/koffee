@@ -11,5 +11,8 @@ read -p "Enter your Git email: " git_email
 git config --global user.email "$git_email"
 git config --global user.name "$git_username"
 
+# Set VS Code as the default text editor
+git config --global core.editor "code --wait"
+
 # Setup environment and activate poetry's virtual environment
 make setup && poetry shell
