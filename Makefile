@@ -2,6 +2,8 @@ help:
 	cat Makefile
 
 ################################################################################
+accept:
+	behave --no-skipped --stop
 
 build:
 	poetry install
@@ -30,10 +32,11 @@ type_check:
 ################################################################################
 
 .PHONY: \
+	accept \
 	build \
 	help \
 	lint \
-	setup \
 	reformat \
+	setup \
 	test \
 	type_check
