@@ -3,7 +3,7 @@ help:
 
 ################################################################################
 accept:
-	behave --no-skipped --stop
+	poetry run behave --no-skipped --stop
 
 build:
 	poetry install
@@ -28,6 +28,15 @@ test:
 
 type_check:
 	poetry run mypy src tests --ignore-missing-import
+
+################################################################################
+
+dist:
+	poetry build --format wheel
+
+ship:
+	make build
+	nox
 
 ################################################################################
 
