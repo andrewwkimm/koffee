@@ -11,7 +11,7 @@ build:
 	make lint
 	make type_check
 	make test
-	poetry run behave
+	make accept
 
 lint:
 	poetry run flake8 src tests
