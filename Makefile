@@ -43,9 +43,11 @@ ship:
 .PHONY: \
 	accept \
 	build \
+	dist \
 	help \
 	lint \
 	reformat \
 	setup \
+	ship \
 	test \
 	type_check
