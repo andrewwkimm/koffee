@@ -48,13 +48,12 @@ def get_output_path(
 ) -> Path:
     """Gets the output path for the translated video file."""
     file_path = Path(video_file_path)
-
-    if output_dir is None:
-        file_dir = file_path.parent
-
-    if output_name is None:
-        file_name = f'{file_path.stem}_{datetime.today().strftime("%m-%d-%Y")}'
-
+    file_dir = output_dir if output_dir is not None else file_path.parent
+    file_name = (
+        output_name
+        if output_name is not None
+        else f'{file_path.stem}_{datetime.today().strftime("%m-%d-%Y")}'
+    )
     file_ext = file_path.suffix
 
     output_path = file_dir / (file_name + file_ext)
