@@ -1,6 +1,6 @@
 [flake8]
 select = B,B9,BLK,C,E,F,W,I,D
-ignore = E203,W503,E501,I001,I003,I004,I005
+ignore = E203,E501,F811,I001,I003,I004,I005, W503
 max-complexity = 20
 max-line-length = 128
 import-order-style = google
