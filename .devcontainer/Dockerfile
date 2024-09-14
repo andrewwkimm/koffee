@@ -8,7 +8,7 @@ RUN \
   apt-get upgrade \
   && apt-get update \
   && apt-get -y install bash-completion curl ffmpeg git libcudnn8 libcudnn8-dev python3 python3-pip \
-  && pip install pre-commit
+  && pip install nox pre-commit
 
 # Create a symlink from python3 to python
 RUN ln -s /usr/bin/python3 /usr/bin/python
