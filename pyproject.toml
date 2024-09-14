@@ -15,7 +15,6 @@ transformers = "^4.39.3"
 ffmpeg-python = "^0.2.0"
 torch = "^2.2.2"
 accelerate = "^0.29.3"
-bitsandbytes = "^0.43.1"
 cyclopts = "^2.9.9"
 
 [tool.poetry.group.dev.dependencies]
