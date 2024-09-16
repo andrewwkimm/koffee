@@ -1,6 +1,7 @@
 """Tests subtitle overlay."""
 
 from pathlib import Path
+
 import pytest
 
 from koffee.overlay import overlay_subtitles
