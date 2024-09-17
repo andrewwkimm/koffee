@@ -39,6 +39,7 @@ def cli(
     output_name: Optional[
         Annotated[str, Parameter(name=("--output-name", "-n"))]
     ] = None,
+    target_language: Annotated[str, Parameter(name=("--target_lang", "-t"))] = "en",
     verbose: Annotated[
         bool, Parameter(name=("--verbose", "-V"), group=options_group)
     ] = False
@@ -61,6 +62,8 @@ def cli(
         Directory for the output file.
     output_name: str
         Name of the output file.
+    target_language: str
+        Language to which the video should be translated.
     verbose: bool
         Print debug log messages.
     """
@@ -79,6 +82,7 @@ def cli(
                 model=model,
                 output_dir=output_dir,
                 output_name=output_name,
+                target_language=target_language,
             )
     except InvalidVideoFileError:
         print("Inputted path is not a valid video file.")

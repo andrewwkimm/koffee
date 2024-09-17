@@ -22,6 +22,7 @@ def translate(
     model: str = "large-v3",
     output_dir: Optional[Path] = None,
     output_name: Optional[str] = None,
+    target_language: str = "en",
 ) -> Path:
     """Processes a video file for translation and subtitle overlay."""
     log.info("Processing video...")
@@ -31,7 +32,7 @@ def translate(
     transcript = transcribe_text(
         video_file_path, batch_size, compute_type, device, model
     )
-    translated_transcript = translate_transcript(transcript)
+    translated_transcript = translate_transcript(transcript, target_language)
     translated_srt_file = convert_text_to_srt(translated_transcript)
 
     overlay_subtitles(video_file_path, translated_srt_file, output_path)
