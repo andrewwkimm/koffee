@@ -6,6 +6,7 @@
 </h1>
 
 [![koffee CI](https://github.com/andrewwkimm/koffee/actions/workflows/ci.yaml/badge.svg)](https://github.com/andrewwkimm/koffee/actions)
+[![codecov](https://codecov.io/github/andrewwkimm/koffee/graph/badge.svg?token=1AGJM1UMK5)](https://codecov.io/github/andrewwkimm/koffee)
 
 **koffee** is a tool that automates the translation and subtitling of Korean<>English videos.
 
