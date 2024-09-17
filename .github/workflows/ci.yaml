@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [macos-latest, ubuntu-latest]
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
@@ -31,7 +31,12 @@ jobs:
 
       - name: Build
         run: |
-          make build
+          poetry install
+          poetry run black src tests
+          poetry run flake8 src tests
+          poetry run mypy src tests --ignore-missing-import
+          poetry run pytest --cov=koffee --cov-report term --cov-report xml --junitxml=testresults.xml
+          poetry run behave --no-skipped --stop
 
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v4
