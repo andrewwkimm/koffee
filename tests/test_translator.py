@@ -13,7 +13,7 @@ def test_translate_transcript() -> None:
         "language": "ko",
     }
 
-    actual = translate_transcript(sample_transcript)
+    actual = translate_transcript(sample_transcript, target_language="en")
     expected = [
         {"text": "Hello."},
         {"text": "Food."},
