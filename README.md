@@ -62,6 +62,7 @@ Refer below for a list of all commands and parameters.
     --model, -m                The Whisper model instance to use.
     --output_dir, -o           Directory for the output file.
     --output_name, -O          Name of the output file.
+    --target_language, -t      Language to which the video should be translated.
 
 ### Options
 
