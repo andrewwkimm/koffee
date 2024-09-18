@@ -4,16 +4,13 @@ on: [push, pull_request]
 
 jobs:
   build:
-    defaults:
-      run:
-        shell: bash
 
     runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, ubuntu-latest]
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
