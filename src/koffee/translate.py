@@ -40,7 +40,10 @@ def translate(
 
         translated_srt_file.unlink()
 
+        log.info("Finished processing video!")
+
         return output_path
+
     except RuntimeError as error:
         error_message = "Inputted file is not a valid video file or does not exist."
         raise InvalidVideoFileError(error_message) from error
@@ -52,6 +55,8 @@ def get_output_path(
     output_name: Optional[str],
 ) -> Path:
     """Gets the output path for the translated video file."""
+    log.debug(repr(output_name))
+
     file_path = Path(video_file_path)
     file_dir = output_dir if output_dir is not None else file_path.parent
     file_name = (
@@ -62,4 +67,5 @@ def get_output_path(
     file_ext = file_path.suffix
 
     output_path = file_dir / (file_name + file_ext)
+    log.debug(repr(output_path))
     return output_path
