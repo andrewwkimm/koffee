@@ -7,7 +7,6 @@ from cyclopts import App, Group, Parameter, validators
 from typing import Annotated, Optional
 
 from koffee.translate import translate
-from koffee.exceptions import InvalidVideoFileError
 
 
 log = logging.getLogger(__name__)
@@ -72,20 +71,17 @@ def cli(
     else:
         logging.basicConfig(level=logging.INFO)
 
-    try:
-        for video in file_path:
-            translate(
-                video_file_path=video,
-                batch_size=batch_size,
-                compute_type=compute_type,
-                device=device,
-                model=model,
-                output_dir=output_dir,
-                output_name=output_name,
-                target_language=target_language,
-            )
-    except InvalidVideoFileError:
-        print("Inputted path is not a valid video file.")
+    for video in file_path:
+        translate(
+            video_file_path=video,
+            batch_size=batch_size,
+            compute_type=compute_type,
+            device=device,
+            model=model,
+            output_dir=output_dir,
+            output_name=output_name,
+            target_language=target_language,
+        )
 
 
 def main() -> None:
