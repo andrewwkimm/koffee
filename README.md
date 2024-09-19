@@ -61,7 +61,7 @@ Refer below for a list of all commands and parameters.
     --compute_type, -c         Compute type used for the model.
     --model, -m                The Whisper model instance to use.
     --output_dir, -o           Directory for the output file.
-    --output_name, -O          Name of the output file.
+    --output_name, -n          Name of the output file.
     --target_language, -t      Language to which the video should be translated.
 
 ### Options
