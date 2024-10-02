@@ -5,6 +5,9 @@ help:
 accept:
 	poetry run behave --no-skipped --stop
 
+accept_wip:
+	poetry run behave --no-skipped --stop --tags=wip
+
 build:
 	poetry install
 	make reformat
