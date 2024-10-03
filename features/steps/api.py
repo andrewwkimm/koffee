@@ -28,10 +28,13 @@ def step_impl(context, path) -> None:
 @when("the user calls the koffee API")
 def step_impl(context):
     """Invoke the koffee API."""
+    output_dir = getattr(context, "output_dir", None)
+    output_name = getattr(context, "output_name", None)
+
     context.output_file_path = translate(
         context.video_file_path,
-        output_dir=context.output_dir,
-        output_name=context.output_name,
+        output_dir=output_dir,
+        output_name=output_name,
     )
 
 
