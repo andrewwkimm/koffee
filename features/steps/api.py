@@ -42,3 +42,9 @@ def step_impl(context):
 def step_impl(context):
     """Assert that the output file exists."""
     assert context.output_file_path.exists()
+
+
+@given("the user corrupts the file somehow")
+def step_impl(context):
+    """Corrupts a video file."""
+    context.video_file_path = Path("invalid_video_file.mp4")
