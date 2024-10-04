@@ -42,4 +42,5 @@ def convert_to_timestamp(seconds: Union[float, int]) -> str:
     ts = timedelta(seconds=int(seconds))
     hours, remainder = divmod(ts.seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
-    return f"{hours:02}:{minutes:02}:{seconds:02},{ms:03}"
+    timestamp = f"{hours:02}:{minutes:02}:{seconds:02},{ms:03}"
+    return timestamp
