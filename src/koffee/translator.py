@@ -12,8 +12,11 @@ log = logging.getLogger(__name__)
 def translate_transcript(transcript: dict, target_language: str) -> list:
     """Gets a translated JSON file."""
     log.info("Translating transcript.")
+    log.debug("target_language: " + repr(target_language))
 
     source_language = transcript["language"]
+    log.debug("source_language: " + repr(source_language))
+
     for i in range(len(transcript["segments"])):
         text = transcript["segments"][i]["text"]
         translated_text = translate_text(text, source_language, target_language)
