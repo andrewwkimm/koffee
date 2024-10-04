@@ -37,6 +37,17 @@
             ]
         },
         {
+            "name": "Behave: WIP",
+            "type": "python",
+            "request": "launch",
+            "module": "behave",
+            "console": "integratedTerminal",
+            "args": [
+                "--stop",
+                "--tags=wip,"
+            ]
+        },
+        {
             "name": "CLI",
             "type": "python",
             "request": "launch",
