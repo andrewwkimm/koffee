@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 def translate_transcript(transcript: dict, target_language: str) -> list:
     """Gets a translated JSON file."""
-    log.info("Translating transcript.")
+    log.debug("Translating transcript.")
 
     source_language = transcript["language"]
     for i in range(len(transcript["segments"])):
@@ -26,6 +26,8 @@ def translate_transcript(transcript: dict, target_language: str) -> list:
 
 def translate_text(text: str, source_language: str, target_language: str) -> str:
     """Translates source language to target language."""
+    log.debug(repr(text), repr(source_language), repr(target_language))
+
     model_name = f"Helsinki-NLP/opus-mt-{source_language}-{target_language}"
     model = MarianMTModel.from_pretrained(model_name)
 
@@ -35,5 +37,4 @@ def translate_text(text: str, source_language: str, target_language: str) -> str
     translation = model.generate(**tokenized_text)
 
     translated_text = tokenizer.decode(translation[0], skip_special_tokens=True)
-    log.debug(repr(translated_text))
     return translated_text
