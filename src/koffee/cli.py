@@ -72,9 +72,7 @@ def cli(
         Print debug log messages.
     """
     if verbose:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(level=logging.INFO)
+        logging.getLogger().setLevel(logging.DEBUG)
 
     for video in file_path:
         translate(
