@@ -52,7 +52,9 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/koffee/cli.py",
-            "args": ["examples/videos/sample_korean_video.mp4"],
+            "args": [
+                "examples/videos/sample_korean_video.mp4",
+            ],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "justMyCode": true,
