@@ -15,7 +15,6 @@ def convert_text_to_srt(
 ) -> Path:
     """Converts translated text to SRT format."""
     log.info("Converting text to SRT format.")
-    log.debug(repr(convert_text_to_srt(translated_text, output_file_path)))
 
     if output_file_path is None:
         output_file_path = Path(f"{os.getcwd()}/translated_text.srt")
