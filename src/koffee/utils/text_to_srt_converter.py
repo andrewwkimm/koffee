@@ -1,15 +1,22 @@
 """Text to SRT converter."""
 
 from datetime import timedelta
+import logging
 import os
 from pathlib import Path
 from typing import Optional, Union
+
+
+log = logging.getLogger(__name__)
 
 
 def convert_text_to_srt(
     translated_text: list, output_file_path: Optional[Path] = None
 ) -> Path:
     """Converts translated text to SRT format."""
+    log.info("Converting text to SRT format.")
+    log.debug(repr(convert_text_to_srt(translated_text, output_file_path)))
+
     if output_file_path is None:
         output_file_path = Path(f"{os.getcwd()}/translated_text.srt")
 
@@ -26,6 +33,7 @@ def convert_text_to_srt(
             else:
                 file.write(f"{text}\n")
 
+    log.debug(repr(output_file_path))
     return output_file_path
 
 
