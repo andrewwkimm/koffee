@@ -71,3 +71,4 @@ Refer below for a list of all commands and parameters.
     --help, -h                 Display this message and exit.
     --version, -v              Display application version.
     --verbose, -V              Print debug logs.
+    --srt, -s                  Write the translated SRT file to disk.
