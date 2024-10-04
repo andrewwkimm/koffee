@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 def translate_transcript(transcript: dict, target_language: str) -> list:
     """Gets a translated JSON file."""
     log.info("Translating transcript.")
+
     source_language = transcript["language"]
     for i in range(len(transcript["segments"])):
         text = transcript["segments"][i]["text"]
@@ -19,6 +20,7 @@ def translate_transcript(transcript: dict, target_language: str) -> list:
         transcript["segments"][i]["text"] = translated_text
 
     translated_transcript = transcript["segments"]
+    log.debug(repr(translated_transcript))
     return translated_transcript
 
 
@@ -33,4 +35,5 @@ def translate_text(text: str, source_language: str, target_language: str) -> str
     translation = model.generate(**tokenized_text)
 
     translated_text = tokenizer.decode(translation[0], skip_special_tokens=True)
+    log.debug(repr(translated_text))
     return translated_text
