@@ -1,5 +1,5 @@
 Feature: koffee Exceptions
-    @wip
+
     Scenario Outline: User inputs an invalid video file
         Given a user has a basic Korean video file
         But the user corrupts the file somehow
