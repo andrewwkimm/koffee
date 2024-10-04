@@ -23,6 +23,7 @@ def translate(
     model: str = "large-v3",
     output_dir: Optional[Path] = None,
     output_name: Optional[str] = None,
+    srt: Optional[bool] = False,
     target_language: str = "en",
 ) -> Path:
     """Processes a video file for translation and subtitle overlay."""
@@ -38,7 +39,8 @@ def translate(
 
         overlay_subtitles(video_file_path, translated_srt_file, output_path)
 
-        translated_srt_file.unlink()
+        if srt is False:
+            translated_srt_file.unlink()
 
         log.info("Finished processing video!")
 

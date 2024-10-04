@@ -44,9 +44,10 @@ def cli(
         Annotated[str, Parameter(name=("--output-name", "-n"))]
     ] = None,
     target_language: Annotated[str, Parameter(name=("--target_lang", "-t"))] = "en",
+    srt: Annotated[bool, Parameter(name=("--srt", "-s"), group=options_group)] = False,
     verbose: Annotated[
         bool, Parameter(name=("--verbose", "-V"), group=options_group)
-    ] = False
+    ] = False,
 ) -> None:
     """Automatic video translation and subtitling tool.
 
@@ -66,6 +67,8 @@ def cli(
         Directory for the output file.
     output_name: str
         Name of the output file.
+    srt: bool
+        Write the translated SRT file to disk
     target_language: str
         Language to which the video should be translated.
     verbose: bool
@@ -83,6 +86,7 @@ def cli(
             model=model,
             output_dir=output_dir,
             output_name=output_name,
+            srt=srt,
             target_language=target_language,
         )
 
