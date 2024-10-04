@@ -7,5 +7,5 @@ Feature: koffee Exceptions
         Then the user receives the error message <message>
 
     Examples: message
-        | message                                                   |
-        | Inputted file is not a valid video file or does not exist.|
+        | message                                                    |
+        | Inputted file is not a valid video file or does not exist. |
