@@ -26,8 +26,6 @@ def translate_transcript(transcript: dict, target_language: str) -> list:
 
 def translate_text(text: str, source_language: str, target_language: str) -> str:
     """Translates source language to target language."""
-    log.debug(repr(text), repr(source_language), repr(target_language))
-
     model_name = f"Helsinki-NLP/opus-mt-{source_language}-{target_language}"
     model = MarianMTModel.from_pretrained(model_name)
 
