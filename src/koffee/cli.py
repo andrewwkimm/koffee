@@ -4,10 +4,15 @@ import logging
 from pathlib import Path
 
 from cyclopts import App, Group, Parameter, validators
+from rich.logging import RichHandler
 from typing import Annotated, Optional
 
 from koffee.translate import translate
 
+
+logging.basicConfig(
+    level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
+)
 
 log = logging.getLogger(__name__)
 
