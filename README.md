@@ -1,6 +1,5 @@
 <h1 align="center">
   <img
-    height="250" width="390"
     src="https://raw.githubusercontent.com/andrewwkimm/koffee/main/assets/koffee.png" alt="koffee logo">
   <br>
 </h1>
