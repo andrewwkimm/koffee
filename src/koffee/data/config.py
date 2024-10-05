@@ -17,3 +17,8 @@ class koffeeConfig(BaseModel):
     output_name: Optional[str] = None
     srt: Optional[bool] = False
     target_language: str = "en"
+
+    class Config:
+        """Configuration to remove all leading and trailing white space."""
+
+        anystr_strip_whitespace = True
