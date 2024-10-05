@@ -34,10 +34,10 @@ koffee some_dir/some_video_file.mp4
 Alternatively, usage through Python is also available.
 
 ```python
-from koffee import translate
+import koffee
 
 
-translate("some_dir/some_video_file.mp4")
+koffee.translate("some_dir/some_video_file.mp4")
 ```
 
 Here is an example output using a [sample video](examples/videos/sample_korean_video.mp4) from [examples](examples/videos/sample_korean_video.mp4).
