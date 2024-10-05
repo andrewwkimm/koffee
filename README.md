@@ -72,6 +72,21 @@ Refer below for a list of all commands and parameters.
     --verbose, -V              Print debug logs.
     --srt, -s                  Write the translated SRT file to disk.
 
+## Contributing
+
+The simplest way to start developing is by using either a [DevContainer](https://code.visualstudio.com/docs/devcontainers/containers) or [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer).
+
+If you are planning to develop inside DevContainer, choose the CUDA setup if you have a NVIDIA graphics card and would like to run koffee with CUDA support; otherwise, the default build is much leaner and recommended.
+
+For Poetry, run the following commands to set up your environment:
+
+```bash
+git clone https://github.com/andrewwkimm/koffee.git
+cd koffee
+pip install pre-commit
+make setup
+```
+
 ## Credits
 
 Special thanks to [Leah Song](https://github.com/leahiscoding) for designing the koffee logo.
