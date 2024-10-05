@@ -71,3 +71,7 @@ Refer below for a list of all commands and parameters.
     --version, -v              Display application version.
     --verbose, -V              Print debug logs.
     --srt, -s                  Write the translated SRT file to disk.
+
+## Credits
+
+Special thanks to [Leah Song](https://github.com/leahiscoding) for designing the koffee logo.
