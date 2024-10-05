@@ -14,5 +14,8 @@ git config --global user.name "$git_username"
 # Set VS Code as the default text editor
 git config --global core.editor "code --wait"
 
+# Change ownership of the workspace to vscode user
+chown -R vscode:vscode $(pwd)
+
 # Setup environment and activate poetry's virtual environment
 make setup
