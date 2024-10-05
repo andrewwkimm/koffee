@@ -15,4 +15,4 @@ git config --global user.name "$git_username"
 git config --global core.editor "code --wait"
 
 # Setup environment and activate poetry's virtual environment
-make setup && poetry shell
+make setup
