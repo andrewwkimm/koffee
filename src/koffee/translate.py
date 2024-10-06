@@ -3,7 +3,7 @@
 from datetime import datetime
 import logging
 from pathlib import Path
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from koffee.asr import transcribe_text
 from koffee.data.config import koffeeConfig
@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 def translate(
     video_file_path: Union[Path, str],
     config: Optional[koffeeConfig] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> Path:
     """Processes a video file for translation and subtitle overlay."""
     log.info("Processing video...")
