@@ -56,9 +56,9 @@ def cli(
     file_path: Path
         Path to the video file.
     compute_type: str
-        Device used to load the model.
+        Type to use for computation.
     device: str
-        Compute type used for the model.
+        Device to use for computation.
     model: str
         The Whisper model instance to use.
     output_dir: Path

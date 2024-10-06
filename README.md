@@ -57,8 +57,8 @@ Refer below for a list of all commands and parameters.
 ### Parameters
 
     --file_path                Path to the video file.
-    --device, -d               Device used for PyTorch inference.
-    --compute_type, -c         Compute type used for the model.
+    --device, -d               Device to use for computation.
+    --compute_type, -c         Type to use for computation.
     --model, -m                The Whisper model instance to use.
     --output_dir, -o           Directory for the output file.
     --output_name, -n          Name of the output file.
