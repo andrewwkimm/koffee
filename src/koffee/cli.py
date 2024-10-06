@@ -34,7 +34,6 @@ app["--version"].group = options_group
 @app.default()
 def cli(
     *file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
-    batch_size: Annotated[int, Parameter(name=("--batch-size", "-b"))] = 16,
     compute_type: Annotated[str, Parameter(name=("--compute-type", "-c"))] = "float32",
     device: Annotated[str, Parameter(name=("--device", "-d"))] = "cpu",
     model: Annotated[str, Parameter(name=("--model", "-m"))] = "large-v3",
@@ -56,8 +55,6 @@ def cli(
     ----------
     file_path: Path
         Path to the video file.
-    batch_size: str
-        Batch size used when transcribing the audio.
     compute_type: str
         Device used to load the model.
     device: str
@@ -79,7 +76,6 @@ def cli(
         logging.getLogger().setLevel(logging.DEBUG)
 
     config = koffeeConfig(
-        batch_size=batch_size,
         compute_type=compute_type,
         device=device,
         model=model,

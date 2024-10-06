@@ -35,8 +35,7 @@ def translate(
         )
 
         transcript = transcribe_text(
-            video_file_path,
-            config.batch_size,
+            str(video_file_path),
             config.compute_type,
             config.device,
             config.model,
