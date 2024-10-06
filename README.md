@@ -57,7 +57,6 @@ Refer below for a list of all commands and parameters.
 ### Parameters
 
     --file_path                Path to the video file.
-    --batch_size, -b           Batch size used when transcribing the audio.
     --device, -d               Device used for PyTorch inference.
     --compute_type, -c         Compute type used for the model.
     --model, -m                The Whisper model instance to use.
