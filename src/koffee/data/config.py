@@ -9,7 +9,6 @@ from pydantic import BaseModel
 class koffeeConfig(BaseModel):
     """Configuration data model for koffee."""
 
-    batch_size: int = 16
     compute_type: str = "default"
     device: str = "auto"
     model: str = "large-v3"
