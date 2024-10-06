@@ -34,8 +34,8 @@ app["--version"].group = options_group
 @app.default()
 def cli(
     *file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
-    compute_type: Annotated[str, Parameter(name=("--compute-type", "-c"))] = "float32",
-    device: Annotated[str, Parameter(name=("--device", "-d"))] = "cpu",
+    compute_type: Annotated[str, Parameter(name=("--compute-type", "-c"))] = "default",
+    device: Annotated[str, Parameter(name=("--device", "-d"))] = "auto",
     model: Annotated[str, Parameter(name=("--model", "-m"))] = "large-v3",
     output_dir: Optional[
         Annotated[Path, Parameter(name=("--output-dir", "-o"))]
