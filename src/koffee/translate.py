@@ -24,38 +24,37 @@ def translate(
     """Processes a video file for translation and subtitle overlay."""
     log.info("Processing video...")
 
+    if not Path(video_file_path).exists() or not Path(video_file_path).is_file():
+        error_message = "Inputted file is not a valid video file or does not exist."
+        log.error(error_message)
+        raise InvalidVideoFileError(error_message)
+
     if config is None:
         config = koffeeConfig(**kwargs)
     else:
         config = koffeeConfig(**{**config.model_dump(), **kwargs})
 
-    try:
-        output_path = get_output_path(
-            video_file_path, config.output_dir, config.output_name
-        )
+    output_path = get_output_path(
+        video_file_path, config.output_dir, config.output_name
+    )
 
-        transcript = transcribe_text(
-            video_file_path,
-            config.batch_size,
-            config.compute_type,
-            config.device,
-            config.model,
-        )
-        translated_transcript = translate_transcript(transcript, config.target_language)
-        translated_srt_file = convert_text_to_srt(translated_transcript)
+    transcript = transcribe_text(
+        str(video_file_path),
+        config.compute_type,
+        config.device,
+        config.model,
+    )
+    translated_transcript = translate_transcript(transcript, config.target_language)
+    translated_srt_file = convert_text_to_srt(translated_transcript)
 
-        overlay_subtitles(video_file_path, translated_srt_file, output_path)
+    overlay_subtitles(video_file_path, translated_srt_file, output_path)
 
-        if config.srt is False:
-            translated_srt_file.unlink()
+    if config.srt is False:
+        translated_srt_file.unlink()
 
-        log.info("Finished processing video!")
+    log.info("Finished processing video!")
 
-        return output_path
-
-    except RuntimeError as error:
-        error_message = "Inputted file is not a valid video file or does not exist."
-        raise InvalidVideoFileError(error_message) from error
+    return output_path
 
 
 def get_output_path(

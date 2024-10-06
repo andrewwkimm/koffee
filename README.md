@@ -42,7 +42,7 @@ koffee.translate("some_dir/some_video_file.mp4")
 
 Here is an example output using a [sample video](examples/videos/sample_korean_video.mp4) from [examples](examples/videos/sample_korean_video.mp4).
 
-https://github.com/user-attachments/assets/8b899ac0-fd8d-420f-87d9-505347a149fd
+https://github.com/user-attachments/assets/3e62d003-5b84-42e4-80b2-13cb89e289e4
 
 ## Usage
 
@@ -57,7 +57,6 @@ Refer below for a list of all commands and parameters.
 ### Parameters
 
     --file_path                Path to the video file.
-    --batch_size, -b           Batch size used when transcribing the audio.
     --device, -d               Device used for PyTorch inference.
     --compute_type, -c         Compute type used for the model.
     --model, -m                The Whisper model instance to use.
