@@ -89,3 +89,5 @@ make setup
 ## Credits
 
 Special thanks to [Leah Song](https://github.com/leahiscoding) for designing the koffee logo.
+
+Credits to [여배우의 책방](https://www.youtube.com/@onewomansplay2270/featured) for the full version of the sample Korean video.
