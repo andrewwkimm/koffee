@@ -10,8 +10,8 @@ class koffeeConfig(BaseModel):
     """Configuration data model for koffee."""
 
     batch_size: int = 16
-    compute_type: str = "float32"
-    device: str = "cpu"
+    compute_type: str = "default"
+    device: str = "auto"
     model: str = "large-v3"
     output_dir: Optional[Path] = None
     output_name: Optional[str] = None
