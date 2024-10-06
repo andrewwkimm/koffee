@@ -7,6 +7,7 @@ from cyclopts import App, Group, Parameter, validators
 from rich.logging import RichHandler
 from typing import Annotated, Optional
 
+from koffee.data.config import koffeeConfig
 from koffee.translate import translate
 
 
@@ -77,18 +78,19 @@ def cli(
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
+    config = koffeeConfig(
+        batch_size=batch_size,
+        compute_type=compute_type,
+        device=device,
+        model=model,
+        output_dir=output_dir,
+        output_name=output_name,
+        srt=srt,
+        target_language=target_language,
+    )
+
     for video in file_path:
-        translate(
-            video_file_path=video,
-            batch_size=batch_size,
-            compute_type=compute_type,
-            device=device,
-            model=model,
-            output_dir=output_dir,
-            output_name=output_name,
-            srt=srt,
-            target_language=target_language,
-        )
+        translate(video_file_path=video, config=config)
 
 
 def main() -> None:
