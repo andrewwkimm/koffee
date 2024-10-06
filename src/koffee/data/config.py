@@ -21,4 +21,4 @@ class koffeeConfig(BaseModel):
     class Config:
         """Configuration to remove all leading and trailing white space."""
 
-        anystr_strip_whitespace = True
+        str_strip_whitespace = True
