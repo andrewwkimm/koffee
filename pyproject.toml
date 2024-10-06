@@ -17,6 +17,7 @@ torch = "^2.2.2"
 accelerate = "^0.29.3"
 cyclopts = "^2.9.9"
 rich = "^13.9.2"
+pydantic = "^2.9.2"
 sentencepiece = "^0.2.0"
 sacremoses = "^0.1.1"
 
@@ -34,7 +35,6 @@ flake8-simplify = ">=0.19.3"
 flake8-docstrings = ">=1.6.0"
 mypy = ">=0.981"
 behave = "^1.2.6"
-pydantic = "^2.9.2"
 
 [tool.coverage.run]
 branch = true

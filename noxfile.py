@@ -10,7 +10,6 @@ def test_build_from_wheel(session: Session) -> None:
     session.install("pytest")
     session.install("pytest-mock")
     session.install("behave")
-    session.install("pydantic")
 
     session.run("poetry", "build", "--format", "wheel")
     session.run(
