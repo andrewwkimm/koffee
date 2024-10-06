@@ -30,21 +30,29 @@ options_group = Group("Options", sort_key=2)
 app["--help"].group = options_group
 app["--version"].group = options_group
 
+options = koffeeConfig()
+
 
 @app.default()
 def cli(
     *file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
-    compute_type: Annotated[str, Parameter(name=("--compute-type", "-c"))] = "default",
-    device: Annotated[str, Parameter(name=("--device", "-d"))] = "auto",
-    model: Annotated[str, Parameter(name=("--model", "-m"))] = "large-v3",
+    compute_type: Annotated[
+        str, Parameter(name=("--compute-type", "-c"))
+    ] = options.compute_type,
+    device: Annotated[str, Parameter(name=("--device", "-d"))] = options.device,
+    model: Annotated[str, Parameter(name=("--model", "-m"))] = options.model,
     output_dir: Optional[
         Annotated[Path, Parameter(name=("--output-dir", "-o"))]
     ] = None,
     output_name: Optional[
         Annotated[str, Parameter(name=("--output-name", "-n"))]
     ] = None,
-    target_language: Annotated[str, Parameter(name=("--target_lang", "-t"))] = "en",
-    srt: Annotated[bool, Parameter(name=("--srt", "-s"), group=options_group)] = False,
+    target_language: Annotated[
+        str, Parameter(name=("--target_lang", "-t"))
+    ] = options.target_language,
+    srt: Annotated[
+        bool, Parameter(name=("--srt", "-s"), group=options_group)
+    ] = options.srt,
     verbose: Annotated[
         bool, Parameter(name=("--verbose", "-V"), group=options_group)
     ] = False,
@@ -84,7 +92,6 @@ def cli(
         srt=srt,
         target_language=target_language,
     )
-
     for video in file_path:
         translate(video_file_path=video, config=config)
 
