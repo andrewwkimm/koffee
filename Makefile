@@ -39,6 +39,7 @@ dist:
 
 ship:
 	make build
+	make dist
 	nox -s test_build_from_wheel
 
 ################################################################################
