@@ -40,7 +40,7 @@ def test_cli(video_file_path: Path, output_name: str) -> None:
     assert output_video_file_path.exists()
 
 
-def test_verbose(mocker: MockerFixture):
+def test_verbose(mocker: MockerFixture) -> None:
     """Tests if verbose flag sets log level to DEBUG."""
     mock_logger = mocker.patch("logging.getLogger")
 
