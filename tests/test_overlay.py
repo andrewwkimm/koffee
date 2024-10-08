@@ -32,5 +32,3 @@ def test_overlay(
     overlay_subtitles(video_file_path, srt_file_path, output_file_path)
 
     assert output_file_path.exists()
-
-    output_file_path.unlink
