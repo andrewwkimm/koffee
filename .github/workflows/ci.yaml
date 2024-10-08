@@ -36,6 +36,7 @@ jobs:
 
       - name: Generate coverage report
         run: |
+          pip install coverage
           coverage report
           coverage xml
 
