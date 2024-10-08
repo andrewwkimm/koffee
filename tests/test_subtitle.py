@@ -54,3 +54,5 @@ This is a subtitle.
         raise ValueError(f"Unsupported subtitle format: {subtitle_format}")
 
     assert actual == expected
+
+    subtitle_file_path.unlink
