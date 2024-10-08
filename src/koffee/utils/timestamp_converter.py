@@ -3,6 +3,8 @@
 from datetime import timedelta
 from typing import Union
 
+from koffee.exceptions import InvalidSubtitleFormatError
+
 
 def convert_to_timestamp(seconds: Union[float, int], subtitle_format: str) -> str:
     """Converts seconds to SRT timestamp format."""
@@ -16,6 +18,7 @@ def convert_to_timestamp(seconds: Union[float, int], subtitle_format: str) -> st
     elif subtitle_format == "vtt":
         timestamp = f"{hours:02}:{minutes:02}:{seconds:02}.{ms:03}"
     else:
-        raise ValueError("Unsupported format. Choose 'srt' or 'vtt'.")
+        error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
+        raise InvalidSubtitleFormatError(error_message)
 
     return timestamp

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from koffee.exceptions import InvalidSubtitleFormatError
 from koffee.subtitle import generate_subtitles
 
 
@@ -51,7 +52,8 @@ Hello, world!
 This is a subtitle.
 """
     else:
-        raise ValueError(f"Invalid subtitle format: {subtitle_format}")
+        error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
+        raise InvalidSubtitleFormatError(error_message)
 
     assert actual == expected
 
@@ -63,6 +65,6 @@ def test_invalid_format(subtitle_format: str) -> None:
     """Tests that the appropriate error is raised when an invalid format is given."""
     sample_text = [{"start": 10.5, "end": 15.0, "text": "Hello, world!"}]
 
-    error_message = f"Invalid subtitle format: {subtitle_format}"
-    with pytest.raises(ValueError, match=error_message):
+    error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
+    with pytest.raises(InvalidSubtitleFormatError, match=error_message):
         generate_subtitles(subtitle_format, sample_text)
