@@ -21,6 +21,6 @@ def generate_subtitles(
     elif subtitle_format == "vtt":
         subtitle_file_path = convert_text_to_vtt(transcript, output_dir)
     else:
-        raise ValueError(f"Unsupported subtitle format: {subtitle_format}")
+        raise ValueError(f"Invalid subtitle format: {subtitle_format}")
 
     return subtitle_file_path
