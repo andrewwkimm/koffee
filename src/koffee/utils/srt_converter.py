@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from koffee.utils import convert_to_timestamp
+from koffee.utils.timestamp_converter import convert_to_timestamp
 
 
 log = logging.getLogger(__name__)
