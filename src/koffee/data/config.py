@@ -14,7 +14,7 @@ class koffeeConfig(BaseModel):
     model: str = "large-v3"
     output_dir: Optional[Path] = None
     output_name: Optional[str] = None
-    srt: bool = False
+    subtitle_format: str = "srt"
     target_language: str = "en"
 
     class Config:
