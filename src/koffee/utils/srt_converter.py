@@ -1,9 +1,7 @@
 """Text to SRT converter."""
 
 import logging
-import os
 from pathlib import Path
-from typing import Optional
 
 from koffee.utils.timestamp_converter import convert_to_timestamp
 
@@ -11,14 +9,11 @@ from koffee.utils.timestamp_converter import convert_to_timestamp
 log = logging.getLogger(__name__)
 
 
-def convert_text_to_srt(transcript: list, output_dir: Optional[Path] = None) -> Path:
+def convert_text_to_srt(transcript: list, output_dir: Path) -> Path:
     """Converts text to SRT format."""
     log.info("Converting text to SRT format.")
 
-    if output_dir is None:
-        output_file_path = Path(f"{os.getcwd()}/subtitles.srt")
-    else:
-        output_file_path = output_dir / "subtitles.srt"
+    output_file_path = output_dir / "subtitles.srt"
 
     with open(output_file_path, "w", encoding="utf-8") as file:
         for idx, subtitle in enumerate(transcript, 1):
