@@ -36,7 +36,7 @@ jobs:
 
       - name: Generate coverage report
         run: |
-          pip install coverage
+          pip install pytest-cov
           coverage report
           coverage xml
 
