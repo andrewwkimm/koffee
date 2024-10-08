@@ -1,42 +1,37 @@
-"""Tests text to subtitle conversion."""
+"""Tests for subtitle conversion."""
 
 from pathlib import Path
 from typing import Callable, Dict, List
 
 import pytest
 
-from koffee.utils import (
-    convert_text_to_srt,
-    convert_text_to_vtt,
-    convert_to_timestamp,
-)
+from koffee.subtitle import generate_subtitles
+from koffee.utils import convert_to_timestamp
 
 
 SubtitleConverter = Callable[[List[Dict[str, object]], Path], Path]
 
 
 @pytest.mark.parametrize(
-    "subtitle_format, subtitle_file_name, subtitle_converter",
+    "subtitle_format, output_dir",
     [
-        ("srt", Path("sample_srt_file.srt"), convert_text_to_srt),
-        ("vtt", Path("sample_vtt_file.vtt"), convert_text_to_vtt),
+        ("srt", Path("scratch")),
+        ("srt", None),
+        ("vtt", Path("scratch")),
+        ("vtt", None),
     ],
 )
 def test_convert_subtitle_conversion(
     subtitle_format: str,
-    subtitle_file_name: Path,
-    subtitle_converter: SubtitleConverter,
+    output_dir: Path,
 ) -> None:
     """Tests that the text is converted to the correct subtitle format."""
     sample_text = [
         {"start": 10.5, "end": 15.0, "text": "Hello, world!"},
         {"start": 20.0, "end": 25.3, "text": "This is a subtitle."},
     ]
+    subtitle_file_path = generate_subtitles(subtitle_format, sample_text, output_dir)
 
-    output_dir = Path("examples/subtitles")
-    output_path = output_dir / subtitle_file_name
-
-    subtitle_file_path = Path(subtitle_converter(sample_text, output_path))
     assert subtitle_file_path.exists()
 
     with open(subtitle_file_path, "r") as f:
