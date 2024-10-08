@@ -1,9 +1,7 @@
 """Text to VTT converter."""
 
 import logging
-import os
 from pathlib import Path
-from typing import Optional
 
 from koffee.utils.timestamp_converter import convert_to_timestamp
 
@@ -11,14 +9,11 @@ from koffee.utils.timestamp_converter import convert_to_timestamp
 log = logging.getLogger(__name__)
 
 
-def convert_text_to_vtt(transcript: list, output_dir: Optional[Path] = None) -> Path:
+def convert_text_to_vtt(transcript: list, output_dir: Path) -> Path:
     """Converts text to VTT format."""
     log.info("Converting text to VTT format.")
 
-    if output_dir is None:
-        output_file_path = Path(f"{os.getcwd()}/subtitles.vtt")
-    else:
-        output_file_path = output_dir / "subtitles.vtt"
+    output_file_path = output_dir / "subtitles.vtt"
 
     with open(output_file_path, "w", encoding="utf-8") as file:
         file.write("WEBVTT\n\n")
