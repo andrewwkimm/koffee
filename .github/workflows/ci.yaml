@@ -26,6 +26,7 @@ jobs:
         uses: FedericoCarboni/setup-ffmpeg@v3
         with:
           architecture: 'x64'
+          max_attempts: 3
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
