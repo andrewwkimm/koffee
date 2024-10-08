@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Translator</title>
+</head>
+<body>
+    <h1>Video Translator</h1>
+    <form method="POST" action="/">
+        <label for="file_path">Enter Video File Path:</label>
+        <input type="text" id="file_path" name="file_path" required>
+        <button type="submit">Translate</button>
+    </form>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul>
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+</body>
+</html>
