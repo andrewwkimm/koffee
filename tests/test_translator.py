@@ -1,4 +1,4 @@
-"""Tests text translation."""
+"""Tests for text translation."""
 
 from koffee.translator import translate_transcript
 
