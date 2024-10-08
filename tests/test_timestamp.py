@@ -2,6 +2,7 @@
 
 import pytest
 
+from koffee.exceptions import InvalidSubtitleFormatError
 from koffee.utils import convert_to_timestamp
 
 
@@ -30,3 +31,11 @@ def test_convert_to_timestamp(subtitle_format: str) -> None:
     for value, expected in timestamps[subtitle_format].items():
         actual = convert_to_timestamp(value, subtitle_format)
         assert actual == expected
+
+
+@pytest.mark.parametrize("subtitle_format", ["csv", "pdf", "txt"])
+def test_invalid_format(subtitle_format: str) -> None:
+    """Tests that the appropriate error is raised when an invalid format is given."""
+    error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
+    with pytest.raises(InvalidSubtitleFormatError, match=error_message):
+        convert_to_timestamp(42, subtitle_format)
