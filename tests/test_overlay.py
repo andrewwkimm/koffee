@@ -1,4 +1,4 @@
-"""Tests subtitle overlay."""
+"""Tests for subtitle overlay."""
 
 from pathlib import Path
 
