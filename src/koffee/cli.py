@@ -50,9 +50,12 @@ def cli(
     target_language: Annotated[
         str, Parameter(name=("--target_lang", "-t"))
     ] = options.target_language,
-    srt: Annotated[
-        bool, Parameter(name=("--srt", "-s"), group=options_group)
-    ] = options.srt,
+    subtitle_format: Annotated[
+        str, Parameter(name=("--subtitle_format", "-sf"))
+    ] = options.subtitle_format,
+    subtitles: Annotated[
+        bool, Parameter(name=("--subtitles", "-s"), group=options_group)
+    ] = options.subtitles,
     verbose: Annotated[
         bool, Parameter(name=("--verbose", "-V"), group=options_group)
     ] = False,
@@ -73,8 +76,10 @@ def cli(
         Directory for the output file.
     output_name: str
         Name of the output file.
-    srt: bool
-        Write the translated SRT file to disk
+    subtitle_format: str
+        Format to use for the subtitles.
+    subtitles: bool
+        Write the translated subtitle file to disk
     target_language: str
         Language to which the video should be translated.
     verbose: bool
@@ -89,7 +94,8 @@ def cli(
         model=model,
         output_dir=output_dir,
         output_name=output_name,
-        srt=srt,
+        subtitle_format=subtitle_format,
+        subtitles=subtitles,
         target_language=target_language,
     )
     for video in file_path:

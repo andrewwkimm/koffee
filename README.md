@@ -62,6 +62,7 @@ Refer below for a list of all commands and parameters.
     --model, -m                The Whisper model instance to use.
     --output_dir, -o           Directory for the output file.
     --output_name, -n          Name of the output file.
+    --subtitle_format, -sf     Format to use for the subtitles.
     --target_language, -t      Language to which the video should be translated.
 
 ### Options
@@ -69,7 +70,7 @@ Refer below for a list of all commands and parameters.
     --help, -h                 Display this message and exit.
     --version, -v              Display application version.
     --verbose, -V              Print debug logs.
-    --srt, -s                  Write the translated SRT file to disk.
+    --subtitles, -s            Write the translated subtitle file to disk.
 
 ## Contributing
 

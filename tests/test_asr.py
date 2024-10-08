@@ -1,4 +1,4 @@
-"""Tests ASR."""
+"""Tests for ASR."""
 
 from koffee.asr import transcribe_text
 from koffee.data.config import koffeeConfig

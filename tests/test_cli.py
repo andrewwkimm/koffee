@@ -1,4 +1,4 @@
-"""Tests CLI."""
+"""Tests for CLI."""
 
 from pathlib import Path
 
