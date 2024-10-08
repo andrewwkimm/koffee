@@ -34,6 +34,11 @@ jobs:
         run: |
           make build
 
+      - name: Generate coverage report
+        run: |
+          coverage report
+          coverage xml
+
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v4
         with:
