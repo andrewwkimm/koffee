@@ -15,6 +15,7 @@ class koffeeConfig(BaseModel):
     output_dir: Optional[Path] = None
     output_name: Optional[str] = None
     subtitle_format: str = "srt"
+    subtitles: bool = False
     target_language: str = "en"
 
     class Config:
