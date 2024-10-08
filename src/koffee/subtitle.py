@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from koffee.exceptions import InvalidSubtitleFormatError
 from koffee.utils import convert_text_to_srt, convert_text_to_vtt
 
 
@@ -21,6 +22,7 @@ def generate_subtitles(
     elif subtitle_format == "vtt":
         subtitle_file_path = convert_text_to_vtt(transcript, output_dir)
     else:
-        raise ValueError(f"Invalid subtitle format: {subtitle_format}")
+        error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
+        raise InvalidSubtitleFormatError(error_message)
 
     return subtitle_file_path
