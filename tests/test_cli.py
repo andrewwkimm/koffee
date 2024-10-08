@@ -40,6 +40,22 @@ def test_cli(video_file_path: Path, output_name: str) -> None:
     assert output_video_file_path.exists()
 
 
+def test_subtitles() -> None:
+    """Tests if the subtitles flag writes the subtitle file to disk."""
+    subtitle_file_path = Path("subtitles.srt")
+
+    cli(
+        korean_video_file_path,
+        output_dir=output_directory_path,
+        output_name=korean_video_file_name,
+        subtitles=True,
+    )
+
+    assert subtitle_file_path.exists()
+
+    subtitle_file_path.unlink()
+
+
 def test_verbose(mocker: MockerFixture) -> None:
     """Tests if verbose flag sets log level to DEBUG."""
     mock_logger = mocker.patch("logging.getLogger")
