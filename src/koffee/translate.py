@@ -9,8 +9,8 @@ from koffee.asr import transcribe_text
 from koffee.data.config import koffeeConfig
 from koffee.exceptions import InvalidVideoFileError
 from koffee.overlay import overlay_subtitles
+from koffee.subtitle import generate_subtitles
 from koffee.translator import translate_transcript
-from koffee.utils.text_to_srt_converter import convert_text_to_srt
 
 
 log = logging.getLogger(__name__)
@@ -45,12 +45,14 @@ def translate(
         config.model,
     )
     translated_transcript = translate_transcript(transcript, config.target_language)
-    translated_srt_file = convert_text_to_srt(translated_transcript)
+    translated_subtitle_file = generate_subtitles(
+        config.subtitle_format, translated_transcript
+    )
 
-    overlay_subtitles(video_file_path, translated_srt_file, output_path)
+    overlay_subtitles(video_file_path, translated_subtitle_file, output_path)
 
-    if config.srt is False:
-        translated_srt_file.unlink()
+    if config.subtitles is False:
+        translated_subtitle_file.unlink()
 
     log.info("Finished processing video!")
 
