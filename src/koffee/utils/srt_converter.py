@@ -1,10 +1,11 @@
 """Text to SRT converter."""
 
-from datetime import timedelta
 import logging
 import os
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
+
+from koffee.utils import convert_to_timestamp
 
 
 log = logging.getLogger(__name__)
@@ -34,13 +35,3 @@ def convert_text_to_srt(
 
     log.debug(repr(output_file_path))
     return output_file_path
-
-
-def convert_to_timestamp(seconds: Union[float, int]) -> str:
-    """Converts seconds to SRT timestamp format."""
-    ms = int((seconds % 1) * 1000)
-    ts = timedelta(seconds=int(seconds))
-    hours, remainder = divmod(ts.seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    timestamp = f"{hours:02}:{minutes:02}:{seconds:02},{ms:03}"
-    return timestamp
