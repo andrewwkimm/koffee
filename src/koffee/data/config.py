@@ -18,7 +18,7 @@ class koffeeConfig(BaseModel):
     subtitles: bool = False
     target_language: str = "en"
 
-    class Config:
+    class DictConfig:
         """Configuration to remove all leading and trailing white space."""
 
         str_strip_whitespace = True
