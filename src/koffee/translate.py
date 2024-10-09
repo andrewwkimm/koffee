@@ -37,7 +37,6 @@ def translate(
     output_path = get_output_path(
         video_file_path, config.output_dir, config.output_name
     )
-    log.debug(f"output_path: {repr(output_path)}")
 
     transcript = transcribe_text(
         str(video_file_path),
