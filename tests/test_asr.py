@@ -1,7 +1,7 @@
 """Tests for ASR."""
 
 from koffee.asr import transcribe_text
-from koffee.data.config import koffeeConfig
+from koffee.data.config import KoffeeConfig
 
 
 def clean_transcript(transcript: dict) -> dict:
@@ -21,7 +21,7 @@ def clean_transcript(transcript: dict) -> dict:
 def test_transcribe_text() -> None:
     """Tests that ASR successfully transcribes from a video file."""
     video_file_path = "examples/videos/sample_korean_video.mp4"
-    config = koffeeConfig()
+    config = KoffeeConfig()
 
     transcript = transcribe_text(
         video_file_path, config.compute_type, config.device, config.model

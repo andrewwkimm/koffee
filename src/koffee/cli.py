@@ -7,7 +7,7 @@ from cyclopts import App, Group, Parameter, validators
 from rich.logging import RichHandler
 from typing import Annotated, Optional
 
-from koffee.data.config import koffeeConfig
+from koffee.data.config import KoffeeConfig
 from koffee.translate import translate
 
 
@@ -30,7 +30,7 @@ options_group = Group("Options", sort_key=2)
 app["--help"].group = options_group
 app["--version"].group = options_group
 
-options = koffeeConfig()
+options = KoffeeConfig()
 
 
 @app.default()
@@ -88,7 +88,7 @@ def cli(
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    config = koffeeConfig(
+    config = KoffeeConfig(
         compute_type=compute_type,
         device=device,
         model=model,

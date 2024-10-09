@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 from koffee.asr import transcribe_text
-from koffee.data.config import koffeeConfig
+from koffee.data.config import KoffeeConfig
 from koffee.exceptions import InvalidVideoFileError
 from koffee.overlay import overlay_subtitles
 from koffee.subtitle import generate_subtitles
@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 def translate(
     video_file_path: Union[Path, str],
-    config: Optional[koffeeConfig] = None,
+    config: Optional[KoffeeConfig] = None,
     **kwargs: Any,
 ) -> Path:
     """Processes a video file for translation and subtitle overlay."""
@@ -30,9 +30,9 @@ def translate(
         raise InvalidVideoFileError(error_message)
 
     if config is None:
-        config = koffeeConfig(**kwargs)
+        config = KoffeeConfig(**kwargs)
     else:
-        config = koffeeConfig(**{**config.model_dump(), **kwargs})
+        config = KoffeeConfig(**{**config.model_dump(), **kwargs})
 
     output_path = get_output_path(
         video_file_path, config.output_dir, config.output_name

@@ -6,7 +6,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-class koffeeConfig(BaseModel):
+class KoffeeConfig(BaseModel):
     """Configuration data model for koffee."""
 
     compute_type: str = "default"
