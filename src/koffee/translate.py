@@ -37,6 +37,7 @@ def translate(
     output_path = get_output_path(
         video_file_path, config.output_dir, config.output_name
     )
+    log.debug(f"output_path: {repr(output_path)}")
 
     transcript = transcribe_text(
         str(video_file_path),
@@ -65,7 +66,7 @@ def get_output_path(
     output_name: Optional[str],
 ) -> Path:
     """Gets the output path for the translated video file."""
-    log.debug("output_name: " + repr(output_name))
+    log.debug(f"output_name: {repr(output_name)}")
 
     file_path = Path(video_file_path)
     file_dir = output_dir if output_dir is not None else file_path.parent
@@ -77,5 +78,5 @@ def get_output_path(
     file_ext = file_path.suffix
 
     output_path = file_dir / (file_name + file_ext)
-    log.debug("output_dir: " + repr(output_path))
+    log.debug(f"output_dir: {repr(output_path)}")
     return output_path

@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 def convert_to_timestamp(seconds: Union[float, int], subtitle_format: str) -> str:
     """Converts seconds to SRT timestamp format."""
-    log.debug("subtitle_format: " + repr(subtitle_format))
+    log.debug(f"subtitle_format: {repr(subtitle_format)}")
 
     ms = int((seconds % 1) * 1000)
     ts = timedelta(seconds=int(seconds))
