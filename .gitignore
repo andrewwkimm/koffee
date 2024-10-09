@@ -1,5 +1,6 @@
 # Absolute paths
 /.coverage
+/.env
 /.nox
 /.pytest_cache
 /.venv
