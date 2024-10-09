@@ -9,7 +9,7 @@ get_env_value() {
         # Check if the key exists in the .env file
         value=$(grep "^$key=" .env | cut -d '=' -f2)
     fi
-    
+
     echo "$value"
 }
 
@@ -27,7 +27,7 @@ if [ -z "$git_email" ]; then
 fi
 
 # Check if GIT_USERNAME and GIT_EMAIL already exist in .env file
-if ! (grep -q "^GIT_USERNAME=" .env && grep -q "^GIT_EMAIL=" .env); then
+if ! (grep -q "^GIT_USERNAME=" .env 2>/dev/null && grep -q "^GIT_EMAIL=" .env 2>/dev/null); then
     # Ask if user wants to write Git credentials to .env file
     write_to_env_file=false
     read -p "Write Git credentials to .env file? (y/n): " response
