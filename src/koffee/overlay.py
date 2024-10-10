@@ -6,6 +6,8 @@ from typing import Union
 
 import ffmpeg
 
+from koffee.exceptions import SubtitleOverlayError
+
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +23,9 @@ def overlay_subtitles(
 
     log.info("Overlaying subtitles.")
 
-    ffmpeg.input(video_file_path).output(
-        str(video_file_output_path), vf=f"subtitles={srt_path}"
-    ).run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
+    try:
+        ffmpeg.input(video_file_path).output(
+            str(video_file_output_path), vf=f"subtitles={srt_path}"
+        ).run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
+    except Exception as error:
+        raise SubtitleOverlayError(error) from error
