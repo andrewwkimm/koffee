@@ -49,7 +49,7 @@ def translate(
         config.subtitle_format, translated_transcript
     )
 
-    overlay_subtitles(video_file_path, translated_subtitle_file, output_path)
+    overlay_subtitles(translated_subtitle_file, video_file_path, output_path)
 
     if config.subtitles is False:
         translated_subtitle_file.unlink()
