@@ -15,9 +15,10 @@ def convert_to_timestamp(seconds: Union[float, int], subtitle_format: str) -> st
     """Converts seconds to SRT timestamp format."""
     log.debug(f"subtitle_format: {repr(subtitle_format)}")
 
-    seconds = Decimal(str(seconds))
-    ms = int((seconds % 1) * 1000)
-    ts = timedelta(seconds=int(seconds))
+    seconds_decimal = Decimal(str(seconds))
+    seconds_int = int(seconds_decimal)
+    ms = int((seconds_decimal % 1) * 1000)
+    ts = timedelta(seconds=seconds_int)
     hours, remainder = divmod(ts.seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
 
