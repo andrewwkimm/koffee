@@ -18,9 +18,6 @@ def overlay_subtitles(
     video_file_output_path: Union[Path, str],
 ) -> None:
     """Overlay subtitles to a video file."""
-    # TODO: Investigate why setting output path as a Pathlib
-    #       object causes error when the other parameters don't
-
     log.info("Overlaying subtitles.")
 
     try:
