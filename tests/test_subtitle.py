@@ -58,15 +58,15 @@ def test_subtitle_generator(
 When we got out of the long tunnel of the border, it was an eyebled.
 
 2
-00:00:07,799 --> 00:00:10,740
+00:00:07,800 --> 00:00:10,740
 The bottom of the night has been changed.
 
 3
-00:00:12,320 --> 00:00:14,939
+00:00:12,320 --> 00:00:14,940
 The train stopped at the signal station.
 
 4
-00:00:16,980 --> 00:00:24,059
+00:00:16,980 --> 00:00:24,060
 On the other side, a virgin approached and opened a window in front of the Shimmura.
 """
     elif subtitle_format == "vtt":
@@ -75,13 +75,13 @@ On the other side, a virgin approached and opened a window in front of the Shimm
 00:00:00.000 --> 00:00:06.280
 When we got out of the long tunnel of the border, it was an eyebled.
 
-00:00:07.799 --> 00:00:10.740
+00:00:07.800 --> 00:00:10.740
 The bottom of the night has been changed.
 
-00:00:12.320 --> 00:00:14.939
+00:00:12.320 --> 00:00:14.940
 The train stopped at the signal station.
 
-00:00:16.980 --> 00:00:24.059
+00:00:16.980 --> 00:00:24.060
 On the other side, a virgin approached and opened a window in front of the Shimmura.
 """
     else:
