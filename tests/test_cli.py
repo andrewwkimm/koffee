@@ -2,6 +2,8 @@
 
 import logging
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 from pytest_mock import MockerFixture
@@ -38,6 +40,14 @@ def test_cli(video_file_path: Path, output_name: str) -> None:
     output_video_file_path = output_directory_path / (output_name + file_ext)
 
     assert output_video_file_path.exists()
+
+
+def test_script_run() -> None:
+    """Tests that the CLI script runs."""
+    cli_path = Path("src/koffee/cli.py")
+    result = subprocess.run([sys.executable, cli_path], capture_output=True, text=True)
+
+    assert result.returncode == 0
 
 
 def test_subtitles() -> None:
