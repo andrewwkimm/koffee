@@ -1,6 +1,7 @@
 """Float to timestamp converter."""
 
 from datetime import timedelta
+from decimal import Decimal
 import logging
 from typing import Union
 
@@ -14,6 +15,7 @@ def convert_to_timestamp(seconds: Union[float, int], subtitle_format: str) -> st
     """Converts seconds to SRT timestamp format."""
     log.debug(f"subtitle_format: {repr(subtitle_format)}")
 
+    seconds = Decimal(str(seconds))
     ms = int((seconds % 1) * 1000)
     ts = timedelta(seconds=int(seconds))
     hours, remainder = divmod(ts.seconds, 3600)
