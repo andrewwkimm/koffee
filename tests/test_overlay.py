@@ -3,7 +3,9 @@
 from pathlib import Path
 
 import pytest
+from pytest_mock import MockerFixture
 
+from koffee.exceptions import SubtitleOverlayError
 from koffee.overlay import overlay_subtitles
 
 
@@ -14,8 +16,8 @@ def video_file_path() -> Path:
 
 
 @pytest.fixture
-def srt_file_path() -> Path:
-    """Pytest fixture for the SRT file."""
+def subtitle_file_path() -> Path:
+    """Pytest fixture for the subtitles."""
     return Path("examples/subtitles/sample_srt_file.srt")
 
 
@@ -26,9 +28,28 @@ def output_file_path() -> Path:
 
 
 def test_overlay(
-    video_file_path: Path, srt_file_path: Path, output_file_path: Path
+    video_file_path: Path, subtitle_file_path: Path, output_file_path: Path
 ) -> None:
     """Tests that the subtitle has been overlayed onto the video."""
-    overlay_subtitles(video_file_path, srt_file_path, output_file_path)
+    overlay_subtitles(subtitle_file_path, video_file_path, output_file_path)
 
     assert output_file_path.exists()
+
+
+def test_exception_handling(
+    subtitle_file_path: Path,
+    video_file_path: Path,
+    output_file_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    """Tests that exception is caught and an error is raised."""
+    error = "FFmpegError"
+    error_message = f"Subtitle overlaying failed: {error}"
+
+    mocker.patch("ffmpeg.input", side_effect=Exception("FFmpegError"))
+
+    with pytest.raises(SubtitleOverlayError) as exc_info:
+        overlay_subtitles(subtitle_file_path, video_file_path, output_file_path)
+
+    assert isinstance(exc_info.value.__cause__, Exception)
+    assert error_message in str(exc_info.value)

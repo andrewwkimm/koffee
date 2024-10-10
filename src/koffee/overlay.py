@@ -25,4 +25,5 @@ def overlay_subtitles(
             str(output_file_path), vf=f"subtitles={subtitle_file_path}"
         ).run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
     except Exception as error:
-        raise SubtitleOverlayError(error) from error
+        error_message = f"Subtitle overlaying failed: {error}"
+        raise SubtitleOverlayError(error_message) from error
