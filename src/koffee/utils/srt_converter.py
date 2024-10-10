@@ -11,9 +11,10 @@ log = logging.getLogger(__name__)
 
 def convert_text_to_srt(transcript: list, output_dir: Path) -> Path:
     """Converts text to SRT format."""
-    log.info("Converting text to SRT format.")
+    log.debug("Converting text to SRT format.")
 
     output_file_path = output_dir / "subtitles.srt"
+    log.debug(f"output_file_path: {repr(output_file_path)}")
 
     with open(output_file_path, "w", encoding="utf-8") as file:
         for idx, subtitle in enumerate(transcript, 1):
