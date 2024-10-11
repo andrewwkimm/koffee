@@ -43,14 +43,14 @@ def test_cli(language: str, subtitle_file_path: Path) -> None:
 
     translated_video_file_name = f"sample_{language}_video_translated.mp4"
     translated_video_file_path = output_directory_path / translated_video_file_name
-    actual_video_file_path = overlay_subtitles(
+    expected_video_file_path = overlay_subtitles(
         subtitle_file_path, video_file_path, translated_video_file_path
     )
 
-    output_video_file_path = output_directory_path / (output_file_name + file_ext)
+    actual_video_file_path = output_directory_path / (output_file_name + file_ext)
 
     actual = get_md5_checksum(actual_video_file_path)
-    expected = get_md5_checksum(output_video_file_path)
+    expected = get_md5_checksum(expected_video_file_path)
 
     assert actual == expected
 
