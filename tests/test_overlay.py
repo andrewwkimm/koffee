@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import ffmpeg
 import pytest
 from pytest_mock import MockerFixture
 
@@ -43,13 +44,10 @@ def test_exception_handling(
     mocker: MockerFixture,
 ) -> None:
     """Tests that exception is caught and an error is raised."""
-    error = "FFmpegError"
-    error_message = f"Subtitle overlaying failed: {error}"
-
-    mocker.patch("ffmpeg.input", side_effect=Exception("FFmpegError"))
+    mocker.patch("ffmpeg.input", side_effect=ffmpeg.Error("ffmpeg", "", b"FFmpegError"))
 
     with pytest.raises(SubtitleOverlayError) as exc_info:
         overlay_subtitles(subtitle_file_path, video_file_path, output_file_path)
 
-    assert isinstance(exc_info.value.__cause__, Exception)
-    assert error_message in str(exc_info.value)
+    assert isinstance(exc_info.value.__cause__, ffmpeg.Error)
+    assert "FFmpegError" in str(exc_info.value)

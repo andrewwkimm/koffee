@@ -24,8 +24,8 @@ def overlay_subtitles(
         ffmpeg.input(video_file_path).output(
             str(output_file_path), vf=f"subtitles={subtitle_file_path}"
         ).run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
-    except Exception as error:
-        error_message = f"Subtitle overlaying failed: {error}"
+    except ffmpeg.Error as error:
+        error_message = error.stderr.decode("utf-8")
         raise SubtitleOverlayError(error_message) from error
 
     return output_file_path
