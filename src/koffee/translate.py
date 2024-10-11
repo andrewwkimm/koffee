@@ -20,7 +20,7 @@ def translate(
     video_file_path: Union[Path, str],
     config: Optional[KoffeeConfig] = None,
     **kwargs: Any,
-) -> Path:
+) -> Union[Path, str]:
     """Processes a video file for translation and subtitle overlay."""
     log.info("Processing video...")
 
@@ -45,18 +45,20 @@ def translate(
         config.model,
     )
     translated_transcript = translate_transcript(transcript, config.target_language)
-    translated_subtitle_file = generate_subtitles(
+    subtitle_file_path = generate_subtitles(
         config.subtitle_format, translated_transcript
     )
 
-    overlay_subtitles(translated_subtitle_file, video_file_path, output_path)
+    output_video_file_path = overlay_subtitles(
+        subtitle_file_path, video_file_path, output_path
+    )
 
     if config.subtitles is False:
-        translated_subtitle_file.unlink()
+        subtitle_file_path.unlink()
 
     log.info("Finished processing video!")
 
-    return output_path
+    return output_video_file_path
 
 
 def get_output_path(
