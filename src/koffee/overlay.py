@@ -16,7 +16,7 @@ def overlay_subtitles(
     subtitle_file_path: Union[Path, str],
     video_file_path: Union[Path, str],
     output_file_path: Union[Path, str],
-) -> None:
+) -> Union[Path, str]:
     """Overlay subtitles to a video file."""
     log.info("Overlaying subtitles.")
 
@@ -27,3 +27,5 @@ def overlay_subtitles(
     except Exception as error:
         error_message = f"Subtitle overlaying failed: {error}"
         raise SubtitleOverlayError(error_message) from error
+
+    return output_file_path
