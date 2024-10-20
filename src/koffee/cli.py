@@ -42,10 +42,10 @@ def cli(
     device: Annotated[str, Parameter(name=("--device", "-d"))] = options.device,
     model: Annotated[str, Parameter(name=("--model", "-m"))] = options.model,
     output_dir: Optional[
-        Annotated[Path, Parameter(name=("--output-dir", "-o"))]
+        Annotated[Path, Parameter(name=("--output_dir", "-o"))]
     ] = None,
     output_name: Optional[
-        Annotated[str, Parameter(name=("--output-name", "-n"))]
+        Annotated[str, Parameter(name=("--output_name", "-n"))]
     ] = None,
     target_language: Annotated[
         str, Parameter(name=("--target_lang", "-t"))
