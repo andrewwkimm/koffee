@@ -103,12 +103,7 @@ def cli(
 
 
 def main() -> None:
-    """Wraps app() so that it is accessible to poetry.
-
-    Poetry's `scripts` configuration expects the entry point to be a callable
-    function directly accessible from the module specified, but since main is
-    decorated, that is not possible.
-    """
+    """Wraps app() so that it is accessible to poetry."""
     app()
 
 
