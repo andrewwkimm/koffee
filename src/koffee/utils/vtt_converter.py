@@ -11,9 +11,10 @@ log = logging.getLogger(__name__)
 
 def convert_text_to_vtt(transcript: list, output_dir: Path) -> Path:
     """Converts text to VTT format."""
-    log.info("Converting text to VTT format.")
+    log.debug("Converting text to VTT format.")
 
     output_file_path = output_dir / "subtitles.vtt"
+    log.debug(f"output_file_path: {repr(output_file_path)}")
 
     with open(output_file_path, "w", encoding="utf-8") as file:
         file.write("WEBVTT\n\n")

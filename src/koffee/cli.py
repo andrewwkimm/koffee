@@ -7,7 +7,7 @@ from cyclopts import App, Group, Parameter, validators
 from rich.logging import RichHandler
 from typing import Annotated, Optional
 
-from koffee.data.config import koffeeConfig
+from koffee.data.config import KoffeeConfig
 from koffee.translate import translate
 
 
@@ -30,7 +30,7 @@ options_group = Group("Options", sort_key=2)
 app["--help"].group = options_group
 app["--version"].group = options_group
 
-options = koffeeConfig()
+options = KoffeeConfig()
 
 
 @app.default()
@@ -42,10 +42,10 @@ def cli(
     device: Annotated[str, Parameter(name=("--device", "-d"))] = options.device,
     model: Annotated[str, Parameter(name=("--model", "-m"))] = options.model,
     output_dir: Optional[
-        Annotated[Path, Parameter(name=("--output-dir", "-o"))]
+        Annotated[Path, Parameter(name=("--output_dir", "-o"))]
     ] = None,
     output_name: Optional[
-        Annotated[str, Parameter(name=("--output-name", "-n"))]
+        Annotated[str, Parameter(name=("--output_name", "-n"))]
     ] = None,
     target_language: Annotated[
         str, Parameter(name=("--target_lang", "-t"))
@@ -88,7 +88,7 @@ def cli(
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    config = koffeeConfig(
+    config = KoffeeConfig(
         compute_type=compute_type,
         device=device,
         model=model,
@@ -103,14 +103,9 @@ def cli(
 
 
 def main() -> None:
-    """Wraps app() so that it is accessible to poetry.
-
-    Poetry's `scripts` configuration expects the entry point to be a callable
-    function directly accessible from the module specified, but since main is
-    decorated, that is not possible.
-    """
+    """Wraps app() so that it is accessible to poetry."""
     app()
 
 
 if __name__ == "__main__":
-    app()
+    main()

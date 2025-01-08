@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 from koffee.asr import transcribe_text
-from koffee.data.config import koffeeConfig
+from koffee.data.config import KoffeeConfig
 from koffee.exceptions import InvalidVideoFileError
 from koffee.overlay import overlay_subtitles
 from koffee.subtitle import generate_subtitles
@@ -18,9 +18,9 @@ log = logging.getLogger(__name__)
 
 def translate(
     video_file_path: Union[Path, str],
-    config: Optional[koffeeConfig] = None,
+    config: Optional[KoffeeConfig] = None,
     **kwargs: Any,
-) -> Path:
+) -> Union[Path, str]:
     """Processes a video file for translation and subtitle overlay."""
     log.info("Processing video...")
 
@@ -30,9 +30,9 @@ def translate(
         raise InvalidVideoFileError(error_message)
 
     if config is None:
-        config = koffeeConfig(**kwargs)
+        config = KoffeeConfig(**kwargs)
     else:
-        config = koffeeConfig(**{**config.model_dump(), **kwargs})
+        config = KoffeeConfig(**{**config.model_dump(), **kwargs})
 
     output_path = get_output_path(
         video_file_path, config.output_dir, config.output_name
@@ -45,18 +45,20 @@ def translate(
         config.model,
     )
     translated_transcript = translate_transcript(transcript, config.target_language)
-    translated_subtitle_file = generate_subtitles(
+    subtitle_file_path = generate_subtitles(
         config.subtitle_format, translated_transcript
     )
 
-    overlay_subtitles(video_file_path, translated_subtitle_file, output_path)
+    output_video_file_path = overlay_subtitles(
+        subtitle_file_path, video_file_path, output_path
+    )
 
     if config.subtitles is False:
-        translated_subtitle_file.unlink()
+        subtitle_file_path.unlink()
 
     log.info("Finished processing video!")
 
-    return output_path
+    return output_video_file_path
 
 
 def get_output_path(
@@ -65,7 +67,7 @@ def get_output_path(
     output_name: Optional[str],
 ) -> Path:
     """Gets the output path for the translated video file."""
-    log.debug("output_name: " + repr(output_name))
+    log.debug(f"output_name: {repr(output_name)}")
 
     file_path = Path(video_file_path)
     file_dir = output_dir if output_dir is not None else file_path.parent
@@ -77,5 +79,5 @@ def get_output_path(
     file_ext = file_path.suffix
 
     output_path = file_dir / (file_name + file_ext)
-    log.debug("output_dir: " + repr(output_path))
+    log.debug(f"output_dir: {repr(output_path)}")
     return output_path

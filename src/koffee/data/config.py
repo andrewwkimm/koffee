@@ -6,7 +6,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-class koffeeConfig(BaseModel):
+class KoffeeConfig(BaseModel):
     """Configuration data model for koffee."""
 
     compute_type: str = "default"
@@ -18,7 +18,7 @@ class koffeeConfig(BaseModel):
     subtitles: bool = False
     target_language: str = "en"
 
-    class Config:
+    class DictConfig:
         """Configuration to remove all leading and trailing white space."""
 
         str_strip_whitespace = True

@@ -18,12 +18,12 @@ def test_convert_to_timestamp(subtitle_format: str) -> None:
     timestamps = {
         "srt": {
             10.5: "00:00:10,500",
-            60.123: "00:01:00,122",
+            60.12: "00:01:00,120",
             3600: "01:00:00,000",
         },
         "vtt": {
             10.5: "00:00:10.500",
-            60.123: "00:01:00.122",
+            60.12: "00:01:00.120",
             3600: "01:00:00.000",
         },
     }
@@ -33,7 +33,7 @@ def test_convert_to_timestamp(subtitle_format: str) -> None:
         assert actual == expected
 
 
-@pytest.mark.parametrize("subtitle_format", ["csv", "pdf", "txt"])
+@pytest.mark.parametrize("subtitle_format", ["csv", "pdf", "txt", 42, 17.0])
 def test_invalid_format(subtitle_format: str) -> None:
     """Tests that the appropriate error is raised when an invalid format is given."""
     error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
