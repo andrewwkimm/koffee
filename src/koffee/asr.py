@@ -18,7 +18,10 @@ def transcribe_text(
     log.info("Transcribing text.")
 
     loaded_model = WhisperModel(
-        model_size_or_path=model, device=device, compute_type=compute_type
+        model_size_or_path=model,
+        device=device,
+        compute_type=compute_type,
+        local_files_only=False,
     )
     segments, info = loaded_model.transcribe(video_file)
 
