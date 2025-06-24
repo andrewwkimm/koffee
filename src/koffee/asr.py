@@ -2,6 +2,7 @@
 
 import logging
 from dataclasses import asdict
+from typing import Any
 
 from faster_whisper import WhisperModel  # noqa: E402
 
@@ -25,6 +26,6 @@ def transcribe_text(
     )
     segments, info = loaded_model.transcribe(video_file)
 
-    transcript = {"segments": [asdict(segment) for segment in segments]}
+    transcript: dict[str, Any] = {"segments": [asdict(segment) for segment in segments]}
     transcript["language"] = info.language
     return transcript
