@@ -1,5 +1,7 @@
 """Behavior test steps for koffee APIs."""
 
+# ruff: noqa: F811
+
 from pathlib import Path
 
 from behave import given, then, when
