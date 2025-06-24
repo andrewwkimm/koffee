@@ -1,6 +1,7 @@
 """Text extractor from audio."""
 
 import logging
+from dataclasses import asdict
 
 from faster_whisper import WhisperModel  # noqa: E402
 
@@ -21,6 +22,6 @@ def transcribe_text(
     )
     segments, info = loaded_model.transcribe(video_file)
 
-    transcript = {"segments": [segment._asdict() for segment in segments]}
+    transcript = {"segments": [asdict(segment) for segment in segments]}
     transcript["language"] = info.language
     return transcript
