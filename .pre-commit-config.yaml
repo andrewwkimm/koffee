@@ -1,21 +1,22 @@
 repos:
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.6.0
-  hooks:
-  - id: trailing-whitespace
-  - id: end-of-file-fixer
-    exclude: ^docs/
-  - id: check-yaml
-  - id: check-added-large-files
-- repo: local
-  hooks:
-  - id: black
-    name: black
-    entry: poetry run black
-    language: system
-    types: [python]
-  - id: flake8
-    name: flake8
-    entry: poetry run flake8
-    language: system
-    types: [python]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+        exclude: ^docs/
+      - id: check-yaml
+      - id: check-added-large-files
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4  # match your pyproject.toml ruff version
+    hooks:
+      - id: ruff
+        args: ["--fix"]  # autoformat like black + lint like flake8
+        additional_dependencies: []  # optional if you're using poetry
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        args: ["--config-file=pyproject.toml", --ignore-missing-import]
