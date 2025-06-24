@@ -1,34 +1,38 @@
-[tool.poetry]
+[project]
 name = "koffee"
 version = "0.1.0"
 description = "A Korean<>English video file translator."
-authors = ["Kim, Andrew <andrewkimka@gmail.com>"]
+authors = [
+    {name = "Kim, Andrew", email = "andrewkimka@gmail.com"}
+]
 readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "faster-whisper>=1.0.3",
+    "transformers>=4.39.3",
+    "ffmpeg-python>=0.2.0",
+    "torch>=2.2.2",
+    "accelerate>=0.29.3",
+    "cyclopts>=2.9.9",
+    "rich>=13.9.2",
+    "pydantic>=2.9.2",
+    "sentencepiece>=0.2.0",
+    "sacremoses>=0.1.1",
+]
 
-[tool.poetry.scripts]
+[dependency-groups]
+dev = [
+    "coverage>=7.9.1",
+    "mypy>=1.16.1",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "pytest-mock>=3.14.1",
+    "ruff>=0.12.0",
+    "behave>=1.2.6",
+]
+
+[project.scripts]
 koffee = "koffee.cli:main"
-
-[tool.poetry.dependencies]
-python = ">=3.10"
-faster-whisper = "^1.0.3"
-transformers = "^4.39.3"
-ffmpeg-python = "^0.2.0"
-torch = "^2.2.2"
-accelerate = "^0.29.3"
-cyclopts = "^2.9.9"
-rich = "^13.9.2"
-pydantic = "^2.9.2"
-sentencepiece = "^0.2.0"
-sacremoses = "^0.1.1"
-
-[tool.poetry.group.dev.dependencies]
-coverage = "^7.9.1"
-mypy = "^1.16.1"
-pytest = "^8.4.1"
-pytest-cov = "^6.2.1"
-pytest-mock = "^3.14.1"
-ruff = "^0.12.0"
-behave = "^1.2.6"
 
 [tool.coverage.run]
 branch = true
@@ -39,7 +43,7 @@ show_missing = true
 fail_under = 80
 
 [tool.pytest.ini_options]
-testpaths=["tests"]
+testpaths = ["tests"]
 
 [tool.pyright]
 include = ["src"]
@@ -49,6 +53,7 @@ files = ["src", "tests"]
 cache_dir = "${HOME}/.mypy_cache"
 ignore_errors = false
 disallow_untyped_defs = true
+exclude = 'features/steps/.*'
 
 [tool.ruff]
 target-version = "py311"
@@ -76,5 +81,5 @@ exclude = ["tests/data", ".venv", "build", "dist"]
 convention = "google"  # or "numpy" or "pep257"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
