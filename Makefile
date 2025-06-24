@@ -28,11 +28,23 @@ type_check:
 
 ################################################################################
 
+dist:
+	hatch build -t wheel
+
+ship:
+	make build
+	make dist
+	nox -s test_build_from_wheel
+
+################################################################################
+
 .PHONY: \
 	build \
+	dist \
 	help \
 	lint \
 	reformat \
 	setup \
+	ship \
 	test \
 	type_check
