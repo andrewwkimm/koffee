@@ -17,10 +17,10 @@ build:
 	make accept
 
 lint:
-	poetry run flake8 src tests
+	poetry run ruff check --fix .
 
 reformat:
-	poetry run black src tests
+	poetry run ruff format .
 
 setup:
 	pre-commit install --install-hooks

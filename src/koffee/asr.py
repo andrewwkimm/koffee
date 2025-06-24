@@ -4,7 +4,6 @@ import logging
 
 from faster_whisper import WhisperModel  # noqa: E402
 
-
 log = logging.getLogger(__name__)
 
 

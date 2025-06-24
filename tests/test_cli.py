@@ -1,9 +1,9 @@
 """Tests for CLI."""
 
 import logging
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 from pytest_mock import MockerFixture
@@ -11,7 +11,6 @@ from pytest_mock import MockerFixture
 from koffee.cli import cli
 from koffee.overlay import overlay_subtitles
 from koffee.utils import get_md5_checksum
-
 
 korean_subtitle_file_path = Path("examples/subtitles/sample_srt_file.srt")
 korean_video_file_path = Path("examples/videos/sample_korean_video.mp4")
@@ -58,7 +57,9 @@ def test_cli(language: str, subtitle_file_path: Path) -> None:
 def test_script_run() -> None:
     """Tests that the CLI script runs."""
     cli_path = Path("src/koffee/cli.py")
-    result = subprocess.run([sys.executable, cli_path], capture_output=True, text=True)
+    result = subprocess.run(
+        [sys.executable, cli_path], check=False, capture_output=True, text=True
+    )
 
     assert result.returncode == 0
 

@@ -1,7 +1,6 @@
 """The koffee Configuration."""
 
 from pathlib import Path
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -12,8 +11,8 @@ class KoffeeConfig(BaseModel):
     compute_type: str = "default"
     device: str = "auto"
     model: str = "large-v3"
-    output_dir: Optional[Path] = None
-    output_name: Optional[str] = None
+    output_dir: Path | None = None
+    output_name: str | None = None
     subtitle_format: str = "srt"
     subtitles: bool = False
     target_language: str = "en"

@@ -2,14 +2,13 @@
 
 import logging
 from pathlib import Path
+from typing import Annotated
 
 from cyclopts import App, Group, Parameter, validators
 from rich.logging import RichHandler
-from typing import Annotated, Optional
 
 from koffee.data.config import KoffeeConfig
 from koffee.translate import translate
-
 
 logging.basicConfig(
     level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
@@ -34,19 +33,15 @@ options = KoffeeConfig()
 
 
 @app.default()
-def cli(
+def cli(  # noqa: PLR0913
     *file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
     compute_type: Annotated[
         str, Parameter(name=("--compute-type", "-c"))
     ] = options.compute_type,
     device: Annotated[str, Parameter(name=("--device", "-d"))] = options.device,
     model: Annotated[str, Parameter(name=("--model", "-m"))] = options.model,
-    output_dir: Optional[
-        Annotated[Path, Parameter(name=("--output_dir", "-o"))]
-    ] = None,
-    output_name: Optional[
-        Annotated[str, Parameter(name=("--output_name", "-n"))]
-    ] = None,
+    output_dir: Annotated[Path, Parameter(name=("--output_dir", "-o"))] | None = None,
+    output_name: Annotated[str, Parameter(name=("--output_name", "-n"))] | None = None,
     target_language: Annotated[
         str, Parameter(name=("--target_lang", "-t"))
     ] = options.target_language,

@@ -26,7 +26,9 @@ def test_subtitle_generator(
         {
             "start": 0.0,
             "end": 6.28,
-            "text": "When we got out of the long tunnel of the border, it was an eyebled.",
+            "text": (
+                "When we got out of the long tunnel of the border, it was an eyebled."
+            ),
         },
         {
             "start": 7.8,
@@ -41,7 +43,10 @@ def test_subtitle_generator(
         {
             "start": 16.98,
             "end": 24.06,
-            "text": "On the other side, a virgin approached and opened a window in front of the Shimmura.",
+            "text": (
+                "On the other side, a virgin approached and opened a window "
+                "in front of the Shimmura."
+            ),
         },
     ]
 
@@ -49,7 +54,7 @@ def test_subtitle_generator(
 
     assert subtitle_file_path.exists()
 
-    with open(subtitle_file_path, "r") as f:
+    with open(subtitle_file_path) as f:
         actual = f.read()
 
     if subtitle_format == "srt":

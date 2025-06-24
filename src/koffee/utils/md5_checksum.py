@@ -1,12 +1,10 @@
 """Utility for calculating the MD5 checksum of a file."""
 
-from pathlib import Path
-from typing import Union
-
 import hashlib
+from pathlib import Path
 
 
-def get_md5_checksum(file_path: Union[Path, str]) -> str:
+def get_md5_checksum(file_path: Path | str) -> str:
     """Calculates the MD5 checksum of a file."""
     md5_hash = hashlib.md5()
 

@@ -4,7 +4,6 @@ import logging
 
 from transformers import MarianMTModel, MarianTokenizer
 
-
 logging.getLogger("transformers").setLevel(logging.ERROR)
 log = logging.getLogger(__name__)
 

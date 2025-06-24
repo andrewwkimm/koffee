@@ -2,7 +2,6 @@
 
 import os
 from pathlib import Path
-from typing import Optional
 
 from koffee.exceptions import InvalidSubtitleFormatError
 from koffee.utils import convert_text_to_srt, convert_text_to_vtt
@@ -11,7 +10,7 @@ from koffee.utils import convert_text_to_srt, convert_text_to_vtt
 def generate_subtitles(
     subtitle_format: str,
     transcript: list,
-    output_dir: Optional[Path] = None,
+    output_dir: Path | None = None,
 ) -> Path:
     """Generates subtitles from a transcript."""
     if output_dir is None:

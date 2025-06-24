@@ -2,21 +2,19 @@
 
 import logging
 from pathlib import Path
-from typing import Union
 
 import ffmpeg
 
 from koffee.exceptions import SubtitleOverlayError
 
-
 log = logging.getLogger(__name__)
 
 
 def overlay_subtitles(
-    subtitle_file_path: Union[Path, str],
-    video_file_path: Union[Path, str],
-    output_file_path: Union[Path, str],
-) -> Union[Path, str]:
+    subtitle_file_path: Path | str,
+    video_file_path: Path | str,
+    output_file_path: Path | str,
+) -> Path | str:
     """Overlay subtitles to a video file."""
     log.info("Overlaying subtitles.")
 

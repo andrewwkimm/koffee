@@ -1,17 +1,15 @@
 """Float to timestamp converter."""
 
+import logging
 from datetime import timedelta
 from decimal import Decimal
-import logging
-from typing import Union
 
 from koffee.exceptions import InvalidSubtitleFormatError
-
 
 log = logging.getLogger(__name__)
 
 
-def convert_to_timestamp(seconds: Union[float, int], subtitle_format: str) -> str:
+def convert_to_timestamp(seconds: float | int, subtitle_format: str) -> str:
     """Converts seconds to SRT timestamp format."""
     log.debug(f"subtitle_format: {repr(subtitle_format)}")
 

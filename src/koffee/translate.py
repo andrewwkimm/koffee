@@ -1,9 +1,9 @@
 """The koffee API."""
 
-from datetime import datetime
 import logging
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 from koffee.asr import transcribe_text
 from koffee.data.config import KoffeeConfig
@@ -12,15 +12,14 @@ from koffee.overlay import overlay_subtitles
 from koffee.subtitle import generate_subtitles
 from koffee.translator import translate_transcript
 
-
 log = logging.getLogger(__name__)
 
 
 def translate(
-    video_file_path: Union[Path, str],
-    config: Optional[KoffeeConfig] = None,
+    video_file_path: Path | str,
+    config: KoffeeConfig | None = None,
     **kwargs: Any,
-) -> Union[Path, str]:
+) -> Path | str:
     """Processes a video file for translation and subtitle overlay."""
     log.info("Processing video...")
 
@@ -62,9 +61,9 @@ def translate(
 
 
 def get_output_path(
-    video_file_path: Union[Path, str],
-    output_dir: Optional[Path],
-    output_name: Optional[str],
+    video_file_path: Path | str,
+    output_dir: Path | None,
+    output_name: str | None,
 ) -> Path:
     """Gets the output path for the translated video file."""
     log.debug(f"output_name: {repr(output_name)}")
@@ -74,7 +73,7 @@ def get_output_path(
     file_name = (
         output_name
         if output_name is not None
-        else f'{file_path.stem}_{datetime.today().strftime("%m-%d-%Y")}'
+        else f"{file_path.stem}_{datetime.today().strftime('%m-%d-%Y')}"
     )
     file_ext = file_path.suffix
 
