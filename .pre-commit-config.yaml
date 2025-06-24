@@ -9,7 +9,7 @@ repos:
       - id: check-added-large-files
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.4  # match your pyproject.toml ruff version
+    rev: v0.12.0  # match your pyproject.toml ruff version
     hooks:
       - id: ruff
         args: ["--fix"]  # autoformat like black + lint like flake8
