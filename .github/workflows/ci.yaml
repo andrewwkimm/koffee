@@ -27,8 +27,8 @@ jobs:
         with:
           architecture: 'x64'
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Build
         run: |

@@ -10,5 +10,4 @@ RUN \
 # Coding only for vscode user and not root
 USER vscode
 
-RUN curl -sSL https://install.python-poetry.org | python3 - \
-    && bash -c "echo 'source <(poetry completions bash)' >> ~/.bashrc"
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
