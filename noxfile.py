@@ -11,7 +11,7 @@ def test_build_from_wheel(session: Session) -> None:
     session.install("pytest-mock")
     session.install("behave")
 
-    session.run("poetry", "build", "--format", "wheel")
+    session.run("hatch", "build", "-t", "wheel")
     session.run(
         "pip",
         "install",
