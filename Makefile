@@ -29,7 +29,7 @@ type_check:
 ################################################################################
 
 dist:
-	hatch build -t wheel
+	uv build --wheel
 
 ship:
 	make build
