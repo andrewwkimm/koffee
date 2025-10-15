@@ -31,8 +31,12 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Build
-        run: |
-          make build
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_wait_seconds: 10
+          command: make build
 
       - name: Generate coverage report
         run: |
