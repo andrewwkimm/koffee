@@ -1,8 +1,8 @@
 """Tests for subtitle overlay."""
 
+import subprocess
 from pathlib import Path
 
-import ffmpeg
 import pytest
 from pytest_mock import MockerFixture
 
@@ -44,10 +44,15 @@ def test_exception_handling(
     mocker: MockerFixture,
 ) -> None:
     """Tests that exception is caught and an error is raised."""
-    mocker.patch("ffmpeg.input", side_effect=ffmpeg.Error("ffmpeg", "", b"FFmpegError"))
+    mocker.patch(
+        "subprocess.run",
+        side_effect=subprocess.CalledProcessError(
+            returncode=1, cmd=["ffmpeg"], stderr="FFmpegError"
+        ),
+    )
 
     with pytest.raises(SubtitleOverlayError) as exc_info:
         overlay_subtitles(subtitle_file_path, video_file_path, output_file_path)
 
-    assert isinstance(exc_info.value.__cause__, ffmpeg.Error)
+    assert isinstance(exc_info.value.__cause__, subprocess.CalledProcessError)
     assert "FFmpegError" in str(exc_info.value)

@@ -10,7 +10,6 @@ requires-python = ">=3.10"
 dependencies = [
     "faster-whisper>=1.0.3",
     "transformers>=4.39.3",
-    "ffmpeg-python>=0.2.0",
     "torch>=2.2.2",
     "accelerate>=0.29.3",
     "cyclopts>=2.9.9",

@@ -1,9 +1,8 @@
 """Subtitle overlayer."""
 
 import logging
+import subprocess
 from pathlib import Path
-
-import ffmpeg
 
 from koffee.exceptions import SubtitleOverlayError
 
@@ -18,12 +17,25 @@ def overlay_subtitles(
     """Overlay subtitles to a video file."""
     log.info("Overlaying subtitles.")
 
+    cmd = [
+        "ffmpeg",
+        "-i",
+        str(video_file_path),
+        "-i",
+        str(subtitle_file_path),
+        "-c",
+        "copy",
+        "-c:s",
+        "mov_text",
+        "-metadata:s:s:0",
+        "language=eng",
+        "-y",
+        str(output_file_path),
+    ]
+
     try:
-        ffmpeg.input(video_file_path).output(
-            str(output_file_path), vf=f"subtitles={subtitle_file_path}"
-        ).run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
-    except ffmpeg.Error as error:
-        error_message = error.stderr.decode("utf-8")
-        raise SubtitleOverlayError(error_message) from error
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
+    except subprocess.CalledProcessError as error:
+        raise SubtitleOverlayError(error.stderr) from error
 
     return output_file_path
