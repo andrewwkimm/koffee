@@ -76,11 +76,11 @@ Refer below for a list of all commands and parameters.
 
 ## Contributing
 
-The simplest way to start developing is by using either a [DevContainer](https://code.visualstudio.com/docs/devcontainers/containers) or [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer).
+The simplest way to start developing is by using either a [DevContainer](https://code.visualstudio.com/docs/devcontainers/containers) or [uv](https://docs.astral.sh/uv/).
 
 If you are planning to develop inside DevContainer, choose the CUDA setup if you have a NVIDIA graphics card and would like to run koffee with CUDA support; otherwise, the default build is much leaner and recommended.
 
-For Poetry, run the following commands to set up your environment:
+For uv, run the following commands to set up your environment:
 
 ```bash
 git clone https://github.com/andrewwkimm/koffee.git
