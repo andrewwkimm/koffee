@@ -54,8 +54,8 @@ def test_transcribe_text() -> None:
         "language": "ko",
     }
 
-    actual_segments = cast(list[dict[str, Any]], actual["segments"])
-    expected_segments = cast(list[dict[str, Any]], expected["segments"])
+    actual_segments = cast(list[dict[str, Any]], actual["segments"].strip())
+    expected_segments = cast(list[dict[str, Any]], expected["segments"].strip())
 
     assert len(actual_segments) == len(expected_segments)
 
