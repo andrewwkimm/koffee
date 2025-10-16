@@ -1,5 +1,6 @@
 """Utilities for koffee."""
 
+from .get_video_duration import get_video_duration
 from .md5_checksum import get_md5_checksum
 from .srt_converter import convert_text_to_srt
 from .timestamp_converter import convert_to_timestamp
@@ -10,4 +11,5 @@ all = [
     convert_to_timestamp,
     convert_text_to_vtt,
     get_md5_checksum,
+    get_video_duration,
 ]

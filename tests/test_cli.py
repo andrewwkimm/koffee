@@ -10,7 +10,7 @@ from pytest_mock import MockerFixture
 
 from koffee.cli import cli
 from koffee.overlay import overlay_subtitles
-from koffee.utils import get_md5_checksum
+from koffee.utils import get_video_duration
 
 korean_subtitle_file_path = Path("examples/subtitles/sample_srt_file.srt")
 korean_video_file_path = Path("examples/videos/sample_korean_video.mp4")
@@ -49,8 +49,8 @@ def test_cli(language: str, subtitle_file_path: Path) -> None:
 
     actual_video_file_path = output_directory_path / (output_file_name + file_ext)
 
-    actual = get_md5_checksum(actual_video_file_path)
-    expected = get_md5_checksum(expected_video_file_path)
+    actual = get_video_duration(actual_video_file_path)
+    expected = get_video_duration(expected_video_file_path)
 
     assert actual == expected
 

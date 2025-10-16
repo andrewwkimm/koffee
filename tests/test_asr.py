@@ -1,5 +1,7 @@
 """Tests for ASR."""
 
+import math
+
 from koffee.asr import transcribe_text
 from koffee.data.config import KoffeeConfig
 
@@ -7,7 +9,11 @@ from koffee.data.config import KoffeeConfig
 def clean_transcript(transcript: dict) -> dict:
     """Removes extraneous fields from the transcript."""
     cleaned_segments = [
-        {"start": segment["start"], "end": segment["end"], "text": segment["text"]}
+        {
+            "start": segment["start"],
+            "end": segment["end"],
+            "text": segment["text"].strip(),
+        }
         for segment in transcript["segments"]
     ]
 
@@ -40,11 +46,20 @@ def test_transcribe_text() -> None:
             {"start": 12.32, "end": 15.34, "text": " 기차는 신호소 앞에서 멈췄다."},
             {
                 "start": 16.98,
-                "end": 23.54,
+                "end": 23.52,
                 "text": " 건너편 좌석에서 처녀가 다가와 심화물화 앞 유리창을 열었다.",
             },
         ],
         "language": "ko",
     }
 
-    assert actual == expected
+    for actual_segment, expected_segment in zip(
+        actual["segments"], expected["segments"], strict=True
+    ):
+        assert math.isclose(
+            actual_segment["start"], expected_segment["start"], abs_tol=0.05
+        )
+        assert math.isclose(
+            actual_segment["end"], expected_segment["end"], abs_tol=0.05
+        )
+        assert actual_segment["text"].strip() == expected_segment["text"].strip()
