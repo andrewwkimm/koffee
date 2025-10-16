@@ -36,6 +36,7 @@ def test_cli(language: str, subtitle_file_path: Path) -> None:
 
     cli(
         video_file_path,
+        compute_type="int8",
         output_dir=output_directory_path,
         output_name=output_file_name,
     )
@@ -70,6 +71,7 @@ def test_subtitles() -> None:
 
     cli(
         korean_video_file_path,
+        compute_type="int8",
         output_dir=output_directory_path,
         output_name=output_file_name,
         subtitles=True,
@@ -88,6 +90,7 @@ def test_verbose(mocker: MockerFixture) -> None:
 
     cli(
         korean_video_file_path,
+        compute_type="int8",
         output_dir=output_directory_path,
         output_name=output_file_name,
         verbose=True,

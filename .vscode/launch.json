@@ -55,7 +55,8 @@
             "args": [
                 "examples/videos/sample_korean_video.mp4",
                 "--verbose",
-                "--output_dir=scratch"
+                "--compute_type=int8",
+                "--output_dir=scratch",
             ],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",

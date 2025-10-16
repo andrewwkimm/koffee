@@ -21,7 +21,7 @@ def clean_transcript(transcript: dict) -> dict:
 def test_transcribe_text() -> None:
     """Tests that ASR successfully transcribes from a video file."""
     video_file_path = "examples/videos/sample_korean_video.mp4"
-    config = KoffeeConfig()
+    config = KoffeeConfig(compute_type="int8")
 
     transcript = transcribe_text(
         video_file_path, config.compute_type, config.device, config.model
@@ -37,7 +37,7 @@ def test_transcribe_text() -> None:
                 "text": " 접경의 긴 터널을 빠져나오면 바로 눈고장이었다.",
             },
             {"start": 7.8, "end": 10.74, "text": " 밤의 밑바닥이 환해졌다."},
-            {"start": 12.32, "end": 15.36, "text": " 기차는 신호소 앞에서 멈췄다."},
+            {"start": 12.32, "end": 15.34, "text": " 기차는 신호소 앞에서 멈췄다."},
             {
                 "start": 16.98,
                 "end": 23.54,
