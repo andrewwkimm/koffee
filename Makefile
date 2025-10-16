@@ -17,8 +17,8 @@ reformat:
 	uv run ruff format .
 
 setup:
-	pre-commit install --install-hooks
 	uv sync
+	pre-commit install --install-hooks
 
 test:
 	uv run pytest -x --cov
