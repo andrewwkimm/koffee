@@ -9,6 +9,7 @@ build:
 	make lint
 	make type_check
 	make test
+	make accept
 
 lint:
 	uv run ruff check --fix .
@@ -28,6 +29,14 @@ type_check:
 
 ################################################################################
 
+accept:
+	uv run behave --no-skipped --stop
+
+accept_wip:
+	uv run behave --no-skipped --stop --tags=wip
+
+################################################################################
+
 dist:
 	uv build --wheel
 
@@ -39,6 +48,8 @@ ship:
 ################################################################################
 
 .PHONY: \
+	accept \
+	accept_wip \
 	build \
 	dist \
 	help \
