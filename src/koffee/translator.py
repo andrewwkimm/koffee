@@ -2,7 +2,7 @@
 
 import logging
 
-from transformers import MarianMTModel, MarianTokenizer
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 logging.getLogger("transformers").setLevel(logging.ERROR)
 log = logging.getLogger(__name__)
@@ -28,13 +28,29 @@ def translate_transcript(transcript: dict, target_language: str) -> list:
 
 def translate_text(text: str, source_language: str, target_language: str) -> str:
     """Translates source language to target language."""
-    model_name = f"Helsinki-NLP/opus-mt-{source_language}-{target_language}"
-    model = MarianMTModel.from_pretrained(model_name)
+    model_name = "facebook/nllb-200-distilled-600M"
 
-    tokenizer = MarianTokenizer.from_pretrained(model_name)
-    tokenized_text = tokenizer([text], return_tensors="pt")
+    languages = {
+        "ko": "kor_Hang",
+        "ja": "jpn_Jpan",
+        "en": "eng_Latn",
+        "es": "spa_Latn",
+        "fr": "fra_Latn",
+        "de": "deu_Latn",
+        "zh": "zho_Hans",
+    }
 
-    translation = model.generate(**tokenized_text)
+    source_language_code = languages.get(source_language, source_language)
+    target_language_code = languages.get(target_language, target_language)
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name, src_lang=source_language_code)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+
+    tokenized_text = tokenizer(text, return_tensors="pt")
+    translation = model.generate(
+        **tokenized_text,
+        forced_bos_token_id=tokenizer.convert_tokens_to_ids(target_language_code),
+    )
 
     translated_text = tokenizer.decode(translation[0], skip_special_tokens=True)
     return translated_text

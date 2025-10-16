@@ -7,7 +7,7 @@ def test_translate_transcript() -> None:
     """Tests that the transcript was translated properly."""
     sample_transcript = {
         "segments": [
-            {"text": "안녕하세요."},
+            {"text": "시대를 초월한 마음."},
             {"text": "음식."},
         ],
         "language": "ko",
@@ -15,7 +15,7 @@ def test_translate_transcript() -> None:
 
     actual = translate_transcript(sample_transcript, target_language="en")
     expected = [
-        {"text": "Hello."},
+        {"text": "A mind beyond its time."},
         {"text": "Food."},
     ]
 
