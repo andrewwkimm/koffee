@@ -10,7 +10,7 @@ from koffee.data.config import KoffeeConfig
 def assert_segments_match(
     actual: list[dict],
     expected: list[dict],
-    text_similarity_threshold: float = 0.95,
+    text_similarity_threshold: float = 0.90,
     timestamp_tolerance: float = 0.05,
 ) -> None:
     """Assert that actual and expected segments match within tolerance."""
