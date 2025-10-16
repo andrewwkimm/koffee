@@ -18,6 +18,7 @@ def test_api() -> None:
         video_file_path=video_file_path,
         output_dir=output_directory_path,
         output_name=output_file_name,
+        compute_type="int8",
     )
 
     output_video_file_path = Path(output_video_file)
