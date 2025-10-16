@@ -1,6 +1,7 @@
 """Tests for ASR."""
 
 import math
+from typing import Any, cast
 
 from koffee.asr import transcribe_text
 from koffee.data.config import KoffeeConfig
@@ -53,8 +54,13 @@ def test_transcribe_text() -> None:
         "language": "ko",
     }
 
+    actual_segments = cast(list[dict[str, Any]], actual["segments"])
+    expected_segments = cast(list[dict[str, Any]], expected["segments"])
+
+    assert len(actual_segments) == len(expected_segments)
+
     for actual_segment, expected_segment in zip(
-        actual["segments"], expected["segments"], strict=True
+        actual_segments, expected_segments, strict=True
     ):
         assert math.isclose(
             actual_segment["start"], expected_segment["start"], abs_tol=0.05
@@ -62,4 +68,4 @@ def test_transcribe_text() -> None:
         assert math.isclose(
             actual_segment["end"], expected_segment["end"], abs_tol=0.05
         )
-        assert actual_segment["text"].strip() == expected_segment["text"].strip()
+        assert actual_segment["text"] == expected_segment["text"]
