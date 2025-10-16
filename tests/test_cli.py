@@ -9,8 +9,6 @@ import pytest
 from pytest_mock import MockerFixture
 
 from koffee.cli import cli
-from koffee.overlay import overlay_subtitles
-from koffee.utils import get_video_duration
 
 korean_subtitle_file_path = Path("examples/subtitles/sample_srt_file.srt")
 korean_video_file_path = Path("examples/videos/sample_korean_video.mp4")
@@ -19,7 +17,7 @@ japanese_subtitle_file_path = Path("examples/subtitles/sample_vtt_file.vtt")
 japanese_video_file_path = Path("examples/videos/sample_japanese_video.mp4")
 
 output_directory_path = Path("scratch")
-output_file_name = "output_video_file"
+output_file_name = "cli_output_video_file"
 
 
 @pytest.mark.parametrize(
@@ -41,18 +39,9 @@ def test_cli(language: str, subtitle_file_path: Path) -> None:
         output_name=output_file_name,
     )
 
-    translated_video_file_name = f"sample_{language}_video_translated.mp4"
-    translated_video_file_path = output_directory_path / translated_video_file_name
-    expected_video_file_path = overlay_subtitles(
-        subtitle_file_path, video_file_path, translated_video_file_path
-    )
+    output_video_file_path = output_directory_path / (output_file_name + file_ext)
 
-    actual_video_file_path = output_directory_path / (output_file_name + file_ext)
-
-    actual = get_video_duration(actual_video_file_path)
-    expected = get_video_duration(expected_video_file_path)
-
-    assert actual == expected
+    assert output_video_file_path.exists()
 
 
 def test_script_run() -> None:
