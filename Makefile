@@ -19,7 +19,7 @@ reformat:
 
 setup:
 	uv sync
-	pre-commit install --install-hooks
+	uv run pre-commit install --install-hooks
 
 test:
 	uv run pytest -x --cov
