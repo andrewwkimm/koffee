@@ -42,7 +42,7 @@ def cli(  # noqa: PLR0913
     model: Annotated[str, Parameter(name=("--model", "-m"))] = options.model,
     output_dir: Annotated[Path, Parameter(name=("--output_dir", "-o"))] | None = None,
     output_name: Annotated[str, Parameter(name=("--output_name", "-n"))] | None = None,
-    target_language: Annotated[
+    target_lang: Annotated[
         str, Parameter(name=("--target_lang", "-t"))
     ] = options.target_language,
     subtitle_format: Annotated[
@@ -91,7 +91,7 @@ def cli(  # noqa: PLR0913
         output_name=output_name,
         subtitle_format=subtitle_format,
         subtitles=subtitles,
-        target_language=target_language,
+        target_language=target_lang,
     )
     for video in file_path:
         translate(video_file_path=video, config=config)

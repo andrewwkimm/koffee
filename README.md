@@ -65,7 +65,7 @@ Refer below for a list of all commands and parameters.
     --output_dir, -o           Directory for the output file.
     --output_name, -n          Name of the output file.
     --subtitle_format, -sf     Format to use for the subtitles.
-    --target_language, -t      Language to which the video should be translated.
+    --target_lang, -t          Language to which the video should be translated.
 
 ### Options
 
