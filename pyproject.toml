@@ -56,20 +56,22 @@ fix = true
 unsafe-fixes = true
 
 lint.select = [
-  "E",   # pycodestyle errors
-  "F",   # pyflakes
-  "I",   # isort
-  "UP",  # pyupgrade
-  "B",   # bugbear
-  "SIM", # simplify
-  "D",   # pydocstyle
-  "PL",  # pylint-like
-  "C90", # mccabe
-  "PERF", # performance
-  "RUF", # ruff-specific
-  "PTH", # pathlib
-  "FLY", # f-strings
+    "B",    # bugbear
+    "C4",   # flake8-comprehensions
+    "C90",  # mccabe
+    "D",    # pydocstyle
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "FLY",  # f-strings
+    "I",    # isort
+    "PERF", # performance
+    "PL",   # pylint-like
+    "PTH",  # pathlib
+    "RUF",  # ruff-specific
+    "SIM",  # simplify
+    "UP",   # pyupgrade
 ]
+
 
 lint.ignore = []
 
