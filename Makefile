@@ -25,7 +25,7 @@ test:
 	uv run pytest -x --cov
 
 type_check:
-	uv run mypy tests --ignore-missing-import
+	uv run ty check tests
 
 ################################################################################
 
