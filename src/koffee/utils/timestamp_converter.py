@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 def convert_to_timestamp(seconds: float | int, subtitle_format: str) -> str:
     """Converts seconds to SRT timestamp format."""
-    log.debug(f"subtitle_format: {repr(subtitle_format)}")
+    log.debug(f"subtitle_format: {subtitle_format!r}")
 
     seconds_decimal = Decimal(str(seconds))
     seconds_int = int(seconds_decimal)

@@ -13,9 +13,9 @@ def convert_text_to_srt(transcript: list, output_dir: Path) -> Path:
     log.debug("Converting text to SRT format.")
 
     output_file_path = output_dir / "subtitles.srt"
-    log.debug(f"output_file_path: {repr(output_file_path)}")
+    log.debug(f"output_file_path: {output_file_path!r}")
 
-    with open(output_file_path, "w", encoding="utf-8") as file:
+    with Path.open(output_file_path, "w", encoding="utf-8") as file:
         for idx, subtitle in enumerate(transcript, 1):
             start = convert_to_timestamp(subtitle["start"], "srt")
             end = convert_to_timestamp(subtitle["end"], "srt")

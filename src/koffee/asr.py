@@ -4,7 +4,7 @@ import logging
 from dataclasses import asdict
 from typing import Any
 
-from faster_whisper import WhisperModel  # noqa: E402
+from faster_whisper import WhisperModel
 
 log = logging.getLogger(__name__)
 

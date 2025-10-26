@@ -54,7 +54,7 @@ def test_subtitle_generator(
 
     assert subtitle_file_path.exists()
 
-    with open(subtitle_file_path) as f:
+    with Path.open(subtitle_file_path) as f:
         actual = f.read()
 
     if subtitle_format == "srt":

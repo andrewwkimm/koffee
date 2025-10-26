@@ -13,9 +13,9 @@ def convert_text_to_vtt(transcript: list, output_dir: Path) -> Path:
     log.debug("Converting text to VTT format.")
 
     output_file_path = output_dir / "subtitles.vtt"
-    log.debug(f"output_file_path: {repr(output_file_path)}")
+    log.debug(f"output_file_path: {output_file_path!r}")
 
-    with open(output_file_path, "w", encoding="utf-8") as file:
+    with Path.open(output_file_path, "w", encoding="utf-8") as file:
         file.write("WEBVTT\n\n")
 
         for idx, subtitle in enumerate(transcript, 1):

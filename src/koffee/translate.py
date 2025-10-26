@@ -66,7 +66,7 @@ def get_output_path(
     output_name: str | None,
 ) -> Path:
     """Gets the output path for the translated video file."""
-    log.debug(f"output_name: {repr(output_name)}")
+    log.debug(f"output_name: {output_name!r}")
 
     file_path = Path(video_file_path)
     file_dir = output_dir if output_dir is not None else file_path.parent
@@ -78,5 +78,5 @@ def get_output_path(
     file_ext = file_path.suffix
 
     output_path = file_dir / (file_name + file_ext)
-    log.debug(f"output_dir: {repr(output_path)}")
+    log.debug(f"output_dir: {output_path!r}")
     return output_path

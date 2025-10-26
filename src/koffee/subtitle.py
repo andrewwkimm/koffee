@@ -1,6 +1,5 @@
 """Subtitle generator."""
 
-import os
 from pathlib import Path
 
 from koffee.exceptions import InvalidSubtitleFormatError
@@ -14,7 +13,7 @@ def generate_subtitles(
 ) -> Path:
     """Generates subtitles from a transcript."""
     if output_dir is None:
-        output_dir = Path(os.getcwd())
+        output_dir = Path.cwd()
 
     if subtitle_format == "srt":
         subtitle_file_path = convert_text_to_srt(transcript, output_dir)
