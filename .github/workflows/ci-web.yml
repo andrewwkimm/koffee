@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "koffee-web/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "koffee-web/**"
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+      - run: npm run ci
