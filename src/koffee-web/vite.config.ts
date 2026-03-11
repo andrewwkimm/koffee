@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vite/config";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
@@ -11,5 +11,10 @@ export default defineConfig({
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Embedder-Policy": "require-corp",
     },
+  },
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./src/tests/setup.ts"],
+    globals: true,
   },
 });
