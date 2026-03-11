@@ -36,10 +36,11 @@ export const toSegments = (chunks: WhisperChunk[]): Segment[] =>
 let transcriber: Awaited<ReturnType<typeof pipeline>> | null = null;
 
 const loadModel = async (): Promise<void> => {
-  if (transcriber) return;
-  transcriber = await pipeline("automatic-speech-recognition", MODEL, {
-    device: "webgpu",
-  });
+  transcriber = await pipeline(
+    'automatic-speech-recognition',
+    MODEL,
+    {device: 'wasm'},
+  );
 };
 
 // --- Audio decoding ---

@@ -38,7 +38,7 @@ const loadModel = async (sourceLanguage: string): Promise<void> => {
 
   if (translator && loadedModelId === id) return;
 
-  translator = await pipeline("translation", id, { device: "webgpu" });
+  translator = await pipeline('translation', id, {device: 'wasm'});
   loadedModelId = id;
 };
 
