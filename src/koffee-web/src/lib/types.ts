@@ -19,14 +19,20 @@ export interface TranscriptionResult {
 // Worker message types
 
 export type WhisperMessage =
-  | {type: 'segment'; payload: Segment}
-  | {type: 'done'; payload: {language: string}}
-  | {type: 'error'; payload: {code: string; message: string; fatal: boolean}};
+  | { type: "segment"; payload: Segment }
+  | { type: "done"; payload: { language: string } }
+  | {
+      type: "error";
+      payload: { code: string; message: string; fatal: boolean };
+    };
 
 export type TranslateMessage =
-  | {type: 'segment'; payload: TranslatedSegment}
-  | {type: 'done'}
-  | {type: 'error'; payload: {code: string; message: string; fatal: boolean}};
+  | { type: "segment"; payload: TranslatedSegment }
+  | { type: "done" }
+  | {
+      type: "error";
+      payload: { code: string; message: string; fatal: boolean };
+    };
 
 // App -> worker init message
 export interface TranslateInitPayload {
@@ -35,5 +41,5 @@ export interface TranslateInitPayload {
 }
 
 export type TranslateWorkerInbound =
-  | {type: 'init'; payload: TranslateInitPayload}
-  | {type: 'segment'; payload: Segment};
+  | { type: "init"; payload: TranslateInitPayload }
+  | { type: "segment"; payload: Segment };

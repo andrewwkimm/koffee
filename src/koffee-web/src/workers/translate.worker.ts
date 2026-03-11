@@ -1,4 +1,4 @@
-import type {TranslatedSegment, TranslateMessage} from '../lib/types';
+import type { TranslatedSegment, TranslateMessage } from "../lib/types";
 
 export interface TranslationSingle {
   translation_text: string;
@@ -10,4 +10,4 @@ export const toTranslatedText = (output: TranslationOutput): string =>
   output[0].translation_text;
 
 // Worker plumbing comes in Phase 5 implementation
-export type {TranslatedSegment, TranslateMessage};
+export type { TranslatedSegment, TranslateMessage };

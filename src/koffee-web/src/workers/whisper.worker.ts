@@ -1,4 +1,4 @@
-import type {Segment, WhisperMessage} from '../lib/types';
+import type { Segment, WhisperMessage } from "../lib/types";
 
 export interface WhisperChunk {
   text: string;
@@ -6,11 +6,11 @@ export interface WhisperChunk {
 }
 
 export const toSegments = (chunks: WhisperChunk[]): Segment[] =>
-  chunks.map(({text, timestamp}) => ({
+  chunks.map(({ text, timestamp }) => ({
     text,
     start: timestamp[0],
     end: timestamp[1],
   }));
 
 // Worker plumbing comes in Phase 5 implementation
-export type {WhisperMessage};
+export type { WhisperMessage };
