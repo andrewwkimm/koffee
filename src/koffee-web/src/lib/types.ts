@@ -16,20 +16,10 @@ export interface TranscriptionResult {
   language: string;
 }
 
-// Worker message types
-
 export type WhisperMessage =
-  | { type: "segment"; payload: Segment }
-  | { type: "done"; payload: { language: string } }
-  | {
-      type: "error";
-      payload: { code: string; message: string; fatal: boolean };
-    };
-
-export type WhisperWorkerInbound = {
-    type: 'start';
-    payload: {audio: Float32Array};
-  };
+  | {type: 'segment'; payload: Segment}
+  | {type: 'done'; payload: {language: string}}
+  | {type: 'error'; payload: {code: string; message: string; fatal: boolean}};
 
 export type TranslateMessage =
   | {type: 'segment'; payload: TranslatedSegment}
@@ -37,7 +27,6 @@ export type TranslateMessage =
   | {type: 'done'}
   | {type: 'error'; payload: {code: string; message: string; fatal: boolean}};
 
-// App -> worker init message
 export interface TranslateInitPayload {
   sourceLanguage: string;
   targetLanguage: string;
@@ -45,4 +34,10 @@ export interface TranslateInitPayload {
 
 export type TranslateWorkerInbound =
   | {type: 'init'; payload: TranslateInitPayload}
-  | {type: 'segment'; payload: Segment};
+  | {type: 'segment'; payload: Segment}
+  | {type: 'done'};
+
+export type WhisperWorkerInbound = {
+  type: 'start';
+  payload: {audio: Float32Array};
+};

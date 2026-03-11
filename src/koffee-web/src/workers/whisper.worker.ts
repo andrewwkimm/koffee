@@ -3,13 +3,7 @@ import type {Segment, WhisperMessage} from '../lib/types';
 
 env.allowLocalModels = false;
 
-// TODO: per-chunk streaming not supported in Transformers.js v3 —
-// segments are posted after full transcription completes.
-// Revisit when upstream adds stable chunk callback support.
-
 const MODEL = 'onnx-community/whisper-small';
-
-// --- Types ---
 
 export interface WhisperChunk {
   text: string;
@@ -22,16 +16,12 @@ interface WhisperOutput {
   language?: string;
 }
 
-// --- Pure helpers (exported for testing) ---
-
 export const toSegments = (chunks: WhisperChunk[]): Segment[] =>
   chunks.map(({text, timestamp}) => ({
     text,
     start: timestamp[0],
     end: timestamp[1],
   }));
-
-// --- Model singleton ---
 
 let transcriber: Awaited<ReturnType<typeof pipeline>> | null = null;
 
@@ -43,8 +33,6 @@ const loadModel = async (): Promise<void> => {
     {device: 'wasm'},
   );
 };
-
-// --- Worker message handling ---
 
 const post = (msg: WhisperMessage): void => {
   self.postMessage(msg);
@@ -70,12 +58,18 @@ self.addEventListener('message', async (e: MessageEvent) => {
   }
 
   try {
-    const result = (await transcriber!(payload.audio, {
+    const options: Record<string, unknown> = {
       return_timestamps: true,
       chunk_length_s: 30,
       stride_length_s: 5,
-    })) as WhisperOutput;
+    };
 
+    // Use language hint if provided to improve detection accuracy
+    if (payload.language) {
+      options.language = payload.language;
+    }
+
+    const result = (await transcriber!(payload.audio, options)) as WhisperOutput;
     const segments = toSegments(result.chunks ?? []);
 
     for (const segment of segments) {
@@ -84,7 +78,7 @@ self.addEventListener('message', async (e: MessageEvent) => {
 
     post({
       type: 'done',
-      payload: {language: result.language ?? 'en'},
+      payload: {language: result.language ?? payload.language ?? 'en'},
     });
   } catch (err) {
     post({

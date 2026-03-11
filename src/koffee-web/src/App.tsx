@@ -13,8 +13,6 @@ import type {
 } from './lib/types';
 import {createWhisperWorker, createTranslateWorker} from './lib/workerFactory';
 
-// --- Types ---
-
 type PipelineStatus = 'idle' | 'transcribing' | 'translating' | 'muxing' | 'done' | 'error';
 
 interface AppState {
@@ -22,6 +20,7 @@ interface AppState {
   segments: TranslatedSegment[];
   status: PipelineStatus;
   error: string | null;
+  sourceLanguage: string;
 }
 
 const INITIAL_STATE: AppState = {
@@ -29,31 +28,26 @@ const INITIAL_STATE: AppState = {
   segments: [],
   status: 'idle',
   error: null,
+  sourceLanguage: 'auto',
 };
-
-// --- Component ---
 
 export default function App() {
   const [state, setState] = useState<AppState>(INITIAL_STATE);
 
-  // Language state in refs to avoid stale closures in worker callbacks
+  // Keep ref in sync with state for use in worker callbacks
   const sourceLanguageRef = useRef<string>('auto');
   const targetLanguageRef = useRef<string>('en');
-
-  // Segments and file in refs to avoid stale closures in async callbacks
   const segmentsRef = useRef<TranslatedSegment[]>([]);
   const fileRef = useRef<File | null>(null);
-
-  // Translate worker readiness and segment buffer
   const translateReadyRef = useRef(false);
   const segmentBufferRef = useRef<Segment[]>([]);
-
+  const whisperDoneRef = useRef(false);
   const whisperWorkerRef = useRef<Worker | null>(null);
   const translateWorkerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
     initFFmpeg().catch((err: unknown) => {
-      console.error('ffmpeg failed to load:', err);
+      console.error('[ffmpeg] failed to load:', err);
     });
   }, []);
 
@@ -66,16 +60,56 @@ export default function App() {
 
   const initTranslateWorker = useCallback(
     (sourceLanguage: string, targetLanguage: string) => {
+      // If source and target are the same, skip translation — pass segments through directly
+      if (sourceLanguage === targetLanguage) {
+        console.log('[translate] same language, skipping translation');
+        // Convert buffered segments to TranslatedSegments directly
+        const passthrough: TranslatedSegment[] = segmentBufferRef.current.map((seg) => ({
+          original: seg.text,
+          translated: seg.text,
+          start: seg.start,
+          end: seg.end,
+        }));
+        segmentBufferRef.current = [];
+        segmentsRef.current = passthrough;
+        setState((prev) => ({...prev, segments: passthrough, status: 'muxing'}));
+
+        muxSubtitles(fileRef.current!, passthrough)
+          .then((blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = deriveOutputFilename(fileRef.current!.name);
+            a.click();
+            URL.revokeObjectURL(url);
+            setState((prev) => ({...prev, status: 'done'}));
+          })
+          .catch((err: unknown) => {
+            console.error('[mux] failed:', err);
+            setState((prev) => ({
+              ...prev,
+              status: 'error',
+              error: err instanceof Error ? err.message : String(err),
+            }));
+          })
+          .finally(() => {
+            terminateWorkers();
+          });
+        return;
+      }
+
+      console.log('[translate] sending init with:', sourceLanguage, targetLanguage);
       const payload: TranslateWorkerInbound = {
         type: 'init',
         payload: {sourceLanguage, targetLanguage},
       };
       translateWorkerRef.current?.postMessage(payload);
     },
-    [],
+    [terminateWorkers],
   );
 
-  const flushSegmentBuffer = useCallback(() => {
+  const flushSegmentBuffer = useCallback((sendDone: boolean = false) => {
+    console.log('[translate] flushing buffer, segments:', segmentBufferRef.current.length);
     for (const segment of segmentBufferRef.current) {
       translateWorkerRef.current?.postMessage({
         type: 'segment',
@@ -83,31 +117,34 @@ export default function App() {
       });
     }
     segmentBufferRef.current = [];
+
+    if (sendDone) {
+      console.log('[translate] sending done to translate worker');
+      translateWorkerRef.current?.postMessage({type: 'done'});
+    }
   }, []);
 
   const handleTranslateMessage = useCallback(
     (e: MessageEvent<TranslateMessage>) => {
       const msg = e.data;
+      console.log('[translate] message received:', msg.type);
 
       if (msg.type === 'ready') {
+        console.log('[translate] worker ready, flushing buffer');
         translateReadyRef.current = true;
-        flushSegmentBuffer();
+        flushSegmentBuffer(whisperDoneRef.current);
         return;
       }
 
       if (msg.type === 'segment') {
         segmentsRef.current = [...segmentsRef.current, msg.payload];
-        setState((prev) => ({
-          ...prev,
-          segments: segmentsRef.current,
-        }));
+        setState((prev) => ({...prev, segments: segmentsRef.current}));
         return;
       }
 
       if (msg.type === 'done') {
         setState((prev) => ({...prev, status: 'muxing'}));
 
-        // fileRef is guaranteed non-null here — pipeline only starts on file drop
         muxSubtitles(fileRef.current!, segmentsRef.current)
           .then((blob) => {
             const url = URL.createObjectURL(blob);
@@ -119,10 +156,11 @@ export default function App() {
             setState((prev) => ({...prev, status: 'done'}));
           })
           .catch((err: unknown) => {
+            console.error('[mux] failed:', err);
             setState((prev) => ({
               ...prev,
               status: 'error',
-              error: err instanceof Error ? err.message : 'Muxing failed',
+              error: err instanceof Error ? err.message : String(err),
             }));
           })
           .finally(() => {
@@ -132,18 +170,18 @@ export default function App() {
         return;
       }
 
-      if (msg.type === 'error' && msg.payload.fatal) {
-        setState((prev) => ({
-          ...prev,
-          status: 'error',
-          error: msg.payload.message,
-        }));
-        terminateWorkers();
-        return;
+      if (msg.type === 'error') {
+        console.log('[translate] error:', msg.payload);
+        if (msg.payload.fatal) {
+          setState((prev) => ({
+            ...prev,
+            status: 'error',
+            error: msg.payload.message,
+          }));
+          terminateWorkers();
+          return;
+        }
       }
-
-      // non-fatal translate error — pipeline continues, segment is silently skipped
-      // original text substitution is handled inside the translate worker
     },
     [terminateWorkers, flushSegmentBuffer],
   );
@@ -151,35 +189,43 @@ export default function App() {
   const handleWhisperMessage = useCallback(
     (e: MessageEvent<WhisperMessage>) => {
       const msg = e.data;
+      console.log('[whisper] message received:', msg.type);
 
       if (msg.type === 'segment') {
         const segment = msg.payload as Segment;
 
         if (translateReadyRef.current) {
-          translateWorkerRef.current?.postMessage({
-            type: 'segment',
-            payload: segment,
-          });
+          translateWorkerRef.current?.postMessage({type: 'segment', payload: segment});
         } else {
+          console.log('[whisper] buffering segment, translate not ready yet');
           segmentBufferRef.current = [...segmentBufferRef.current, segment];
         }
         return;
       }
 
       if (msg.type === 'done') {
+        console.log('[whisper] done, detected language:', msg.payload.language);
+        console.log('[whisper] sourceLanguageRef:', sourceLanguageRef.current);
+
         const sourceLanguage =
           sourceLanguageRef.current === 'auto'
             ? msg.payload.language
             : sourceLanguageRef.current;
 
         sourceLanguageRef.current = sourceLanguage;
-
+        whisperDoneRef.current = true;
         setState((prev) => ({...prev, status: 'translating'}));
-        initTranslateWorker(sourceLanguage, targetLanguageRef.current);
+
+        if (translateReadyRef.current) {
+          flushSegmentBuffer(true);
+        } else {
+          initTranslateWorker(sourceLanguage, targetLanguageRef.current);
+        }
         return;
       }
 
       if (msg.type === 'error' && msg.payload.fatal) {
+        console.log('[whisper] fatal error:', msg.payload);
         setState((prev) => ({
           ...prev,
           status: 'error',
@@ -188,20 +234,21 @@ export default function App() {
         terminateWorkers();
       }
     },
-    [initTranslateWorker, terminateWorkers],
+    [initTranslateWorker, terminateWorkers, flushSegmentBuffer],
   );
 
   const handleFileDrop = useCallback(
     (file: File) => {
+      console.log('[app] file dropped:', file.name, 'source lang:', sourceLanguageRef.current);
       terminateWorkers();
 
-      // Reset all refs for fresh run
       segmentsRef.current = [];
       fileRef.current = file;
       translateReadyRef.current = false;
       segmentBufferRef.current = [];
+      whisperDoneRef.current = false;
 
-      setState({...INITIAL_STATE, file, status: 'transcribing'});
+      setState((prev) => ({...INITIAL_STATE, file, status: 'transcribing', sourceLanguage: prev.sourceLanguage}));
 
       const whisperWorker = createWhisperWorker();
       const translateWorker = createTranslateWorker();
@@ -219,9 +266,13 @@ export default function App() {
 
       decodeAudio(file)
         .then((audio) => {
-          whisperWorker.postMessage({type: 'start', payload: {audio}}, [audio.buffer]);
+          console.log('[app] audio decoded, starting whisper, lang hint:', sourceLanguageRef.current);
+          // Pass language hint to whisper if user pre-selected
+          const langHint = sourceLanguageRef.current !== 'auto' ? sourceLanguageRef.current : undefined;
+          whisperWorker.postMessage({type: 'start', payload: {audio, language: langHint}}, [audio.buffer]);
         })
         .catch((err: unknown) => {
+          console.error('[app] audio decode failed:', err);
           setState((prev) => ({
             ...prev,
             status: 'error',
@@ -235,8 +286,10 @@ export default function App() {
 
   const handleSourceLanguageChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
-      sourceLanguageRef.current = e.target.value;
-      setState((prev) => ({...prev}));
+      const value = e.target.value;
+      console.log('[app] source language changed to:', value);
+      sourceLanguageRef.current = value;
+      setState((prev) => ({...prev, sourceLanguage: value}));
     },
     [],
   );
@@ -252,7 +305,7 @@ export default function App() {
       <label htmlFor="source-language">Source language</label>
       <select
         id="source-language"
-        defaultValue="auto"
+        value={state.sourceLanguage}
         onChange={handleSourceLanguageChange}
       >
         <option value="auto">Auto-detect</option>
