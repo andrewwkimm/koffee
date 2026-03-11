@@ -1,17 +1,8 @@
+import type {Segment, WhisperMessage} from '../lib/types';
+
 export interface WhisperChunk {
   text: string;
   timestamp: [number, number];
-}
-
-export interface Segment {
-  text: string;
-  start: number;
-  end: number;
-}
-
-export interface TranscriptionResult {
-  segments: Segment[];
-  language: string;
 }
 
 export const toSegments = (chunks: WhisperChunk[]): Segment[] =>
@@ -20,3 +11,6 @@ export const toSegments = (chunks: WhisperChunk[]): Segment[] =>
     start: timestamp[0],
     end: timestamp[1],
   }));
+
+// Worker plumbing comes in Phase 5 implementation
+export type {WhisperMessage};
