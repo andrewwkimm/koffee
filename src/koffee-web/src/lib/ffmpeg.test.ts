@@ -36,16 +36,16 @@ const makeSegment = (
 ): TranslatedSegment => ({original, translated, start, end});
 
 describe('deriveOutputFilename', () => {
-  it('appends _subtitled before the extension', () => {
-    expect(deriveOutputFilename('video.mp4')).toBe('video_subtitled.mp4');
+  it('appends _translated before the extension', () => {
+    expect(deriveOutputFilename('video.mp4')).toBe('video_translated.mp4');
   });
 
   it('handles filenames with multiple dots', () => {
-    expect(deriveOutputFilename('my.video.mp4')).toBe('my.video_subtitled.mp4');
+    expect(deriveOutputFilename('my.video.mp4')).toBe('my.video_translated.mp4');
   });
 
   it('handles filenames with no extension', () => {
-    expect(deriveOutputFilename('video')).toBe('video_subtitled');
+    expect(deriveOutputFilename('video')).toBe('video_translated');
   });
 });
 
@@ -92,7 +92,7 @@ describe('muxSubtitles', () => {
       '-c:s', 'mov_text',
       '-metadata:s:s:0', 'language=eng',
       '-y',
-      'video_subtitled.mp4',
+      'video_translated.mp4',
     ]);
   });
 
@@ -104,7 +104,7 @@ describe('muxSubtitles', () => {
 
     expect(mockFFmpegInstance.deleteFile).toHaveBeenCalledWith('input.mp4');
     expect(mockFFmpegInstance.deleteFile).toHaveBeenCalledWith('subtitles.srt');
-    expect(mockFFmpegInstance.deleteFile).toHaveBeenCalledWith('video_subtitled.mp4');
+    expect(mockFFmpegInstance.deleteFile).toHaveBeenCalledWith('video_translated.mp4');
   });
 
   it('returns a video/mp4 blob', async () => {

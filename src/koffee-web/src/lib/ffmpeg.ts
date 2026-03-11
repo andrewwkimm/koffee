@@ -17,8 +17,8 @@ const getFFmpeg = (): FFmpeg => {
 
 export const deriveOutputFilename = (inputName: string): string => {
   const dotIndex = inputName.lastIndexOf('.');
-  if (dotIndex === -1) return `${inputName}_subtitled`;
-  return `${inputName.slice(0, dotIndex)}_subtitled${inputName.slice(dotIndex)}`;
+  if (dotIndex === -1) return `${inputName}_translated`;
+  return `${inputName.slice(0, dotIndex)}_translated${inputName.slice(dotIndex)}`;
 };
 
 // --- Public API ---
