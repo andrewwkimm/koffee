@@ -17,5 +17,10 @@ export default defineConfig({
     setupFiles: ['./src/setupTests.ts'],
     globals: true,
     clearMocks: true,
+    server: {
+      deps: {
+        inline: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
+      },
+    },
   },
 });
