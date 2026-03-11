@@ -2,6 +2,7 @@ import type React from "react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { DropZone } from "./components/DropZone";
 import { initFFmpeg, muxSubtitles, deriveOutputFilename } from "./lib/ffmpeg";
+import { SUPPORTED_LANGUAGES } from "./lib/languages";
 import type {
   Segment,
   TranslatedSegment,
@@ -233,12 +234,11 @@ export default function App() {
         onChange={handleSourceLanguageChange}
       >
         <option value="auto">Auto-detect</option>
-        <option value="en">English</option>
-        <option value="es">Spanish</option>
-        <option value="fr">French</option>
-        <option value="de">German</option>
-        <option value="ja">Japanese</option>
-        <option value="zh">Chinese</option>
+        {SUPPORTED_LANGUAGES.map((lang) => (
+          <option key={lang.code} value={lang.code}>
+            {lang.label}
+          </option>
+        ))}
       </select>
 
       <DropZone onFileDrop={handleFileDrop} />

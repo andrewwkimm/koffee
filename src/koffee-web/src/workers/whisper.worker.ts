@@ -1,5 +1,5 @@
-import {pipeline, env} from '@huggingface/transformers';
-import type {Segment, WhisperMessage} from '../lib/types';
+import { pipeline, env } from "@huggingface/transformers";
+import type { Segment, WhisperMessage } from "../lib/types";
 
 env.allowLocalModels = false;
 
@@ -7,7 +7,7 @@ env.allowLocalModels = false;
 // segments are posted after full transcription completes.
 // Revisit when upstream adds stable chunk callback support.
 
-const MODEL = 'onnx-community/whisper-small';
+const MODEL = "onnx-community/whisper-small";
 
 // --- Types ---
 
@@ -25,7 +25,7 @@ interface WhisperOutput {
 // --- Pure helpers (exported for testing) ---
 
 export const toSegments = (chunks: WhisperChunk[]): Segment[] =>
-  chunks.map(({text, timestamp}) => ({
+  chunks.map(({ text, timestamp }) => ({
     text,
     start: timestamp[0],
     end: timestamp[1],
@@ -37,11 +37,9 @@ let transcriber: Awaited<ReturnType<typeof pipeline>> | null = null;
 
 const loadModel = async (): Promise<void> => {
   if (transcriber) return;
-  transcriber = await pipeline(
-    'automatic-speech-recognition',
-    MODEL,
-    {device: 'webgpu'},
-  );
+  transcriber = await pipeline("automatic-speech-recognition", MODEL, {
+    device: "webgpu",
+  });
 };
 
 // --- Audio decoding ---
@@ -49,7 +47,7 @@ const loadModel = async (): Promise<void> => {
 const decodeAudio = async (file: File): Promise<Float32Array> => {
   const arrayBuffer = await file.arrayBuffer();
   // 16kHz required by Whisper
-  const audioContext = new AudioContext({sampleRate: 16000});
+  const audioContext = new AudioContext({ sampleRate: 16000 });
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
   // Take first channel — Whisper expects mono
   return audioBuffer.getChannelData(0);
@@ -61,19 +59,20 @@ const post = (msg: WhisperMessage): void => {
   self.postMessage(msg);
 };
 
-self.addEventListener('message', async (e: MessageEvent) => {
-  const {type, payload} = e.data;
+self.addEventListener("message", async (e: MessageEvent) => {
+  const { type, payload } = e.data;
 
-  if (type !== 'start') return;
+  if (type !== "start") return;
 
   try {
     await loadModel();
   } catch (err) {
     post({
-      type: 'error',
+      type: "error",
       payload: {
-        code: 'MODEL_LOAD_FAILED',
-        message: err instanceof Error ? err.message : 'Failed to load Whisper model',
+        code: "MODEL_LOAD_FAILED",
+        message:
+          err instanceof Error ? err.message : "Failed to load Whisper model",
         fatal: true,
       },
     });
@@ -86,10 +85,10 @@ self.addEventListener('message', async (e: MessageEvent) => {
     audio = await decodeAudio(payload.file);
   } catch (err) {
     post({
-      type: 'error',
+      type: "error",
       payload: {
-        code: 'AUDIO_DECODE_FAILED',
-        message: err instanceof Error ? err.message : 'Failed to decode audio',
+        code: "AUDIO_DECODE_FAILED",
+        message: err instanceof Error ? err.message : "Failed to decode audio",
         fatal: true,
       },
     });
@@ -106,19 +105,19 @@ self.addEventListener('message', async (e: MessageEvent) => {
     const segments = toSegments(result.chunks ?? []);
 
     for (const segment of segments) {
-      post({type: 'segment', payload: segment});
+      post({ type: "segment", payload: segment });
     }
 
     post({
-      type: 'done',
-      payload: {language: result.language ?? 'en'},
+      type: "done",
+      payload: { language: result.language ?? "en" },
     });
   } catch (err) {
     post({
-      type: 'error',
+      type: "error",
       payload: {
-        code: 'TRANSCRIPTION_FAILED',
-        message: err instanceof Error ? err.message : 'Transcription failed',
+        code: "TRANSCRIPTION_FAILED",
+        message: err instanceof Error ? err.message : "Transcription failed",
         fatal: true,
       },
     });

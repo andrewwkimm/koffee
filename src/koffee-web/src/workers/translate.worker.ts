@@ -1,5 +1,11 @@
-import {pipeline, env} from '@huggingface/transformers';
-import type {Segment, TranslatedSegment, TranslateMessage, TranslateWorkerInbound} from '../lib/types';
+import { pipeline, env } from "@huggingface/transformers";
+import type {
+  Segment,
+  TranslatedSegment,
+  TranslateMessage,
+  TranslateWorkerInbound,
+} from "../lib/types";
+import { getModelId } from "../lib/languages";
 
 env.allowLocalModels = false;
 
@@ -21,14 +27,18 @@ export const toTranslatedText = (output: TranslationOutput): string =>
 let translator: Awaited<ReturnType<typeof pipeline>> | null = null;
 let loadedModelId: string | null = null;
 
-const modelId = (sourceLanguage: string, targetLanguage: string): string =>
-  `Helsinki-NLP/opus-mt-${sourceLanguage}-${targetLanguage}`;
+const loadModel = async (sourceLanguage: string): Promise<void> => {
+  const id = getModelId(sourceLanguage);
 
-const loadModel = async (sourceLanguage: string, targetLanguage: string): Promise<void> => {
-  const id = modelId(sourceLanguage, targetLanguage);
+  if (!id) {
+    throw new Error(
+      `No translation model available for language: ${sourceLanguage}`,
+    );
+  }
+
   if (translator && loadedModelId === id) return;
 
-  translator = await pipeline('translation', id, {device: 'webgpu'});
+  translator = await pipeline("translation", id, { device: "webgpu" });
   loadedModelId = id;
 };
 
@@ -38,51 +48,85 @@ const post = (msg: TranslateMessage): void => {
   self.postMessage(msg);
 };
 
-self.addEventListener('message', async (e: MessageEvent<TranslateWorkerInbound>) => {
-  const msg = e.data;
+self.addEventListener(
+  "message",
+  async (e: MessageEvent<TranslateWorkerInbound>) => {
+    const msg = e.data;
 
-  if (msg.type === 'init') {
-    try {
-      await loadModel(msg.payload.sourceLanguage, msg.payload.targetLanguage);
-    } catch (err) {
-      post({
-        type: 'error',
-        payload: {
-          code: 'MODEL_LOAD_FAILED',
-          message: err instanceof Error ? err.message : 'Failed to load translation model',
-          fatal: true,
-        },
-      });
-    }
-    return;
-  }
-
-  if (msg.type === 'segment') {
-    const segment: Segment = msg.payload;
-
-    if (!translator) {
-      post({
-        type: 'error',
-        payload: {
-          code: 'MODEL_NOT_LOADED',
-          message: 'Translation model not loaded',
-          fatal: true,
-        },
-      });
+    if (msg.type === "init") {
+      try {
+        await loadModel(msg.payload.sourceLanguage);
+      } catch (err) {
+        post({
+          type: "error",
+          payload: {
+            code: "MODEL_LOAD_FAILED",
+            message:
+              err instanceof Error
+                ? err.message
+                : "Failed to load translation model",
+            fatal: true,
+          },
+        });
+      }
       return;
     }
 
-    try {
-      const result = (await translator(segment.text)) as TranslationOutput;
-      const translated = toTranslatedText(result);
+    if (msg.type === "segment") {
+      const segment: Segment = msg.payload;
 
-      if (!translated) {
+      if (!translator) {
+        post({
+          type: "error",
+          payload: {
+            code: "MODEL_NOT_LOADED",
+            message: "Translation model not loaded",
+            fatal: true,
+          },
+        });
+        return;
+      }
+
+      try {
+        const result = (await translator(segment.text)) as TranslationOutput;
+        const translated = toTranslatedText(result);
+
+        if (!translated) {
+          // Non-fatal — substitute original text and continue
+          post({
+            type: "error",
+            payload: {
+              code: "EMPTY_TRANSLATION",
+              message: "Empty translation result",
+              fatal: false,
+            },
+          });
+
+          const translatedSegment: TranslatedSegment = {
+            original: segment.text,
+            translated: segment.text,
+            start: segment.start,
+            end: segment.end,
+          };
+          post({ type: "segment", payload: translatedSegment });
+          return;
+        }
+
+        const translatedSegment: TranslatedSegment = {
+          original: segment.text,
+          translated,
+          start: segment.start,
+          end: segment.end,
+        };
+
+        post({ type: "segment", payload: translatedSegment });
+      } catch (err) {
         // Non-fatal — substitute original text and continue
         post({
-          type: 'error',
+          type: "error",
           payload: {
-            code: 'EMPTY_TRANSLATION',
-            message: 'Empty translation result',
+            code: "TRANSLATION_FAILED",
+            message: err instanceof Error ? err.message : "Translation failed",
             fatal: false,
           },
         });
@@ -93,37 +137,9 @@ self.addEventListener('message', async (e: MessageEvent<TranslateWorkerInbound>)
           start: segment.start,
           end: segment.end,
         };
-        post({type: 'segment', payload: translatedSegment});
-        return;
+        post({ type: "segment", payload: translatedSegment });
       }
-
-      const translatedSegment: TranslatedSegment = {
-        original: segment.text,
-        translated,
-        start: segment.start,
-        end: segment.end,
-      };
-
-      post({type: 'segment', payload: translatedSegment});
-    } catch (err) {
-      // Non-fatal — substitute original text and continue
-      post({
-        type: 'error',
-        payload: {
-          code: 'TRANSLATION_FAILED',
-          message: err instanceof Error ? err.message : 'Translation failed',
-          fatal: false,
-        },
-      });
-
-      const translatedSegment: TranslatedSegment = {
-        original: segment.text,
-        translated: segment.text,
-        start: segment.start,
-        end: segment.end,
-      };
-      post({type: 'segment', payload: translatedSegment});
+      return;
     }
-    return;
-  }
-});
+  },
+);
