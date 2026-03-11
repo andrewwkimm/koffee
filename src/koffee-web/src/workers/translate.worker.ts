@@ -53,18 +53,16 @@ self.addEventListener(
   async (e: MessageEvent<TranslateWorkerInbound>) => {
     const msg = e.data;
 
-    if (msg.type === "init") {
+    if (msg.type === 'init') {
       try {
         await loadModel(msg.payload.sourceLanguage);
+        post({type: 'ready'});
       } catch (err) {
         post({
-          type: "error",
+          type: 'error',
           payload: {
-            code: "MODEL_LOAD_FAILED",
-            message:
-              err instanceof Error
-                ? err.message
-                : "Failed to load translation model",
+            code: 'MODEL_LOAD_FAILED',
+            message: err instanceof Error ? err.message : 'Failed to load translation model',
             fatal: true,
           },
         });

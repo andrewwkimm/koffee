@@ -43,16 +43,53 @@ const loadModel = async (): Promise<void> => {
   );
 };
 
-// --- Audio decoding ---
+self.addEventListener('message', async (e: MessageEvent) => {
+  const {type, payload} = e.data;
 
-const decodeAudio = async (file: File): Promise<Float32Array> => {
-  const arrayBuffer = await file.arrayBuffer();
-  // 16kHz required by Whisper
-  const audioContext = new AudioContext({ sampleRate: 16000 });
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-  // Take first channel — Whisper expects mono
-  return audioBuffer.getChannelData(0);
-};
+  if (type !== 'start') return;
+
+  try {
+    await loadModel();
+  } catch (err) {
+    post({
+      type: 'error',
+      payload: {
+        code: 'MODEL_LOAD_FAILED',
+        message: err instanceof Error ? err.message : 'Failed to load Whisper model',
+        fatal: true,
+      },
+    });
+    return;
+  }
+
+  try {
+    const result = (await transcriber!(payload.audio, {
+      return_timestamps: true,
+      chunk_length_s: 30,
+      stride_length_s: 5,
+    })) as WhisperOutput;
+
+    const segments = toSegments(result.chunks ?? []);
+
+    for (const segment of segments) {
+      post({type: 'segment', payload: segment});
+    }
+
+    post({
+      type: 'done',
+      payload: {language: result.language ?? 'en'},
+    });
+  } catch (err) {
+    post({
+      type: 'error',
+      payload: {
+        code: 'TRANSCRIPTION_FAILED',
+        message: err instanceof Error ? err.message : 'Transcription failed',
+        fatal: true,
+      },
+    });
+  }
+});
 
 // --- Worker message handling ---
 
