@@ -62,19 +62,20 @@ export const DropZone = ({onFileDrop}: DropZoneProps) => {
     e.preventDefault();
   }, []);
 
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files) handleFiles(e.target.files);
+      e.target.value = '';
+    },
+    [handleFiles],
+  );
+
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
       dragCounter.current = 0;
       setIsDragging(false);
       handleFiles(e.dataTransfer.files);
-    },
-    [handleFiles],
-  );
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files) handleFiles(e.target.files);
     },
     [handleFiles],
   );
