@@ -1,14 +1,10 @@
 # Absolute paths
 /.coverage
 /.env
-/.venv
 /dist
 /node_modules
-/scratch/*
 
 # Patterns
 __pycache__
 .DS_Store
-
-# Exclusions
-!/scratch/README.md
+*.log
