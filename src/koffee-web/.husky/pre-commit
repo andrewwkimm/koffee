@@ -1,2 +1,2 @@
-npm test
+npx vitest run
 npx lint-staged
