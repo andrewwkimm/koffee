@@ -24,6 +24,7 @@
     "@ffmpeg/ffmpeg": "^0.12.10",
     "@ffmpeg/util": "^0.12.1",
     "@huggingface/transformers": "^3.4.0",
+    "clsx": "^2.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.5"
