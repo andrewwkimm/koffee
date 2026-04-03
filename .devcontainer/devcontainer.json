@@ -28,6 +28,13 @@
       ]
     }
   },
+  "mounts": [
+      "source=${localEnv:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached"
+  ],
+  "remoteEnv": {
+        "SSH_AUTH_SOCK": "${localEnv:SSH_AUTH_SOCK}"
+  },
+  "containerUser": "root",
   "remoteUser": "vscode",
-  "postCreateCommand": "bash ./.devcontainer/setup.sh"
+  "postCreateCommand": "make setup"
 }
