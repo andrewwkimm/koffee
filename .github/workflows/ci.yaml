@@ -25,9 +25,11 @@ jobs:
       - name: Install ffmpeg
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            sudo apt-get install -y ffmpeg libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libswresample-dev
+            sudo apt-get install -y libavformat-dev libavcodec-dev libavdevice-dev \
+              libavutil-dev libavfilter-dev libswscale-dev libswresample-dev
           elif [ "$RUNNER_OS" == "macOS" ]; then
-            brew install ffmpeg
+            brew install ffmpeg@7
+            brew link ffmpeg@7 --force
           fi
         shell: bash
 
