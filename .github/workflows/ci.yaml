@@ -23,15 +23,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install ffmpeg
-        run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            sudo apt-get install -y libavformat-dev libavcodec-dev libavdevice-dev \
-              libavutil-dev libavfilter-dev libswscale-dev libswresample-dev
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            brew install ffmpeg@7
-            brew link ffmpeg@7 --force
-          fi
-        shell: bash
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        with:
+          architecture: 'x64'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
