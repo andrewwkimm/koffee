@@ -19,7 +19,4 @@ RUN \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Coding only for vscode user and not root
-USER vscode
-
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv

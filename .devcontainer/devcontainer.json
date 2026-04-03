@@ -29,7 +29,6 @@
   "remoteEnv": {
       "SSH_AUTH_SOCK": "${localEnv:SSH_AUTH_SOCK}"
   },
-  "containerUser": "root",
-  "remoteUser": "vscode",
+  "remoteUser": "root",
   "postCreateCommand": "make setup"
 }
