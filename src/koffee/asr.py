@@ -14,9 +14,12 @@ def transcribe_text(
     compute_type: str,
     device: str,
     model: str,
+    translation_backend,
 ) -> dict:
     """Transcribes text from a video file."""
     log.info("Transcribing text.")
+
+    task = "translate" if translation_backend == "whisper" else "transcribe"
 
     loaded_model = WhisperModel(
         model_size_or_path=model,
@@ -24,7 +27,7 @@ def transcribe_text(
         compute_type=compute_type,
         local_files_only=False,
     )
-    segments, info = loaded_model.transcribe(video_file)
+    segments, info = loaded_model.transcribe(video_file, task=task)
 
     transcript: dict[str, Any] = {"segments": [asdict(segment) for segment in segments]}
     transcript["language"] = info.language

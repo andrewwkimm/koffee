@@ -42,11 +42,15 @@ def translate(
         config.compute_type,
         config.device,
         config.model,
+        config.translation_backend,
     )
-    translated_transcript = translate_transcript(transcript, config.target_language)
-    subtitle_file_path = generate_subtitles(
-        config.subtitle_format, translated_transcript
-    )
+
+    if config.translation_backend == "whisper":
+        segments = transcript["segments"]
+    else:
+        segments = translate_transcript(transcript, config.target_language)
+
+    subtitle_file_path = generate_subtitles(config.subtitle_format, segments)
 
     output_video_file_path = overlay_subtitles(
         subtitle_file_path, video_file_path, output_path

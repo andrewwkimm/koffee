@@ -9,14 +9,11 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "faster-whisper>=1.0.3",
-    "transformers>=4.39.3",
     "torch>=2.2.2",
     "accelerate>=0.29.3",
     "cyclopts>=3.24.0",
     "rich>=13.9.2",
     "pydantic>=2.9.2",
-    "sentencepiece>=0.2.0",
-    "sacremoses>=0.1.1",
 ]
 
 [dependency-groups]

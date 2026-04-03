@@ -63,7 +63,11 @@ def test_transcribe_text() -> None:
     config = KoffeeConfig(compute_type="int8")
 
     transcript = transcribe_text(
-        video_file_path, config.compute_type, config.device, config.model
+        video_file_path,
+        config.compute_type,
+        config.device,
+        config.model,
+        config.translation_backend,
     )
 
     actual: dict = clean_transcript(transcript)
@@ -72,18 +76,27 @@ def test_transcribe_text() -> None:
         "segments": [
             {
                 "start": 0.0,
-                "end": 6.36,
-                "text": " 접경의 긴 터널을 빠져나오면 바로 눈고장이었다.",
+                "end": 7.0,
+                "text": " When I came out of the tunnel, it was a snowstorm.",
             },
-            {"start": 7.8, "end": 10.74, "text": " 밤의 밑바닥이 환해졌다."},
-            {"start": 12.32, "end": 15.34, "text": " 기차는 신호소 앞에서 멈췄다."},
             {
-                "start": 16.98,
-                "end": 23.52,
-                "text": " 건너편 좌석에서 처녀가 다가와 심화물화 앞 유리창을 열었다.",
+                "start": 7.0,
+                "end": 12.0,
+                "text": " The bottom of the night became bright.",
+            },
+            {
+                "start": 12.0,
+                "end": 16.0,
+                "text": " The train stopped in front of the traffic light.",
+            },
+            {
+                "start": 16.0,
+                "end": 24.0,
+                "text": " A girl approached from the left seat on the other side "
+                "and opened the window in front of Shimamura.",
             },
         ],
-        "language": "ko",
+        "language": "en",
     }
 
     assert_segments_match(actual["segments"], expected["segments"])

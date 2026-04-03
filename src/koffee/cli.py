@@ -51,6 +51,9 @@ def cli(  # noqa: PLR0913
     subtitles: Annotated[
         bool, Parameter(name=("--subtitles", "-s"), group=options_group)
     ] = options.subtitles,
+    translation_backend: Annotated[
+        str, Parameter(name=("--translation_backend", "-tb"))
+    ] = options.translation_backend,
     verbose: Annotated[
         bool, Parameter(name=("--verbose", "-V"), group=options_group)
     ] = False,
@@ -60,25 +63,27 @@ def cli(  # noqa: PLR0913
     Parameters
     ----------
     file_path: Path
-        Path to the video file.
+        Path to the video file
     compute_type: str
-        Type to use for computation.
+        Type to use for computation
     device: str
-        Device to use for computation.
+        Device to use for computation
     model: str
-        The Whisper model instance to use.
+        The Whisper model instance to use
     output_dir: Path
-        Directory for the output file.
+        Directory for the output file
     output_name: str
-        Name of the output file.
+        Name of the output file
     subtitle_format: str
-        Format to use for the subtitles.
+        Format to use for the subtitles
     subtitles: bool
         Write the translated subtitle file to disk
     target_language: str
-        Language to which the video should be translated.
+        Language to which the video should be translated
+    translation_backend: str
+        The backend service to use for the translation
     verbose: bool
-        Print debug log messages.
+        Print debug log messages
     """
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -92,6 +97,7 @@ def cli(  # noqa: PLR0913
         subtitle_format=subtitle_format,
         subtitles=subtitles,
         target_language=target_lang,
+        translation_backend=translation_backend,
     )
     for video in file_path:
         translate(video_file_path=video, config=config)
