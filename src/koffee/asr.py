@@ -27,7 +27,9 @@ def transcribe_text(
         compute_type=compute_type,
         local_files_only=False,
     )
-    segments, info = loaded_model.transcribe(video_file, task=task)
+    segments, info = loaded_model.transcribe(
+        video_file, task=task, word_timestamps=True, vad_filter=True
+    )
 
     transcript: dict[str, Any] = {"segments": [asdict(segment) for segment in segments]}
     transcript["language"] = info.language
