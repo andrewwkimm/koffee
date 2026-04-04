@@ -9,7 +9,6 @@ build:
 	make lint
 	make type_check
 	make test
-	make accept
 
 lint:
 	uv run ruff check --fix .
@@ -42,6 +41,7 @@ dist:
 
 ship:
 	make build
+	make accept
 	make dist
 	nox -s test_build_from_wheel
 
