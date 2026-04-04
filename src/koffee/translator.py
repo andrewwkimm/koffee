@@ -9,7 +9,7 @@ from koffee.utils import convert_to_timestamp
 
 log = logging.getLogger(__name__)
 
-CHUNK_SIZE = 300
+CHUNK_SIZE = 600
 CONTEXT_ENTRIES = 25
 SLEEP_BETWEEN_REQUESTS = 4
 
