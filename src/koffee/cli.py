@@ -104,7 +104,16 @@ def cli(  # noqa: PLR0913
         target_language=target_lang,
         translation_backend=translation_backend,
     )
-    for video in file_path:
+
+    resolved_paths = []
+    for pattern in file_path:
+        matches = sorted(Path.cwd().glob(str(pattern)))
+        if matches:
+            resolved_paths.extend(matches)
+        else:
+            resolved_paths.append(Path(pattern))
+
+    for video in resolved_paths:
         translate(video_file_path=video, config=config)
 
 
