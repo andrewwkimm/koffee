@@ -10,6 +10,8 @@ from behave.runner import Context
 from koffee.exceptions import InvalidVideoFileError
 from koffee.translate import translate
 
+SUBTITLE_EXTENSIONS = {".srt", ".vtt"}
+
 
 @given("a user has a basic {language} video file")
 def step_given(context: Context, language: str) -> None:
@@ -24,7 +26,7 @@ def step_given(context: Context, language: str) -> None:
 
 @given("the user sets the output directory to {path}")
 def step_impl(context: Context, path) -> None:
-    """Sets the output directory for the translated video file."""
+    """Sets the output directory for the translated file."""
     context.output_dir = Path(path)
 
 
@@ -44,10 +46,11 @@ def step_impl(context: Context):
         context.error = error
 
 
-@then("the user receives a built video file")
+@then("the user receives a subtitle file")
 def step_impl(context: Context):
-    """Assert that the output file exists."""
+    """Assert that the output subtitle file exists with a valid subtitle extension."""
     assert context.output_file_path.exists()
+    assert context.output_file_path.suffix in SUBTITLE_EXTENSIONS
 
 
 @given("the user corrupts the file somehow")

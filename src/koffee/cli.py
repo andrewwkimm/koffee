@@ -48,9 +48,9 @@ def cli(  # noqa: PLR0913
     subtitle_format: Annotated[
         str, Parameter(name=("--subtitle_format", "-sf"))
     ] = options.subtitle_format,
-    subtitles: Annotated[
-        bool, Parameter(name=("--subtitles", "-s"), group=options_group)
-    ] = options.subtitles,
+    overlay_video: Annotated[
+        bool, Parameter(name=("--overlay-video", "-ov"), group=options_group)
+    ] = options.overlay_video,
     translation_backend: Annotated[
         str, Parameter(name=("--translation_backend", "-tb"))
     ] = options.translation_backend,
@@ -65,7 +65,7 @@ def cli(  # noqa: PLR0913
     Parameters
     ----------
     file_path: Path
-        Path to the video file
+        Path to the video or audio file
     compute_type: str
         Type to use for computation
     device: str
@@ -78,8 +78,9 @@ def cli(  # noqa: PLR0913
         Name of the output file
     subtitle_format: str
         Format to use for the subtitles
-    subtitles: bool
-        Write the translated subtitle file to disk
+    overlay_video: bool
+        Overlay subtitles onto the video file instead of outputting a subtitle file.
+        Only valid for video file inputs.
     target_language: str
         Language to which the video should be translated
     translation_backend: str
@@ -99,8 +100,8 @@ def cli(  # noqa: PLR0913
         model=model,
         output_dir=output_dir,
         output_name=output_name,
+        overlay_video=overlay_video,
         subtitle_format=subtitle_format,
-        subtitles=subtitles,
         target_language=target_lang,
         translation_backend=translation_backend,
     )
