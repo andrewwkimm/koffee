@@ -58,21 +58,23 @@ Refer below for a list of all commands and parameters.
 
 ### Parameters
 
-    --file_path                Path to the video file.
-    --device, -d               Device to use for computation.
-    --compute_type, -c         Type to use for computation.
-    --model, -m                The Whisper model instance to use.
-    --output_dir, -o           Directory for the output file.
-    --output_name, -n          Name of the output file.
-    --subtitle_format, -sf     Format to use for the subtitles.
-    --target_lang, -t          Language to which the video should be translated.
+    --file_path                 Path to the video file.
+    --device, -d                evice to use for computation.
+    --compute_type, -c          Type to use for computation.
+    --model, -m                 The Whisper model instance to use.
+    --output_dir, -o            Directory for the output file.
+    --output_name, -n           Name of the output file.
+    --subtitle_format, -sf      Format to use for the subtitles.
+    --target_lang, -t           Language to which the video should be translated.
+    --translation_backend, tb   Backend service to use for translation.
+    --api-key, -ak              API key for LLM based translation
 
 ### Options
 
-    --help, -h                 Display this message and exit.
-    --version, -v              Display application version.
-    --verbose, -V              Print debug logs.
-    --subtitles, -s            Write the translated subtitle file to disk.
+    --help, -h                  Display this message and exit.
+    --version, -v               Display application version.
+    --verbose, -V               Print debug logs.
+    --subtitles, -s             Write the translated subtitle file to disk.
 
 ## Contributing
 
