@@ -8,6 +8,7 @@ from pydantic import BaseModel
 class KoffeeConfig(BaseModel):
     """Configuration data model for koffee."""
 
+    api_key: str | None = None
     compute_type: str = "default"
     device: str = "auto"
     model: str = "large-v3"

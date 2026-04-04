@@ -48,7 +48,9 @@ def translate(
     if config.translation_backend == "whisper":
         segments = transcript["segments"]
     else:
-        segments = translate_transcript(transcript, config.target_language)
+        segments = translate_transcript(
+            transcript, config.target_language, config.api_key
+        )
 
     subtitle_file_path = generate_subtitles(config.subtitle_format, segments)
 

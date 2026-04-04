@@ -54,6 +54,8 @@ def cli(  # noqa: PLR0913
     translation_backend: Annotated[
         str, Parameter(name=("--translation_backend", "-tb"))
     ] = options.translation_backend,
+    api_key: Annotated[str, Parameter(name=("--api_key", "-ak"), group=options_group)]
+    | None = None,
     verbose: Annotated[
         bool, Parameter(name=("--verbose", "-V"), group=options_group)
     ] = False,
@@ -82,6 +84,8 @@ def cli(  # noqa: PLR0913
         Language to which the video should be translated
     translation_backend: str
         The backend service to use for the translation
+    api_key: str
+        API key for an LLM service
     verbose: bool
         Print debug log messages
     """
@@ -89,6 +93,7 @@ def cli(  # noqa: PLR0913
         logging.getLogger().setLevel(logging.DEBUG)
 
     config = KoffeeConfig(
+        api_key=api_key,
         compute_type=compute_type,
         device=device,
         model=model,
