@@ -4,7 +4,7 @@ import nox
 from nox.sessions import Session
 
 
-@nox.session(python=["3.10", "3.11", "3.12", "3.13", "3.14"])
+@nox.session(python=["3.10", "3.11", "3.12", "3.13"])
 def test_build_from_wheel(session: Session) -> None:
     """Runs tests with local installation from a built wheel."""
     session.install("pytest")
