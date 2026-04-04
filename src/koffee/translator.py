@@ -2,6 +2,7 @@
 
 import logging
 import time
+from collections.abc import Callable
 
 from google import genai
 
@@ -33,49 +34,74 @@ should feel natural in English
 
 
 def translate_transcript(
-    transcript: dict, target_language: str, api_key: str | None
+    transcript: dict,
+    target_language: str,
+    api_key: str | None,
+    on_progress: Callable[[float], None] | None = None,
 ) -> list:
     """Translates a transcript using Gemini, preserving timing information."""
     log.info("Translating transcript with Gemini.")
 
     client = genai.Client(api_key=api_key)
+    chunks = _chunk_segments(transcript, target_language)
+    translated_segments = _translate_chunks(client, chunks, on_progress)
+    return translated_segments
 
+
+def _chunk_segments(transcript: dict, target_language: str) -> list[dict]:
+    """Splits transcript segments into prompt-ready chunks."""
     segments = transcript["segments"]
     source_language = transcript["language"]
-    chunks = [segments[i : i + CHUNK_SIZE] for i in range(0, len(segments), CHUNK_SIZE)]
 
-    log.info(f"Translating {len(segments)} entries in {len(chunks)} chunks.")
+    chunks = [
+        {
+            "chunk": segments[i : i + CHUNK_SIZE],
+            "source_language": source_language,
+            "target_language": target_language,
+            "start_entry": i * CHUNK_SIZE + 1,
+        }
+        for i in range(0, len(segments), CHUNK_SIZE)
+    ]
+
+    return chunks
+
+
+def _translate_chunks(
+    client,
+    chunks: list[dict],
+    on_progress: Callable[[float], None] | None,
+) -> list[dict]:
+    """Iterates chunks, translating each and reporting progress."""
+    log.info(f"Translating in {len(chunks)} chunks.")
 
     translated_segments = []
-
-    for i, chunk in enumerate(chunks):
-        context_entries = (
-            translated_segments[-CONTEXT_ENTRIES:] if translated_segments else []
-        )
-
+    for i, chunk_data in enumerate(chunks):
         prompt = _build_prompt(
-            chunk=chunk,
-            context_entries=context_entries,
-            source_language=source_language,
-            target_language=target_language,
-            start_entry=i * CHUNK_SIZE + 1,
+            **chunk_data,
+            context_entries=translated_segments[-CONTEXT_ENTRIES:],
         )
-
-        log.info(f"Translating chunk {i + 1}/{len(chunks)}.")
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config={
-                "system_instruction": SYSTEM_PROMPT,
-            },
-        )
-        translated_chunk = _parse_srt_response(response.text, chunk)
+        translated_chunk = _translate_chunk(client, prompt, chunk_data["chunk"])
         translated_segments.extend(translated_chunk)
+
+        if on_progress:
+            on_progress((i + 1) / len(chunks))
 
         if i < len(chunks) - 1:
             time.sleep(SLEEP_BETWEEN_REQUESTS)
 
     return translated_segments
+
+
+def _translate_chunk(client, prompt: str, chunk: list[dict]) -> list[dict]:
+    """Calls the LLM with a prompt and parses the response."""
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config={"system_instruction": SYSTEM_PROMPT},
+    )
+    translated_chunk = _parse_srt_response(response.text, chunk)
+
+    return translated_chunk
 
 
 def _segments_to_srt(segments: list[dict]) -> str:
@@ -85,6 +111,7 @@ def _segments_to_srt(segments: list[dict]) -> str:
         start = convert_to_timestamp(seg["start"], "srt")
         end = convert_to_timestamp(seg["end"], "srt")
         lines.append(f"{i}\n{start} --> {end}\n{seg['text'].strip()}\n")
+
     srt_text = "\n".join(lines)
     return srt_text
 
@@ -105,7 +132,6 @@ def _parse_srt_response(
             translated_segments.append(original)
             continue
 
-        # lines[0] is entry number, lines[1] is timestamp, lines[2:] is text
         text = " ".join(lines[2:])
         translated_segments.append(
             {
@@ -126,23 +152,27 @@ def _build_prompt(
     start_entry: int,
 ) -> str:
     """Builds the translation prompt for a chunk of subtitle entries."""
-    prompt_parts = []
-
-    prompt_parts.append(
-        f"Translate the following subtitle entries from {source_language} \
-        to {target_language}."
-    )
+    prompt_parts = [
+        (
+            f"Translate the following subtitle entries from "
+            f"{source_language} to {target_language}."
+        )
+    ]
 
     if context_entries:
-        prompt_parts.append(
-            f"The following {len(context_entries)} entries are provided as context only"
-            " to maintain narrative continuity. Do not include them in your translation"
-            f" output. Begin your translation from entry {start_entry} only.\n"
+        prompt_parts.extend(
+            [
+                f"The following {len(context_entries)} entries are provided as context "
+                "only to maintain narrative continuity. Do not include them in your "
+                "translation."
+                f" output. Begin your translation from entry {start_entry} only.\n",
+                "[CONTEXT - DO NOT TRANSLATE]\n",
+                _segments_to_srt(context_entries),
+                "\n[TRANSLATE FROM HERE]\n",
+            ]
         )
-        prompt_parts.append("[CONTEXT - DO NOT TRANSLATE]\n")
-        prompt_parts.append(_segments_to_srt(context_entries))
-        prompt_parts.append("\n[TRANSLATE FROM HERE]\n")
 
     prompt_parts.append(_segments_to_srt(chunk))
     translation_prompt = "\n".join(prompt_parts)
+
     return translation_prompt

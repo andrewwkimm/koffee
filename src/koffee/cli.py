@@ -6,6 +6,13 @@ from typing import Annotated
 
 from cyclopts import App, Group, Parameter, validators
 from rich.logging import RichHandler
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 
 from koffee.data.config import KoffeeConfig
 from koffee.translate import translate
@@ -15,7 +22,6 @@ logging.basicConfig(
 )
 
 log = logging.getLogger(__name__)
-
 
 app = App(
     default_parameter=Parameter(negative=""),
@@ -32,8 +38,28 @@ app["--version"].group = options_group
 options = KoffeeConfig()
 
 
+def _create_progress_bar() -> Progress:
+    """Creates a rich progress bar for tracking transcription and translation."""
+    return Progress(
+        SpinnerColumn(),
+        TextColumn("[bold blue]{task.description}"),
+        BarColumn(),
+        TextColumn("{task.percentage:>3.0f}%"),
+        TimeElapsedColumn(),
+    )
+
+
+def _make_progress_callback(progress: Progress, task_id) -> callable:
+    """Returns a callback that updates a progress bar given a 0.0-1.0 ratio."""
+
+    def callback(ratio: float) -> None:
+        progress.update(task_id, completed=ratio * 100)
+
+    return callback
+
+
 @app.default()
-def cli(  # noqa: PLR0913
+def cli(
     *file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
     compute_type: Annotated[
         str, Parameter(name=("--compute-type", "-c"))
@@ -49,7 +75,7 @@ def cli(  # noqa: PLR0913
         str, Parameter(name=("--subtitle_format", "-sf"))
     ] = options.subtitle_format,
     overlay_video: Annotated[
-        bool, Parameter(name=("--overlay-video", "-ov"), group=options_group)
+        bool, Parameter(name=("--overlay-video",), group=options_group)
     ] = options.overlay_video,
     translation_backend: Annotated[
         str, Parameter(name=("--translation_backend", "-tb"))
@@ -79,10 +105,10 @@ def cli(  # noqa: PLR0913
     subtitle_format: str
         Format to use for the subtitles
     overlay_video: bool
-        Overlay subtitles onto the video file instead of outputting a subtitle file.
-        Only valid for video file inputs.
+        Embed subtitles into the video as a soft subtitle track instead of
+        outputting a subtitle file. Only valid for video file inputs.
     target_language: str
-        Language to which the video should be translated
+        Language to which the file should be translated
     translation_backend: str
         The backend service to use for the translation
     api_key: str
@@ -106,6 +132,15 @@ def cli(  # noqa: PLR0913
         translation_backend=translation_backend,
     )
 
+    resolved_paths = _resolve_paths(file_path)
+
+    with _create_progress_bar() as progress:
+        for video in resolved_paths:
+            _translate_with_progress(video, config, progress)
+
+
+def _resolve_paths(file_path: tuple) -> list[Path]:
+    """Resolves glob patterns and returns a flat list of matched paths."""
     resolved_paths = []
     for pattern in file_path:
         matches = sorted(Path.cwd().glob(str(pattern)))
@@ -114,8 +149,30 @@ def cli(  # noqa: PLR0913
         else:
             resolved_paths.append(Path(pattern))
 
-    for video in resolved_paths:
-        translate(video_file_path=video, config=config)
+    return resolved_paths
+
+
+def _translate_with_progress(
+    video: Path,
+    config: KoffeeConfig,
+    progress: Progress,
+) -> None:
+    """Runs translation for a single file with ASR and translation progress bars."""
+    asr_task = progress.add_task("Transcribing", total=100)
+    translate_task = progress.add_task("Translating", total=100, start=False)
+
+    def on_asr_progress(ratio: float) -> None:
+        progress.update(asr_task, completed=ratio * 100)
+        if ratio >= 1.0:
+            progress.stop_task(asr_task)
+            progress.start_task(translate_task)
+
+    translate(
+        video_file_path=video,
+        config=config,
+        on_asr_progress=on_asr_progress,
+        on_translate_progress=_make_progress_callback(progress, translate_task),
+    )
 
 
 def main() -> None:

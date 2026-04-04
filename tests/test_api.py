@@ -96,7 +96,7 @@ def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> N
 
     assert result == ["translated"]
     mock_translate.assert_called_once_with(
-        transcript, config.target_language, config.api_key
+        transcript, config.target_language, config.api_key, None
     )
 
 

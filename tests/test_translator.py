@@ -136,3 +136,22 @@ def test_translate_transcript_passes_api_key(mocker: MockerFixture) -> None:
     translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key="test-key")
 
     mock_client_cls.assert_called_once_with(api_key="test-key")
+
+
+def test_translate_transcript_reports_progress(mocker: MockerFixture) -> None:
+    """Test that on_progress is called once per chunk with correct ratio."""
+    mock_client = mocker.MagicMock()
+    mocker.patch("koffee.translator.genai.Client", return_value=mock_client)
+    mocker.patch("koffee.translator.time.sleep")
+    mocker.patch("koffee.translator.CHUNK_SIZE", 1)
+
+    mock_client.models.generate_content.return_value.text = (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello."
+    )
+
+    progress_calls = []
+    translate_transcript(
+        SAMPLE_TRANSCRIPT, "en", api_key=None, on_progress=progress_calls.append
+    )
+
+    assert progress_calls == [0.5, 1.0]
