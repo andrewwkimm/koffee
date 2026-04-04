@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
@@ -36,7 +36,12 @@ jobs:
           timeout_minutes: 30
           max_attempts: 3
           retry_wait_seconds: 10
-          command: make build
+          command:
+            uv sync
+            uv run ruff format .
+            uv run ruff check --fix .
+            uv run ty check tests
+            uv run pytest -x --cov
 
       - name: Generate coverage report
         run: |
