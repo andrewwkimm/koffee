@@ -27,7 +27,7 @@ pip install git+https://github.com/andrewwkimm/koffee
 
 ## Quick start
 
-All that is needed is a working video file and the translated video will be outputted to the current directory.
+All that is needed is a working video or audio file and the translated video, or subtitle file for audios, will be outputted to the current directory.
 
 ```console
 koffee some_dir/some_video_file.mp4
