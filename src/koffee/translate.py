@@ -14,6 +14,8 @@ from koffee.translator import translate_transcript
 
 log = logging.getLogger(__name__)
 
+AUDIO_EXTENSIONS = {".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a"}
+
 
 def translate(
     video_file_path: Path | str,
@@ -21,19 +23,16 @@ def translate(
     **kwargs: Any,
 ) -> Path | str:
     """Processes a video file for translation and subtitle overlay."""
-    log.info("Processing video...")
+    log.info("Translating file...")
 
     if not Path(video_file_path).exists() or not Path(video_file_path).is_file():
         error_message = "Inputted file is not a valid video file or does not exist."
         log.error(error_message)
         raise InvalidVideoFileError(error_message)
 
-    if config is None:
-        config = KoffeeConfig(**kwargs)
-    else:
-        config = KoffeeConfig(**{**config.model_dump(), **kwargs})
+    config = _apply_config_overrides(config, kwargs)
 
-    output_path = get_output_path(
+    output_path = _get_output_path(
         video_file_path, config.output_dir, config.output_name
     )
 
@@ -45,28 +44,42 @@ def translate(
         config.translation_backend,
     )
 
-    if config.translation_backend == "whisper":
-        segments = transcript["segments"]
-    else:
-        segments = translate_transcript(
-            transcript, config.target_language, config.api_key
-        )
-
+    segments = _get_segments(transcript, config)
     subtitle_file_path = generate_subtitles(config.subtitle_format, segments)
 
-    output_video_file_path = overlay_subtitles(
-        subtitle_file_path, video_file_path, output_path
+    is_audio = Path(video_file_path).suffix.lower() in AUDIO_EXTENSIONS
+    if is_audio:
+        return _handle_audio_output(
+            subtitle_file_path, output_path, config.subtitle_format
+        )
+
+    return _finalize_video_output(
+        subtitle_file_path, video_file_path, output_path, config.subtitles
     )
 
-    if config.subtitles is False:
+
+def _apply_config_overrides(config: KoffeeConfig | None, kwargs: dict) -> KoffeeConfig:
+    """Resolves config, applying any kwarg overrides on top of an existing config."""
+    if config is None:
+        return KoffeeConfig(**kwargs)
+    return KoffeeConfig(**{**config.model_dump(), **kwargs})
+
+
+def _finalize_video_output(
+    subtitle_file_path: Path,
+    video_file_path: Path,
+    output_path: Path,
+    keep_subtitles: bool,
+) -> Path:
+    """Overlays subtitles onto the video and optionally removes the subtitle file."""
+    output_video = overlay_subtitles(subtitle_file_path, video_file_path, output_path)
+    if not keep_subtitles:
         subtitle_file_path.unlink()
-
     log.info("Finished processing video!")
+    return output_video
 
-    return output_video_file_path
 
-
-def get_output_path(
+def _get_output_path(
     video_file_path: Path | str,
     output_dir: Path | None,
     output_name: str | None,
@@ -76,13 +89,33 @@ def get_output_path(
 
     file_path = Path(video_file_path)
     file_dir = output_dir if output_dir is not None else file_path.parent
-    file_name = (
-        output_name
-        if output_name is not None
-        else f"{file_path.stem}_{datetime.today().strftime('%m-%d-%Y')}"
-    )
-    file_ext = file_path.suffix
 
-    output_path = file_dir / (file_name + file_ext)
+    is_audio = file_path.suffix.lower() in AUDIO_EXTENSIONS
+
+    if output_name is not None:
+        file_name = output_name
+    elif is_audio:
+        file_name = file_path.stem
+    else:
+        file_name = f"{file_path.stem}_{datetime.today().strftime('%m-%d-%Y')}"
+
+    output_path = file_dir / (file_name + file_path.suffix)
     log.debug(f"output_dir: {output_path!r}")
     return output_path
+
+
+def _get_segments(transcript: dict, config: KoffeeConfig) -> list:
+    """Returns translated or raw segments based on the translation backend."""
+    if config.translation_backend == "whisper":
+        return transcript["segments"]
+    return translate_transcript(transcript, config.target_language, config.api_key)
+
+
+def _handle_audio_output(
+    subtitle_file_path: Path, output_path: Path, subtitle_format: str
+) -> Path:
+    """Moves the subtitle file to the output path for audio file inputs."""
+    output_subtitle_path = output_path.with_suffix(f".{subtitle_format}")
+    subtitle_file_path.rename(output_subtitle_path)
+    log.info("Finished processing audio file!")
+    return output_subtitle_path
