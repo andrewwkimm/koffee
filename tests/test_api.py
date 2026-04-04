@@ -16,13 +16,20 @@ from koffee.translate import (
     _handle_audio_output,
 )
 
-video_file_path = Path("examples/videos/sample_korean_video.mp4")
-output_directory_path = Path("scratch")
-output_file_name = "python_output_video_file"
+
+@pytest.fixture
+def translate_module():
+    """Fixture to import the translate module for mocking purposes."""
+    return importlib.import_module("koffee.translate")
 
 
+@pytest.mark.integration
 def test_api() -> None:
     """Tests if the API call successfully outputs a file."""
+    video_file_path = Path("examples/videos/sample_korean_video.mp4")
+    output_directory_path = Path("scratch")
+    output_file_name = "python_output_video_file"
+
     output_video_file = koffee.translate(
         video_file_path=video_file_path,
         output_dir=output_directory_path,
@@ -30,8 +37,14 @@ def test_api() -> None:
         compute_type="int8",
     )
 
-    output_video_file_path = Path(output_video_file)
-    assert output_video_file_path.exists()
+    assert Path(output_video_file).exists()
+
+
+def test_invalid_video_file() -> None:
+    """Tests that the appropriate error is raised when an invalid file is given."""
+    error_message = "Inputted file is not a valid video file or does not exist."
+    with pytest.raises(InvalidVideoFileError, match=error_message):
+        koffee.translate("invalid_file.mp4")
 
 
 def test_get_output_path_audio_no_output_name() -> None:
@@ -54,9 +67,9 @@ def test_get_output_path_with_output_dir() -> None:
     assert result.parent == Path("/tmp")
 
 
-def test_get_segments_whisper_returns_raw(mocker) -> None:
+def test_get_segments_whisper_returns_raw(mocker, translate_module) -> None:
     """Test that whisper backend returns raw segments without translation."""
-    mock_translate = mocker.patch("koffee.translator.translate_transcript")
+    mock_translate = mocker.patch.object(translate_module, "translate_transcript")
     config = MagicMock(spec=KoffeeConfig)
     config.translation_backend = "whisper"
     transcript = {"segments": [{"start": 0.0, "end": 1.0, "text": "hi"}]}
@@ -67,14 +80,11 @@ def test_get_segments_whisper_returns_raw(mocker) -> None:
     mock_translate.assert_not_called()
 
 
-def test_get_segments_non_whisper_calls_translate(mocker) -> None:
+def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> None:
     """Test that a non-whisper backend calls translate_transcript."""
-    translate_module = importlib.import_module("koffee.translate")
-
     mock_translate = mocker.patch.object(
         translate_module, "translate_transcript", return_value=["translated"]
     )
-
     config = MagicMock(spec=KoffeeConfig)
     config.translation_backend = "gemini"
     config.target_language = "en"
@@ -89,10 +99,12 @@ def test_get_segments_non_whisper_calls_translate(mocker) -> None:
     )
 
 
-def test_finalize_video_output_deletes_subtitle_when_not_kept(mocker, tmp_path) -> None:
+def test_finalize_video_output_deletes_subtitle_when_not_kept(
+    mocker, tmp_path, translate_module
+) -> None:
     """Test that the subtitle file is deleted when keep_subtitles is False."""
-    mocker.patch(
-        "koffee.translate.overlay_subtitles", return_value=tmp_path / "out.mp4"
+    mocker.patch.object(
+        translate_module, "overlay_subtitles", return_value=tmp_path / "out.mp4"
     )
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
@@ -104,10 +116,12 @@ def test_finalize_video_output_deletes_subtitle_when_not_kept(mocker, tmp_path) 
     assert not subtitle.exists()
 
 
-def test_finalize_video_output_keeps_subtitle_when_flagged(mocker, tmp_path) -> None:
+def test_finalize_video_output_keeps_subtitle_when_flagged(
+    mocker, tmp_path, translate_module
+) -> None:
     """Test that the subtitle file is kept when keep_subtitles is True."""
-    mocker.patch(
-        "koffee.translate.overlay_subtitles", return_value=tmp_path / "out.mp4"
+    mocker.patch.object(
+        translate_module, "overlay_subtitles", return_value=tmp_path / "out.mp4"
     )
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
@@ -130,10 +144,3 @@ def test_handle_audio_output_renames_subtitle(tmp_path) -> None:
     assert result == tmp_path / "track.srt"
     assert result.exists()
     assert not subtitle.exists()
-
-
-def test_invalid_video_file() -> None:
-    """Tests that the appropriate error is raised when an invalid file is given."""
-    error_message = "Inputted file is not a valid video file or does not exist."
-    with pytest.raises(InvalidVideoFileError, match=error_message):
-        koffee.translate("invalid_file.mp4")
