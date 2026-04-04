@@ -4,12 +4,13 @@ import nox
 from nox.sessions import Session
 
 
-@nox.session()
+@nox.session(python=["3.10", "3.11", "3.12", "3.13", "3.14"])
 def test_build_from_wheel(session: Session) -> None:
     """Runs tests with local installation from a built wheel."""
     session.install("pytest")
     session.install("pytest-mock")
     session.install("behave")
+    session.install("hatch")
 
     session.run("hatch", "build", "-t", "wheel")
     session.run(
