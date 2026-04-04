@@ -72,7 +72,7 @@ lint.select = [
 ]
 
 
-lint.ignore = []
+lint.ignore = ["PLR2004"]
 
 exclude = ["tests/data", ".venv", "build", "dist"]
 
