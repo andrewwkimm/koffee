@@ -75,7 +75,7 @@ Refer below for a list of all commands and parameters.
     --version, -v               Display application version.
     --verbose, -V               Print debug logs.
     --subtitles, -s             Write the translated subtitle file to disk.
-    --overlay-video, ov             Overlay subtitles onto a video file.
+    --overlay-video, ov         Overlay subtitles onto a video file.
 
 ## Contributing
 
