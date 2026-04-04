@@ -34,7 +34,10 @@ def test_transcribe_text(mocker: MockerFixture) -> None:
     )
 
     mock_model.transcribe.assert_called_once_with(
-        "mock_video_file.mp4", task="translate"
+        "mock_video_file.mp4",
+        task="translate",
+        word_timestamps=True,
+        vad_filter=True,
     )
 
     assert result["language"] == "ko"
