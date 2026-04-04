@@ -22,7 +22,7 @@ def translate(
     config: KoffeeConfig | None = None,
     **kwargs: Any,
 ) -> Path | str:
-    """Processes a video file for translation and subtitle overlay."""
+    """Processes a video or audio file for translation and subtitle generation."""
     log.info("Translating file...")
 
     if not Path(video_file_path).exists() or not Path(video_file_path).is_file():
@@ -48,14 +48,12 @@ def translate(
     subtitle_file_path = generate_subtitles(config.subtitle_format, segments)
 
     is_audio = Path(video_file_path).suffix.lower() in AUDIO_EXTENSIONS
-    if is_audio:
-        return _handle_audio_output(
+    if is_audio or not config.overlay_video:
+        return _handle_subtitle_output(
             subtitle_file_path, output_path, config.subtitle_format
         )
 
-    return _finalize_video_output(
-        subtitle_file_path, video_file_path, output_path, config.subtitles
-    )
+    return _finalize_video_output(subtitle_file_path, video_file_path, output_path)
 
 
 def _apply_config_overrides(config: KoffeeConfig | None, kwargs: dict) -> KoffeeConfig:
@@ -69,12 +67,10 @@ def _finalize_video_output(
     subtitle_file_path: Path,
     video_file_path: Path,
     output_path: Path,
-    keep_subtitles: bool,
-) -> Path:
-    """Overlays subtitles onto the video and optionally removes the subtitle file."""
+) -> Path | str:
+    """Overlays subtitles onto the video and removes the subtitle file."""
     output_video = overlay_subtitles(subtitle_file_path, video_file_path, output_path)
-    if not keep_subtitles:
-        subtitle_file_path.unlink()
+    subtitle_file_path.unlink()
     log.info("Finished processing video!")
     return output_video
 
@@ -84,7 +80,7 @@ def _get_output_path(
     output_dir: Path | None,
     output_name: str | None,
 ) -> Path:
-    """Gets the output path for the translated video file."""
+    """Gets the output path for the translated output file."""
     log.debug(f"output_name: {output_name!r}")
 
     file_path = Path(video_file_path)
@@ -111,11 +107,11 @@ def _get_segments(transcript: dict, config: KoffeeConfig) -> list:
     return translate_transcript(transcript, config.target_language, config.api_key)
 
 
-def _handle_audio_output(
+def _handle_subtitle_output(
     subtitle_file_path: Path, output_path: Path, subtitle_format: str
 ) -> Path:
-    """Moves the subtitle file to the output path for audio file inputs."""
+    """Moves the subtitle file to the output path."""
     output_subtitle_path = output_path.with_suffix(f".{subtitle_format}")
     subtitle_file_path.rename(output_subtitle_path)
-    log.info("Finished processing audio file!")
+    log.info("Finished processing file!")
     return output_subtitle_path

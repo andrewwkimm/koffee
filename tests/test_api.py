@@ -13,7 +13,7 @@ from koffee.translate import (
     _finalize_video_output,
     _get_output_path,
     _get_segments,
-    _handle_audio_output,
+    _handle_subtitle_output,
 )
 
 
@@ -25,19 +25,20 @@ def translate_module():
 
 @pytest.mark.integration
 def test_api() -> None:
-    """Tests if the API call successfully outputs a file."""
+    """Tests if the API call successfully outputs a subtitle file."""
     video_file_path = Path("examples/videos/sample_korean_video.mp4")
     output_directory_path = Path("scratch")
     output_file_name = "python_output_video_file"
 
-    output_video_file = koffee.translate(
+    output_file = koffee.translate(
         video_file_path=video_file_path,
         output_dir=output_directory_path,
         output_name=output_file_name,
         compute_type="int8",
     )
 
-    assert Path(output_video_file).exists()
+    assert Path(output_file).exists()
+    assert Path(output_file).suffix in {".srt", ".vtt"}
 
 
 def test_invalid_video_file() -> None:
@@ -99,47 +100,41 @@ def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> N
     )
 
 
-def test_finalize_video_output_deletes_subtitle_when_not_kept(
+def test_finalize_video_output_deletes_subtitle(
     mocker, tmp_path, translate_module
 ) -> None:
-    """Test that the subtitle file is deleted when keep_subtitles is False."""
+    """Test that the subtitle file is always deleted after overlay."""
     mocker.patch.object(
         translate_module, "overlay_subtitles", return_value=tmp_path / "out.mp4"
     )
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
 
-    _finalize_video_output(
-        subtitle, tmp_path / "in.mp4", tmp_path / "out.mp4", keep_subtitles=False
-    )
+    _finalize_video_output(subtitle, tmp_path / "in.mp4", tmp_path / "out.mp4")
 
     assert not subtitle.exists()
 
 
-def test_finalize_video_output_keeps_subtitle_when_flagged(
-    mocker, tmp_path, translate_module
-) -> None:
-    """Test that the subtitle file is kept when keep_subtitles is True."""
-    mocker.patch.object(
-        translate_module, "overlay_subtitles", return_value=tmp_path / "out.mp4"
-    )
+def test_handle_subtitle_output_renames_subtitle(tmp_path) -> None:
+    """Test that the subtitle file is moved to the correct output path."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
+    output_path = tmp_path / "track.mp4"
 
-    _finalize_video_output(
-        subtitle, tmp_path / "in.mp4", tmp_path / "out.mp4", keep_subtitles=True
-    )
+    result = _handle_subtitle_output(subtitle, output_path, "srt")
 
-    assert subtitle.exists()
+    assert result == tmp_path / "track.srt"
+    assert result.exists()
+    assert not subtitle.exists()
 
 
-def test_handle_audio_output_renames_subtitle(tmp_path) -> None:
-    """Test that the subtitle file is moved to the correct output path."""
+def test_handle_subtitle_output_audio_renames_subtitle(tmp_path) -> None:
+    """Test that the subtitle file is moved correctly for audio inputs."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
     output_path = tmp_path / "track.mp3"
 
-    result = _handle_audio_output(subtitle, output_path, "srt")
+    result = _handle_subtitle_output(subtitle, output_path, "srt")
 
     assert result == tmp_path / "track.srt"
     assert result.exists()

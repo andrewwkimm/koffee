@@ -11,7 +11,7 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
-**koffee** is a tool that automates the translation and subtitling of Korean<>English videos.
+**koffee** is a tool that automates the translation and subtitling of Korean and Japanese video and audio files to English.
 
 ## Dependencies
 
@@ -27,7 +27,7 @@ pip install git+https://github.com/andrewwkimm/koffee
 
 ## Quick start
 
-All that is needed is a working video or audio file and the translated video, or subtitle file for audios, will be outputted to the current directory.
+All that is needed is a working video or audio file and the translated subtitle file will be outputted to the current directory.
 
 ```console
 koffee some_dir/some_video_file.mp4
@@ -75,6 +75,7 @@ Refer below for a list of all commands and parameters.
     --version, -v               Display application version.
     --verbose, -V               Print debug logs.
     --subtitles, -s             Write the translated subtitle file to disk.
+    --overlay-video, ov             Overlay subtitles onto a video file.
 
 ## Contributing
 

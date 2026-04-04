@@ -44,8 +44,8 @@ def test_script_run() -> None:
     assert result.returncode == 0
 
 
-def test_subtitles(mocker: MockerFixture) -> None:
-    """Tests if the subtitles flag writes the subtitle file to disk."""
+def test_overlay_video(mocker: MockerFixture) -> None:
+    """Tests that overlay_video flag is passed through to config."""
     mock_translate = mocker.patch("koffee.cli.translate")
 
     cli(
@@ -53,13 +53,30 @@ def test_subtitles(mocker: MockerFixture) -> None:
         compute_type="int8",
         output_dir=output_directory_path,
         output_name=output_file_name,
-        subtitles=True,
+        overlay_video=True,
     )
 
     mock_translate.assert_called_once()
     config = mock_translate.call_args.kwargs["config"]
 
-    assert config.subtitles is True
+    assert config.overlay_video is True
+
+
+def test_overlay_video_defaults_to_false(mocker: MockerFixture) -> None:
+    """Tests that overlay_video defaults to False."""
+    mock_translate = mocker.patch("koffee.cli.translate")
+
+    cli(
+        korean_video_file_path,
+        compute_type="int8",
+        output_dir=output_directory_path,
+        output_name=output_file_name,
+    )
+
+    mock_translate.assert_called_once()
+    config = mock_translate.call_args.kwargs["config"]
+
+    assert config.overlay_video is False
 
 
 def test_verbose(mocker: MockerFixture) -> None:
