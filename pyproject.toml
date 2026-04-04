@@ -72,7 +72,10 @@ lint.select = [
 ]
 
 
-lint.ignore = ["PLR2004"]
+lint.ignore = [
+    "PLR2004", # Magic value used in comparison
+    "PLR0913", # Too many arguments in function definition
+]
 
 exclude = ["tests/data", ".venv", "build", "dist"]
 
