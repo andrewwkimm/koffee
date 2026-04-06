@@ -34,6 +34,7 @@ def translate(
 
     _validate_file(video_file_path)
     config = _apply_config_overrides(config, kwargs)
+    _validate_api_key(config)
 
     if Path(video_file_path).suffix.lower() in SUBTITLE_EXTENSIONS:
         return _translate_subtitle_file(video_file_path, config, on_translate_progress)
@@ -53,9 +54,19 @@ def translate(
 def _validate_file(video_file_path: Path | str) -> None:
     """Raises InvalidVideoFileError if the file does not exist or is not a file."""
     if not Path(video_file_path).exists() or not Path(video_file_path).is_file():
-        error_message = "Inputted file is not a valid video file or does not exist."
+        error_message = "Inputted file is not valid or does not exist."
         log.error(error_message)
         raise InvalidVideoFileError(error_message)
+
+
+def _validate_api_key(config: KoffeeConfig) -> None:
+    """Raises ValueError if the Gemini backend is selected without an API key."""
+    if config.translation_backend == "gemini" and not config.api_key:
+        error_message = (
+            "An API key is required when using the Gemini translation backend. "
+            "Provide one with --api_key or set the GOOGLE_API_KEY environment variable."
+        )
+        raise ValueError(error_message)
 
 
 def _apply_config_overrides(config: KoffeeConfig | None, kwargs: dict) -> KoffeeConfig:
@@ -173,12 +184,9 @@ def _get_output_path(
     file_path = Path(video_file_path)
     file_dir = output_dir if output_dir is not None else file_path.parent
     file_dir.mkdir(parents=True, exist_ok=True)
-    is_audio = file_path.suffix.lower() in AUDIO_EXTENSIONS
 
     if output_name is not None:
         file_name = output_name
-    elif is_audio:
-        file_name = file_path.stem
     else:
         file_name = f"{file_path.stem}_{datetime.now().strftime('%m-%d-%Y')}"
 
