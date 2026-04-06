@@ -1,0 +1,59 @@
+"""Subtitle file parser."""
+
+import logging
+import re
+from pathlib import Path
+
+log = logging.getLogger(__name__)
+
+TIMESTAMP_PATTERN = re.compile(
+    r"(\d{2}:\d{2}:\d{2}[,\.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,\.]\d{3})"
+)
+
+
+def parse_subtitle_file(file_path: Path | str) -> list[dict]:
+    """Parses an SRT or VTT file into a list of segment dicts."""
+    file_path = Path(file_path)
+    text = file_path.read_text(encoding="utf-8")
+
+    blocks = re.split(r"\n\n+", text.strip())
+    segments = []
+
+    for block in blocks:
+        lines = block.strip().split("\n")
+        match = _find_timestamp_line(lines)
+        if match is None:
+            continue
+
+        timestamp_idx, start_ts, end_ts = match
+        text_lines = lines[timestamp_idx + 1 :]
+        if not text_lines:
+            continue
+
+        segments.append(
+            {
+                "start": _timestamp_to_seconds(start_ts),
+                "end": _timestamp_to_seconds(end_ts),
+                "text": " ".join(line.strip() for line in text_lines),
+            }
+        )
+
+    log.debug(f"Parsed {len(segments)} segments from {file_path.name}")
+    return segments
+
+
+def _find_timestamp_line(lines: list[str]) -> tuple[int, str, str] | None:
+    """Finds the timestamp line in a block and returns (index, start, end)."""
+    for i, line in enumerate(lines):
+        match = TIMESTAMP_PATTERN.search(line)
+        if match:
+            return i, match.group(1), match.group(2)
+    return None
+
+
+def _timestamp_to_seconds(timestamp: str) -> float:
+    """Converts an SRT/VTT timestamp to seconds."""
+    timestamp = timestamp.replace(",", ".")
+    hours, minutes, rest = timestamp.split(":")
+    seconds, ms = rest.split(".")
+    return int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(ms) / 1000
