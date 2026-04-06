@@ -226,12 +226,15 @@ def _build_prompt(
     start_entry: int,
 ) -> str:
     """Builds the translation prompt for a chunk of subtitle entries."""
-    prompt_parts = [
-        (
+    if source_language == "auto":
+        instruction = f"Translate the following subtitle entries to {target_language}."
+    else:
+        instruction = (
             f"Translate the following subtitle entries from "
             f"{source_language} to {target_language}."
         )
-    ]
+
+    prompt_parts = [instruction]
 
     if context_entries:
         prompt_parts.extend(

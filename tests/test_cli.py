@@ -7,7 +7,12 @@ from pathlib import Path
 
 from pytest_mock import MockerFixture
 
-from koffee.cli import _check_embedded_subtitles, _resolve_paths, cli
+from koffee.cli import (
+    _check_embedded_subtitles,
+    _resolve_paths,
+    _select_subtitle_track,
+    cli,
+)
 from koffee.data.config import KoffeeConfig
 
 korean_video_file_path = Path("examples/videos/sample_korean_video.mp4")
@@ -199,16 +204,15 @@ def test_check_embedded_subtitles_user_accepts(
     mocker: MockerFixture,
 ) -> None:
     """Tests that accepting embedded subtitles updates config."""
-    mocker.patch(
-        "koffee.cli.get_subtitle_tracks",
-        return_value=[{"index": 0, "codec": "srt"}],
-    )
+    tracks = [{"index": 0, "codec": "srt", "tags": {"language": "ko"}}]
+    mocker.patch("koffee.cli.get_subtitle_tracks", return_value=tracks)
     mocker.patch("builtins.input", return_value="y")
     config = KoffeeConfig()
 
     result = _check_embedded_subtitles(korean_video_file_path, config)
 
     assert result.use_embedded_subtitles is True
+    assert result.source_language == "ko"
 
 
 def test_check_embedded_subtitles_user_declines(
@@ -258,3 +262,51 @@ def test_batch_progress_logging(mocker: MockerFixture) -> None:
     log_messages = [call.args[0] for call in mock_log.info.call_args_list]
     assert any("[1/2]" in msg for msg in log_messages)
     assert any("[2/2]" in msg for msg in log_messages)
+
+
+def test_select_subtitle_track_single() -> None:
+    """Tests that a single track is selected automatically."""
+    tracks = [{"index": 0, "tags": {"language": "ja"}}]
+
+    index, lang = _select_subtitle_track(tracks)
+
+    assert index == 0
+    assert lang == "ja"
+
+
+def test_select_subtitle_track_multiple(mocker: MockerFixture) -> None:
+    """Tests that user can select from multiple tracks."""
+    tracks = [
+        {"index": 0, "tags": {"language": "ja", "title": "Japanese"}},
+        {"index": 1, "tags": {"language": "ko", "title": "Korean"}},
+    ]
+    mocker.patch("builtins.input", return_value="1")
+
+    index, lang = _select_subtitle_track(tracks)
+
+    assert index == 1
+    assert lang == "ko"
+
+
+def test_select_subtitle_track_default_on_empty_input(mocker: MockerFixture) -> None:
+    """Tests that empty input defaults to track 0."""
+    tracks = [
+        {"index": 0, "tags": {"language": "ja"}},
+        {"index": 1, "tags": {"language": "ko"}},
+    ]
+    mocker.patch("builtins.input", return_value="")
+
+    index, lang = _select_subtitle_track(tracks)
+
+    assert index == 0
+    assert lang == "ja"
+
+
+def test_select_subtitle_track_missing_language_tag() -> None:
+    """Tests that a track without language tag returns None."""
+    tracks = [{"index": 0, "tags": {}}]
+
+    index, lang = _select_subtitle_track(tracks)
+
+    assert index == 0
+    assert lang is None
