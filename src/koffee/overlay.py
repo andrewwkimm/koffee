@@ -9,6 +9,16 @@ from koffee.exceptions import SubtitleOverlayError
 log = logging.getLogger(__name__)
 
 
+MKV_EXTENSIONS = {".mkv", ".webm"}
+
+
+def _get_subtitle_codec(output_file_path: Path | str) -> str:
+    """Returns the appropriate subtitle codec for the output container."""
+    if Path(output_file_path).suffix.lower() in MKV_EXTENSIONS:
+        return "srt"
+    return "mov_text"
+
+
 def overlay_subtitles(
     subtitle_file_path: Path | str,
     video_file_path: Path | str,
@@ -16,6 +26,8 @@ def overlay_subtitles(
 ) -> Path | str:
     """Overlay subtitles to a video file."""
     log.info("Overlaying subtitles.")
+
+    subtitle_codec = _get_subtitle_codec(output_file_path)
 
     cmd = [
         "ffmpeg",
@@ -26,7 +38,7 @@ def overlay_subtitles(
         "-c",
         "copy",
         "-c:s",
-        "mov_text",
+        subtitle_codec,
         "-metadata:s:s:0",
         "language=eng",
         "-y",
