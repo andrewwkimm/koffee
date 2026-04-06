@@ -12,7 +12,7 @@ from koffee.exceptions import InvalidVideoFileError
 from koffee.overlay import overlay_subtitles
 from koffee.subtitle import generate_subtitles
 from koffee.translator import translate_transcript
-from koffee.utils import parse_subtitle_file
+from koffee.utils import extract_subtitle_track, parse_subtitle_file
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +37,11 @@ def translate(
 
     if Path(video_file_path).suffix.lower() in SUBTITLE_EXTENSIONS:
         return _translate_subtitle_file(video_file_path, config, on_translate_progress)
+
+    if config.use_embedded_subtitles:
+        return _translate_embedded_subtitles(
+            video_file_path, config, on_translate_progress
+        )
 
     transcript = _transcribe(video_file_path, config, on_asr_progress)
     subtitle_file_path = _translate(transcript, config, on_translate_progress)
@@ -114,6 +119,23 @@ def _route_output(
         )
 
     return output_file_path
+
+
+def _translate_embedded_subtitles(
+    video_file_path: Path | str,
+    config: KoffeeConfig,
+    on_progress: Callable[[float], None] | None,
+) -> Path:
+    """Extracts embedded subtitles from a video and translates them."""
+    log.info("Extracting embedded subtitles from video.")
+
+    extracted_path = extract_subtitle_track(video_file_path)
+    try:
+        result = _translate_subtitle_file(extracted_path, config, on_progress)
+    finally:
+        extracted_path.unlink(missing_ok=True)
+
+    return result
 
 
 def _translate_subtitle_file(
