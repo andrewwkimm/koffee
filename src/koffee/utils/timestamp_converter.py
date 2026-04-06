@@ -17,7 +17,8 @@ def convert_to_timestamp(seconds: float | int, subtitle_format: str) -> str:
     seconds_int = int(seconds_decimal)
     ms = int((seconds_decimal % 1) * 1000)
     ts = timedelta(seconds=seconds_int)
-    hours, remainder = divmod(ts.seconds, 3600)
+    total_seconds = int(ts.total_seconds())
+    hours, remainder = divmod(total_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
 
     if subtitle_format == "srt":

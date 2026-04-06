@@ -125,7 +125,7 @@ def _get_output_path(
     elif is_audio:
         file_name = file_path.stem
     else:
-        file_name = f"{file_path.stem}_{datetime.today().strftime('%m-%d-%Y')}"
+        file_name = f"{file_path.stem}_{datetime.now().strftime('%m-%d-%Y')}"
 
     output_path = file_dir / (file_name + file_path.suffix)
     log.debug(f"output_dir: {output_path!r}")
