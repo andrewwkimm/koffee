@@ -46,7 +46,7 @@ def overlay_subtitles(
     ]
 
     try:
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
+        subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=600)
     except subprocess.CalledProcessError as error:
         raise SubtitleOverlayError(error.stderr) from error
 
