@@ -11,11 +11,11 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
-**koffee** is a tool that automates the translation and subtitling of Korean and Japanese video and audio files to English.
+**koffee** is a tool that automates the translation and subtitling of video and audio files.
 
 ## Dependencies
 
-Python versions 3.10 to 3.13 are supported. Additionally, [ffmpeg](https://www.ffmpeg.org/download.html) is required for koffee to run.
+Python versions 3.11 to 3.13 are supported. Additionally, [ffmpeg](https://www.ffmpeg.org/download.html) is required for koffee to run.
 
 ## Installation
 
@@ -27,7 +27,7 @@ pip install git+https://github.com/andrewwkimm/koffee
 
 ## Quick start
 
-All that is needed is a working video or audio file and the translated subtitle file will be outputted to the current directory.
+All that is needed is a working video, audio, or subtitle file and the translated subtitle file will be outputted to the current directory.
 
 ```console
 koffee some_dir/some_video_file.mp4
@@ -58,24 +58,25 @@ Refer below for a list of all commands and parameters.
 
 ### Parameters
 
-    --file_path                 Path to the video file.
-    --device, -d                evice to use for computation.
-    --compute_type, -c          Type to use for computation.
+    --compute-type, -c          Type to use for computation.
+    --device, -d                Device to use for computation.
     --model, -m                 The Whisper model instance to use.
     --output_dir, -o            Directory for the output file.
     --output_name, -n           Name of the output file.
-    --subtitle_format, -sf      Format to use for the subtitles.
-    --target_lang, -t           Language to which the video should be translated.
-    --translation_backend, tb   Backend service to use for translation.
-    --api-key, -ak              API key for LLM based translation
+    --source_lang, -sl          Source language (default: auto).
+    --target_lang, -t           Language to which the file should be translated.
+    --subtitle_format, -sf      Format to use for the subtitles (srt, vtt, ass).
+    --translation_backend, -tb  Backend service to use for translation (whisper, gemini).
+    --api_key, -ak              API key for LLM based translation.
 
 ### Options
 
     --help, -h                  Display this message and exit.
     --version, -v               Display application version.
     --verbose, -V               Print debug logs.
-    --subtitles, -s             Write the translated subtitle file to disk.
-    --overlay-video, ov         Overlay subtitles onto a video file.
+    --overlay                   Subtitle overlay mode: none, soft, or hard.
+    --dry-run                   Preview what would be done without processing.
+    --overwrite                 Overwrite existing output files.
 
 ## Contributing
 
