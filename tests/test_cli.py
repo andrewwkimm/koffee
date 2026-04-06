@@ -7,7 +7,7 @@ from pathlib import Path
 
 from pytest_mock import MockerFixture
 
-from koffee.cli import cli
+from koffee.cli import _resolve_paths, cli
 
 korean_video_file_path = Path("examples/videos/sample_korean_video.mp4")
 
@@ -94,3 +94,16 @@ def test_verbose(mocker: MockerFixture) -> None:
     )
 
     logger_instance.setLevel.assert_called_once_with(logging.DEBUG)
+
+
+def test_resolve_paths_expands_directory(tmp_path) -> None:
+    """Tests that a directory input resolves to supported files within it."""
+    (tmp_path / "video.mp4").touch()
+    (tmp_path / "audio.wav").touch()
+    (tmp_path / "readme.txt").touch()
+
+    result = _resolve_paths((tmp_path,))
+
+    suffixes = {p.suffix for p in result}
+    assert suffixes == {".mp4", ".wav"}
+    assert len(result) == 2

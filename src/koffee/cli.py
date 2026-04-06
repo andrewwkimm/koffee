@@ -15,7 +15,7 @@ from rich.progress import (
 )
 
 from koffee.data.config import KoffeeConfig
-from koffee.translate import translate
+from koffee.translate import SUPPORTED_EXTENSIONS, translate
 
 logging.basicConfig(
     level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
@@ -146,12 +146,20 @@ def cli(
 
 
 def _resolve_paths(file_path: tuple) -> list[Path]:
-    """Resolves glob patterns and returns a flat list of matched paths."""
+    """Resolves glob patterns, directories, and files into a flat list of paths."""
     resolved_paths = []
     for pattern in file_path:
         path = Path(pattern)
         if path.exists():
             resolved_paths.append(path)
+        if path.is_dir():
+            resolved_paths.extend(
+                sorted(
+                    p
+                    for p in path.iterdir()
+                    if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS
+                )
+            )
         else:
             matches = sorted(Path.cwd().glob(str(pattern)))
             if matches:
