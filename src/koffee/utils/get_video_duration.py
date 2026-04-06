@@ -24,6 +24,7 @@ def get_video_duration(video_file_path: Path | str) -> float:
             capture_output=True,
             text=True,
             check=True,
+            timeout=30,
         )
     except FileNotFoundError:
         log.error("ffprobe not found. Please install ffmpeg to use this feature.")

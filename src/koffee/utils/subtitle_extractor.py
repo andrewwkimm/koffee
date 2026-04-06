@@ -27,6 +27,7 @@ def get_subtitle_tracks(video_file_path: Path | str) -> list[dict]:
             capture_output=True,
             text=True,
             check=True,
+            timeout=30,
         )
     except FileNotFoundError:
         log.error("ffprobe not found. Please install ffmpeg to use this feature.")
@@ -56,6 +57,7 @@ def extract_subtitle_track(video_file_path: Path | str, track_index: int = 0) ->
             capture_output=True,
             text=True,
             check=True,
+            timeout=600,
         )
     except subprocess.CalledProcessError as error:
         log.error(f"Failed to extract subtitle track: {error.stderr}")
