@@ -22,7 +22,7 @@ def convert_text_to_vtt(transcript: list, output_dir: Path) -> Path:
         for idx, subtitle in enumerate(transcript, 1):
             start = convert_to_timestamp(subtitle["start"], "vtt")
             end = convert_to_timestamp(subtitle["end"], "vtt")
-            text = subtitle["text"]
+            text = subtitle["text"].strip()
 
             file.write(f"{start} --> {end}\n")
             if idx != len(transcript):

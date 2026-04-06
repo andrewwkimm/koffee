@@ -51,7 +51,7 @@ def convert_text_to_ass(transcript: list, output_dir: Path) -> Path:
         for subtitle in transcript:
             start = _seconds_to_ass_timestamp(subtitle["start"])
             end = _seconds_to_ass_timestamp(subtitle["end"])
-            text = subtitle["text"].replace("\n", "\\N")
+            text = subtitle["text"].strip().replace("\n", "\\N")
             file.write(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{text}\n")
 
     log.debug(repr(output_file_path))

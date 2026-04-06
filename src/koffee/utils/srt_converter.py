@@ -20,7 +20,7 @@ def convert_text_to_srt(transcript: list, output_dir: Path) -> Path:
         for idx, subtitle in enumerate(transcript, 1):
             start = convert_to_timestamp(subtitle["start"], "srt")
             end = convert_to_timestamp(subtitle["end"], "srt")
-            text = subtitle["text"]
+            text = subtitle["text"].strip()
 
             file.write(f"{idx}\n")
             file.write(f"{start} --> {end}\n")
