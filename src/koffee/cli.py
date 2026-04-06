@@ -14,7 +14,7 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
-from koffee.data.config import KoffeeConfig
+from koffee.data.config import KoffeeConfig, load_config_file
 from koffee.translate import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, translate
 from koffee.utils import get_subtitle_tracks
 
@@ -36,7 +36,7 @@ options_group = Group("Options", sort_key=2)
 app["--help"].group = options_group
 app["--version"].group = options_group
 
-options = KoffeeConfig()
+options = KoffeeConfig(**load_config_file())
 
 
 def _create_progress_bar() -> Progress:

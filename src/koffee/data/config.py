@@ -1,9 +1,19 @@
 """The koffee Configuration."""
 
+import logging
 from pathlib import Path
 from typing import Literal
 
+import tomllib
 from pydantic import BaseModel, ConfigDict
+
+log = logging.getLogger(__name__)
+
+CONFIG_FILENAME = "koffee.toml"
+CONFIG_SEARCH_PATHS = [
+    Path.cwd() / CONFIG_FILENAME,
+    Path.home() / ".config" / "koffee" / CONFIG_FILENAME,
+]
 
 
 class KoffeeConfig(BaseModel):
@@ -26,3 +36,19 @@ class KoffeeConfig(BaseModel):
     dry_run: bool = False
     overwrite: bool = False
     use_embedded_subtitles: bool = False
+
+
+def load_config_file(path: Path | None = None) -> dict:
+    """Loads config from a TOML file, searching default paths if none given.
+
+    Returns an empty dict if no config file is found.
+    """
+    search_paths = [path] if path is not None else CONFIG_SEARCH_PATHS
+
+    for config_path in search_paths:
+        if config_path.is_file():
+            log.debug(f"Loading config from {config_path}")
+            with config_path.open("rb") as f:
+                return tomllib.load(f)
+
+    return {}
