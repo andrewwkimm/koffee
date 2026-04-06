@@ -12,10 +12,12 @@ from koffee.exceptions import InvalidVideoFileError
 from koffee.overlay import overlay_subtitles
 from koffee.subtitle import generate_subtitles
 from koffee.translator import translate_transcript
+from koffee.utils import parse_subtitle_file
 
 log = logging.getLogger(__name__)
 
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a"}
+SUBTITLE_EXTENSIONS = {".srt", ".vtt"}
 
 
 def translate(
@@ -30,6 +32,10 @@ def translate(
 
     _validate_file(video_file_path)
     config = _apply_config_overrides(config, kwargs)
+
+    if Path(video_file_path).suffix.lower() in SUBTITLE_EXTENSIONS:
+        return _translate_subtitle_file(video_file_path, config, on_translate_progress)
+
     transcript = _transcribe(video_file_path, config, on_asr_progress)
     subtitle_file_path = _translate(transcript, config, on_translate_progress)
     output_path = _route_output(video_file_path, subtitle_file_path, config)
@@ -106,6 +112,30 @@ def _route_output(
         )
 
     return output_file_path
+
+
+def _translate_subtitle_file(
+    file_path: Path | str,
+    config: KoffeeConfig,
+    on_progress: Callable[[float], None] | None,
+) -> Path:
+    """Translates an existing subtitle file without ASR."""
+    log.info("Detected subtitle file input, skipping transcription.")
+
+    segments = parse_subtitle_file(file_path)
+    translated_segments = translate_transcript(
+        {"segments": segments, "language": config.source_language},
+        config.target_language,
+        config.api_key,
+        on_progress,
+        translation_model=config.translation_model,
+    )
+    translated = generate_subtitles(config.subtitle_format, translated_segments)
+    output_path = _get_output_path(file_path, config.output_dir, config.output_name)
+    output_subtitle_path = output_path.with_suffix(f".{config.subtitle_format}")
+    translated.rename(output_subtitle_path)
+
+    return output_subtitle_path
 
 
 def _get_output_path(
