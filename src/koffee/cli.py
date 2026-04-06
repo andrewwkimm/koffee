@@ -68,6 +68,9 @@ def cli(
     model: Annotated[str, Parameter(name=("--model", "-m"))] = options.model,
     output_dir: Annotated[Path, Parameter(name=("--output_dir", "-o"))] | None = None,
     output_name: Annotated[str, Parameter(name=("--output_name", "-n"))] | None = None,
+    source_lang: Annotated[
+        str, Parameter(name=("--source_lang", "-sl"))
+    ] = options.source_language,
     target_lang: Annotated[
         str, Parameter(name=("--target_lang", "-t"))
     ] = options.target_language,
@@ -91,7 +94,7 @@ def cli(
     Parameters
     ----------
     file_path: Path
-        Path to the video or audio file
+        Path to the video, audio, or subtitle file
     compute_type: str
         Type to use for computation
     device: str
@@ -107,6 +110,8 @@ def cli(
     overlay_video: bool
         Embed subtitles into the video as a soft subtitle track instead of
         outputting a subtitle file. Only valid for video file inputs.
+    source_language: str
+        Source language of the subtitle file (default: ja)
     target_language: str
         Language to which the file should be translated
     translation_backend: str
@@ -127,6 +132,7 @@ def cli(
         output_dir=output_dir,
         output_name=output_name,
         overlay_video=overlay_video,
+        source_language=source_lang,
         subtitle_format=subtitle_format,
         target_language=target_lang,
         translation_backend=translation_backend,
@@ -143,11 +149,15 @@ def _resolve_paths(file_path: tuple) -> list[Path]:
     """Resolves glob patterns and returns a flat list of matched paths."""
     resolved_paths = []
     for pattern in file_path:
-        matches = sorted(Path.cwd().glob(str(pattern)))
-        if matches:
-            resolved_paths.extend(matches)
+        path = Path(pattern)
+        if path.exists():
+            resolved_paths.append(path)
         else:
-            resolved_paths.append(Path(pattern))
+            matches = sorted(Path.cwd().glob(str(pattern)))
+            if matches:
+                resolved_paths.extend(matches)
+            else:
+                resolved_paths.append(path)
 
     return resolved_paths
 
