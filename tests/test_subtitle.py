@@ -15,6 +15,8 @@ from koffee.subtitle import generate_subtitles
         ("srt", None),
         ("vtt", Path("scratch")),
         ("vtt", None),
+        ("ass", Path("scratch")),
+        ("ass", None),
     ],
 )
 def test_subtitle_generator(
@@ -89,6 +91,15 @@ The train stopped at the signal station.
 00:00:16.980 --> 00:00:24.060
 On the other side, a virgin approached and opened a window in front of the Shimmura.
 """
+    elif subtitle_format == "ass":
+        assert "[Script Info]" in actual
+        assert "[V4+ Styles]" in actual
+        assert "[Events]" in actual
+        assert "Dialogue: 0," in actual
+        assert "When we got out of the long tunnel of the border" in actual
+        assert "The bottom of the night has been changed." in actual
+        subtitle_file_path.unlink()
+        return
     else:
         error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
         raise InvalidSubtitleFormatError(error_message)

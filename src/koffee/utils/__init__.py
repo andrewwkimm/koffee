@@ -1,5 +1,6 @@
 """Utilities for koffee."""
 
+from .ass_converter import convert_text_to_ass
 from .get_video_duration import get_video_duration
 from .srt_converter import convert_text_to_srt
 from .subtitle_extractor import extract_subtitle_track, get_subtitle_tracks
@@ -8,6 +9,7 @@ from .timestamp_converter import convert_to_timestamp
 from .vtt_converter import convert_text_to_vtt
 
 __all__ = [
+    "convert_text_to_ass",
     "convert_text_to_srt",
     "convert_text_to_vtt",
     "convert_to_timestamp",

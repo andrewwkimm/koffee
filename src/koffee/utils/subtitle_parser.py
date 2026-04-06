@@ -11,10 +11,21 @@ TIMESTAMP_PATTERN = re.compile(
 )
 
 
+ASS_DIALOGUE_PATTERN = re.compile(
+    r"Dialogue:\s*\d+,"
+    r"(\d+:\d{2}:\d{2}\.\d{2}),"
+    r"(\d+:\d{2}:\d{2}\.\d{2}),"
+    r"[^,]*,[^,]*,\d+,\d+,\d+,[^,]*,(.*)"
+)
+
+
 def parse_subtitle_file(file_path: Path | str) -> list[dict]:
-    """Parses an SRT or VTT file into a list of segment dicts."""
+    """Parses an SRT, VTT, or ASS/SSA file into a list of segment dicts."""
     file_path = Path(file_path)
     text = file_path.read_text(encoding="utf-8")
+
+    if file_path.suffix.lower() in (".ass", ".ssa"):
+        return _parse_ass(text, file_path)
 
     blocks = re.split(r"\n\n+", text.strip())
     segments = []
@@ -40,6 +51,38 @@ def parse_subtitle_file(file_path: Path | str) -> list[dict]:
 
     log.debug(f"Parsed {len(segments)} segments from {file_path.name}")
     return segments
+
+
+def _parse_ass(text: str, file_path: Path) -> list[dict]:
+    """Parses ASS/SSA formatted text into segment dicts."""
+    segments = []
+    for line in text.splitlines():
+        match = ASS_DIALOGUE_PATTERN.match(line)
+        if not match:
+            continue
+        start_ts, end_ts, dialogue = match.groups()
+        clean_text = re.sub(r"\{[^}]*\}", "", dialogue).strip()
+        if not clean_text:
+            continue
+        segments.append(
+            {
+                "start": _ass_timestamp_to_seconds(start_ts),
+                "end": _ass_timestamp_to_seconds(end_ts),
+                "text": clean_text.replace("\\N", " "),
+            }
+        )
+
+    log.debug(f"Parsed {len(segments)} segments from {file_path.name}")
+    return segments
+
+
+def _ass_timestamp_to_seconds(timestamp: str) -> float:
+    """Converts an ASS timestamp (H:MM:SS.cc) to seconds."""
+    hours, minutes, rest = timestamp.split(":")
+    seconds, centiseconds = rest.split(".")
+    return (
+        int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(centiseconds) / 100
+    )
 
 
 def _find_timestamp_line(lines: list[str]) -> tuple[int, str, str] | None:

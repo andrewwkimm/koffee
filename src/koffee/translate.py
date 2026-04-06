@@ -17,7 +17,7 @@ from koffee.utils import extract_subtitle_track, parse_subtitle_file
 log = logging.getLogger(__name__)
 
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a"}
-SUBTITLE_EXTENSIONS = {".srt", ".vtt"}
+SUBTITLE_EXTENSIONS = {".srt", ".vtt", ".ass", ".ssa"}
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".flv", ".wmv"}
 SUPPORTED_EXTENSIONS = AUDIO_EXTENSIONS | VIDEO_EXTENSIONS
 
