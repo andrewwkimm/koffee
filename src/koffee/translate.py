@@ -118,6 +118,7 @@ def _get_output_path(
 
     file_path = Path(video_file_path)
     file_dir = output_dir if output_dir is not None else file_path.parent
+    file_dir.mkdir(parents=True, exist_ok=True)
     is_audio = file_path.suffix.lower() in AUDIO_EXTENSIONS
 
     if output_name is not None:
