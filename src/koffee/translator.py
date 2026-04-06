@@ -5,7 +5,7 @@ import time
 from collections.abc import Callable
 
 from google import genai
-from google.genai.errors import APIError
+from google.genai.errors import APIError, ClientError
 
 from koffee.utils import convert_to_timestamp
 
@@ -128,13 +128,20 @@ def _call_with_retries(
 
 
 def _attempt_generate(client, prompt: str, translation_model: str):
-    """Makes a single Gemini API call, returning (response, None) or (None, error)."""
+    """Makes a single Gemini API call, returning (response, None) or (None, error).
+
+    Raises ClientError (4xx except 429) immediately since those are not retryable.
+    """
     try:
         response = client.models.generate_content(
             model=translation_model,
             contents=prompt,
             config={"system_instruction": SYSTEM_PROMPT},
         )
+    except ClientError as exc:
+        if exc.code == 429:
+            return None, exc
+        raise
     except APIError as exc:
         return None, exc
     else:
