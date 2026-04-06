@@ -111,3 +111,35 @@ def test_parse_ass_replaces_newlines(tmp_path) -> None:
     result = parse_subtitle_file(ass)
 
     assert result[0]["text"] == "Line one Line two"
+
+
+def test_parse_srt_skips_empty_text_blocks(tmp_path) -> None:
+    """Tests that SRT blocks with no text lines are skipped."""
+    srt = tmp_path / "test.srt"
+    srt.write_text(
+        "1\n00:00:01,000 --> 00:00:04,500\n\n\n"
+        "2\n00:00:05,000 --> 00:00:08,000\nHello.\n",
+        encoding="utf-8",
+    )
+
+    result = parse_subtitle_file(srt)
+
+    assert len(result) == 1
+    assert result[0]["text"] == "Hello."
+
+
+def test_parse_ass_skips_empty_dialogue(tmp_path) -> None:
+    """Tests that ASS dialogue lines with only style tags are skipped."""
+    ass = tmp_path / "test.ass"
+    ass.write_text(
+        "[Events]\n"
+        + _ASS_EVENT_FMT
+        + "Dialogue: 0,0:00:01.00,0:00:04.50,Default,,0,0,0,,{\\b1}{\\b0}\n"
+        "Dialogue: 0,0:00:05.00,0:00:08.00,Default,,0,0,0,,Hello.\n",
+        encoding="utf-8",
+    )
+
+    result = parse_subtitle_file(ass)
+
+    assert len(result) == 1
+    assert result[0]["text"] == "Hello."

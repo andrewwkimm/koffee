@@ -1,9 +1,13 @@
 """Tests for Gemini text translation."""
 
+import pytest
+from google.genai.errors import APIError, ClientError
 from pytest_mock import MockerFixture
 
 from koffee.translator import (
+    _attempt_generate,
     _build_prompt,
+    _call_with_retries,
     _parse_srt_response,
     _sanitize_response,
     translate_transcript,
@@ -224,3 +228,50 @@ def test_translate_transcript_reports_progress(mocker: MockerFixture) -> None:
     )
 
     assert progress_calls == [0.5, 1.0]
+
+
+def test_call_with_retries_exhaustion(mocker: MockerFixture) -> None:
+    """Tests that retry exhaustion raises the last error."""
+    mocker.patch("koffee.translator.time.sleep")
+    error = APIError(code=500, response_json={"error": "server error"})
+    mocker.patch("koffee.translator._attempt_generate", return_value=(None, error))
+
+    with pytest.raises(APIError):
+        _call_with_retries(None, "prompt", "model", max_retries=2)
+
+
+def test_attempt_generate_non_429_client_error_raises(mocker: MockerFixture) -> None:
+    """Tests that non-429 ClientError is raised immediately, not retried."""
+    mock_client = mocker.MagicMock()
+    mock_client.models.generate_content.side_effect = ClientError(
+        code=400, response_json={"error": "bad request"}
+    )
+
+    with pytest.raises(ClientError):
+        _attempt_generate(mock_client, "prompt", "model")
+
+
+def test_attempt_generate_429_returns_error(mocker: MockerFixture) -> None:
+    """Tests that 429 ClientError is returned as a retryable error."""
+    mock_client = mocker.MagicMock()
+    mock_client.models.generate_content.side_effect = ClientError(
+        code=429, response_json={"error": "rate limited"}
+    )
+
+    result, error = _attempt_generate(mock_client, "prompt", "model")
+
+    assert result is None
+    assert error.code == 429
+
+
+def test_attempt_generate_api_error_returns_error(mocker: MockerFixture) -> None:
+    """Tests that generic APIError is returned as a retryable error."""
+    mock_client = mocker.MagicMock()
+    mock_client.models.generate_content.side_effect = APIError(
+        code=500, response_json={"error": "server error"}
+    )
+
+    result, error = _attempt_generate(mock_client, "prompt", "model")
+
+    assert result is None
+    assert error.code == 500

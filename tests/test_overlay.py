@@ -7,7 +7,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from koffee.exceptions import SubtitleOverlayError
-from koffee.overlay import overlay_subtitles
+from koffee.overlay import _get_subtitle_codec, overlay_subtitles
 
 
 @pytest.fixture
@@ -46,6 +46,13 @@ def test_hard_overlay(
     )
 
     assert output_file_path.exists()
+
+
+def test_mkv_codec() -> None:
+    """Tests that MKV files use the srt subtitle codec."""
+    assert _get_subtitle_codec("output.mkv") == "srt"
+    assert _get_subtitle_codec("output.webm") == "srt"
+    assert _get_subtitle_codec("output.mp4") == "mov_text"
 
 
 def test_exception_handling(
