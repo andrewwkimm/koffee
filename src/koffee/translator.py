@@ -169,6 +169,13 @@ def _parse_srt_response(
     translated_segments = []
     blocks = response_text.strip().split("\n\n")
 
+    if len(blocks) < len(original_segments):
+        log.warning(
+            f"Gemini returned {len(blocks)} blocks but expected "
+            f"{len(original_segments)}; {len(original_segments) - len(blocks)} "
+            "segments will be missing from output."
+        )
+
     for block, original in zip(blocks, original_segments, strict=False):
         lines = block.strip().split("\n")
         if len(lines) < MIN_SRT_BLOCK_LINES:
