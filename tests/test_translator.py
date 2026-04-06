@@ -25,7 +25,7 @@ SAMPLE_TRANSCRIPT = {
 
 
 def test_build_prompt_with_context() -> None:
-    """Test that the prompt includes context section when they are provided."""
+    """Tests that the prompt includes context section when they are provided."""
     context = [{"start": 0.0, "end": 1.0, "text": "시대를 초월하는 마음."}]
 
     result = _build_prompt(
@@ -44,7 +44,7 @@ def test_build_prompt_with_context() -> None:
 
 
 def test_build_prompt_without_context() -> None:
-    """Test that the prompt omits context section when no context entries are given."""
+    """Tests that the prompt omits context section when no context entries are given."""
     result = _build_prompt(
         chunk=SAMPLE_SEGMENTS,
         context_entries=[],
@@ -59,7 +59,7 @@ def test_build_prompt_without_context() -> None:
 
 
 def test_parse_srt_response() -> None:
-    """Test that a well-formed SRT response is parsed correctly."""
+    """Tests that a well-formed SRT response is parsed correctly."""
     result = _parse_srt_response(SAMPLE_SRT_RESPONSE, SAMPLE_SEGMENTS)
 
     assert len(result) == 2
@@ -68,7 +68,7 @@ def test_parse_srt_response() -> None:
 
 
 def test_parse_srt_response_preserves_original_timestamps() -> None:
-    """Test that original segment timestamps are preserved."""
+    """Tests that original segment timestamps are preserved."""
     result = _parse_srt_response(SAMPLE_SRT_RESPONSE, SAMPLE_SEGMENTS)
 
     assert result[0]["start"] == SAMPLE_SEGMENTS[0]["start"]
@@ -78,7 +78,7 @@ def test_parse_srt_response_preserves_original_timestamps() -> None:
 
 
 def test_parse_srt_response_malformed_block_falls_back_to_original() -> None:
-    """Test that a malformed SRT block falls back to the original segment."""
+    """Tests that a malformed SRT block falls back to the original segment."""
     malformed_block_with_missing_timestamp = "1\nHello."
 
     result = _parse_srt_response(
@@ -89,7 +89,7 @@ def test_parse_srt_response_malformed_block_falls_back_to_original() -> None:
 
 
 def test_translate_transcript_single_chunk(mocker: MockerFixture) -> None:
-    """Test translate_transcript with a transcript that fits in one chunk."""
+    """Tests translate_transcript with a transcript that fits in one chunk."""
     mock_client = mocker.MagicMock()
     mocker.patch("koffee.translator.genai.Client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
@@ -108,7 +108,7 @@ def test_translate_transcript_single_chunk(mocker: MockerFixture) -> None:
 
 
 def test_translate_transcript_sleeps_between_chunks(mocker: MockerFixture) -> None:
-    """Test that translate_transcript sleeps between chunks and stops at last entry."""
+    """Tests that translate_transcript sleeps between chunks and stops at last entry."""
     mock_client = mocker.MagicMock()
     mocker.patch("koffee.translator.genai.Client", return_value=mock_client)
     mock_sleep = mocker.patch("koffee.translator.time.sleep")
@@ -125,7 +125,7 @@ def test_translate_transcript_sleeps_between_chunks(mocker: MockerFixture) -> No
 
 
 def test_translate_transcript_passes_api_key(mocker: MockerFixture) -> None:
-    """Test that the API key is passed through to the Gemini client."""
+    """Tests that the API key is passed through to the Gemini client."""
     mock_client_cls = mocker.patch("koffee.translator.genai.Client")
     mock_client_cls.return_value.models.generate_content.return_value.text = (
         "1\n00:00:00,000 --> 00:00:06,360\nHello.\n\n"
@@ -139,7 +139,7 @@ def test_translate_transcript_passes_api_key(mocker: MockerFixture) -> None:
 
 
 def test_translate_transcript_reports_progress(mocker: MockerFixture) -> None:
-    """Test that on_progress is called once per chunk with correct ratio."""
+    """Tests that on_progress is called once per chunk with correct ratio."""
     mock_client = mocker.MagicMock()
     mocker.patch("koffee.translator.genai.Client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")

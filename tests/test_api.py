@@ -49,19 +49,19 @@ def test_invalid_video_file() -> None:
 
 
 def test_get_output_path_audio_no_output_name() -> None:
-    """Test that audio files use the stem as the output name when none is provided."""
+    """Tests that audio files use the stem as the output name when none is provided."""
     result = _get_output_path("video/track.mp3", output_dir=None, output_name=None)
     assert result.name == "track.mp3"
 
 
 def test_get_output_path_with_output_name() -> None:
-    """Test that a provided output name is used as-is."""
+    """Tests that a provided output name is used as-is."""
     result = _get_output_path("video/track.mp4", output_dir=None, output_name="custom")
     assert result.stem == "custom"
 
 
 def test_get_output_path_with_output_dir() -> None:
-    """Test that a provided output directory is used."""
+    """Tests that a provided output directory is used."""
     result = _get_output_path(
         "video/track.mp4", output_dir=Path("/tmp"), output_name="custom"
     )
@@ -69,7 +69,7 @@ def test_get_output_path_with_output_dir() -> None:
 
 
 def test_get_segments_whisper_returns_raw(mocker, translate_module) -> None:
-    """Test that whisper backend returns raw segments without translation."""
+    """Tests that whisper backend returns raw segments without translation."""
     mock_translate = mocker.patch.object(translate_module, "translate_transcript")
     config = MagicMock(spec=KoffeeConfig)
     config.translation_backend = "whisper"
@@ -82,7 +82,7 @@ def test_get_segments_whisper_returns_raw(mocker, translate_module) -> None:
 
 
 def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> None:
-    """Test that a non-whisper backend calls translate_transcript."""
+    """Tests that a non-whisper backend calls translate_transcript."""
     mock_translate = mocker.patch.object(
         translate_module, "translate_transcript", return_value=["translated"]
     )
@@ -108,7 +108,7 @@ def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> N
 def test_finalize_video_output_deletes_subtitle(
     mocker, tmp_path, translate_module
 ) -> None:
-    """Test that the subtitle file is always deleted after overlay."""
+    """Tests that the subtitle file is always deleted after overlay."""
     mocker.patch.object(
         translate_module, "overlay_subtitles", return_value=tmp_path / "out.mp4"
     )
@@ -121,7 +121,7 @@ def test_finalize_video_output_deletes_subtitle(
 
 
 def test_handle_subtitle_output_renames_subtitle(tmp_path) -> None:
-    """Test that the subtitle file is moved to the correct output path."""
+    """Tests that the subtitle file is moved to the correct output path."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
     output_path = tmp_path / "track.mp4"
@@ -134,7 +134,7 @@ def test_handle_subtitle_output_renames_subtitle(tmp_path) -> None:
 
 
 def test_handle_subtitle_output_audio_renames_subtitle(tmp_path) -> None:
-    """Test that the subtitle file is moved correctly for audio inputs."""
+    """Tests that the subtitle file is moved correctly for audio inputs."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
     output_path = tmp_path / "track.mp3"
