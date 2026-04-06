@@ -15,7 +15,8 @@ from rich.progress import (
 )
 
 from koffee.data.config import KoffeeConfig
-from koffee.translate import SUPPORTED_EXTENSIONS, translate
+from koffee.translate import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, translate
+from koffee.utils import get_subtitle_tracks
 
 logging.basicConfig(
     level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
@@ -140,9 +141,31 @@ def cli(
 
     resolved_paths = _resolve_paths(file_path)
 
+    for video in resolved_paths:
+        config = _check_embedded_subtitles(video, config)
+
     with _create_progress_bar() as progress:
         for video in resolved_paths:
             _translate_with_progress(video, config, progress)
+
+
+def _check_embedded_subtitles(video: Path, config: KoffeeConfig) -> KoffeeConfig:
+    """Checks for embedded subtitles and prompts user to use them."""
+    if video.suffix.lower() in SUBTITLE_EXTENSIONS:
+        return config
+
+    tracks = get_subtitle_tracks(video)
+    if not tracks:
+        return config
+
+    track_count = len(tracks)
+    log.info(f"Found {track_count} embedded subtitle track(s) in {video.name}.")
+
+    response = input("Translate embedded subtitles instead of running ASR? [Y/n] ")
+    if response.strip().lower() in ("", "y", "yes"):
+        return config.model_copy(update={"use_embedded_subtitles": True})
+
+    return config
 
 
 def _resolve_paths(file_path: tuple) -> list[Path]:
@@ -176,21 +199,33 @@ def _translate_with_progress(
     progress: Progress,
 ) -> None:
     """Runs translation for a single file with ASR and translation progress bars."""
-    asr_task = progress.add_task("Transcribing", total=100)
-    translate_task = progress.add_task("Translating", total=100, start=False)
-
-    def on_asr_progress(ratio: float) -> None:
-        progress.update(asr_task, completed=ratio * 100)
-        if ratio >= 1.0:
-            progress.stop_task(asr_task)
-            progress.start_task(translate_task)
-
-    translate(
-        video_file_path=video,
-        config=config,
-        on_asr_progress=on_asr_progress,
-        on_translate_progress=_make_progress_callback(progress, translate_task),
+    skip_asr = (
+        config.use_embedded_subtitles or video.suffix.lower() in SUBTITLE_EXTENSIONS
     )
+
+    if skip_asr:
+        translate_task = progress.add_task("Translating", total=100)
+        translate(
+            video_file_path=video,
+            config=config,
+            on_translate_progress=_make_progress_callback(progress, translate_task),
+        )
+    else:
+        asr_task = progress.add_task("Transcribing", total=100)
+        translate_task = progress.add_task("Translating", total=100, start=False)
+
+        def on_asr_progress(ratio: float) -> None:
+            progress.update(asr_task, completed=ratio * 100)
+            if ratio >= 1.0:
+                progress.stop_task(asr_task)
+                progress.start_task(translate_task)
+
+        translate(
+            video_file_path=video,
+            config=config,
+            on_asr_progress=on_asr_progress,
+            on_translate_progress=_make_progress_callback(progress, translate_task),
+        )
 
 
 def main() -> None:
