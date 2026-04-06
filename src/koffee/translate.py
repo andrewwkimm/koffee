@@ -109,6 +109,15 @@ def _translate(
     return subtitle_file_path
 
 
+def _check_output_collision(output_path: Path, overwrite: bool) -> None:
+    """Raises FileExistsError if the output file exists and overwrite is disabled."""
+    if output_path.exists() and not overwrite:
+        error_message = (
+            f"Output file already exists: {output_path}. Use --overwrite to replace it."
+        )
+        raise FileExistsError(error_message)
+
+
 def _route_output(
     video_file_path: Path | str,
     subtitle_file_path: Path,
@@ -121,10 +130,13 @@ def _route_output(
     is_audio = Path(video_file_path).suffix.lower() in AUDIO_EXTENSIONS
 
     if is_audio or not config.overlay_video:
+        target = output_path.with_suffix(f".{config.subtitle_format}")
+        _check_output_collision(target, config.overwrite)
         output_file_path = _handle_subtitle_output(
             subtitle_file_path, output_path, config.subtitle_format
         )
     else:
+        _check_output_collision(output_path, config.overwrite)
         output_file_path = _finalize_video_output(
             subtitle_file_path, video_file_path, output_path
         )
@@ -168,6 +180,7 @@ def _translate_subtitle_file(
     translated = generate_subtitles(config.subtitle_format, translated_segments)
     output_path = _get_output_path(file_path, config.output_dir, config.output_name)
     output_subtitle_path = output_path.with_suffix(f".{config.subtitle_format}")
+    _check_output_collision(output_subtitle_path, config.overwrite)
     translated.rename(output_subtitle_path)
 
     return output_subtitle_path

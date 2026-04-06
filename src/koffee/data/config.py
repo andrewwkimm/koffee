@@ -24,4 +24,5 @@ class KoffeeConfig(BaseModel):
     translation_backend: Literal["whisper", "gemini"] = "whisper"
     translation_model: str = "gemini-2.5-flash"
     dry_run: bool = False
+    overwrite: bool = False
     use_embedded_subtitles: bool = False
