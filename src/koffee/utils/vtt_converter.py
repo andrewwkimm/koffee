@@ -1,6 +1,7 @@
 """Text to VTT converter."""
 
 import logging
+import uuid
 from pathlib import Path
 
 from koffee.utils.timestamp_converter import convert_to_timestamp
@@ -12,7 +13,7 @@ def convert_text_to_vtt(transcript: list, output_dir: Path) -> Path:
     """Converts text to VTT format."""
     log.debug("Converting text to VTT format.")
 
-    output_file_path = output_dir / "subtitles.vtt"
+    output_file_path = output_dir / f"subtitles_{uuid.uuid4().hex[:8]}.vtt"
     log.debug(f"output_file_path: {output_file_path!r}")
 
     with Path.open(output_file_path, "w", encoding="utf-8") as file:

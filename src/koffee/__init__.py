@@ -4,6 +4,6 @@ from importlib.metadata import version
 
 from .translate import translate
 
-all = [translate]
+__all__ = ["translate"]
 
 __version__ = version("koffee")

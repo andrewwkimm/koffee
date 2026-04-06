@@ -5,6 +5,7 @@ import time
 from collections.abc import Callable
 
 from google import genai
+from google.genai.errors import APIError
 
 from koffee.utils import convert_to_timestamp
 
@@ -38,13 +39,16 @@ def translate_transcript(
     target_language: str,
     api_key: str | None,
     on_progress: Callable[[float], None] | None = None,
+    translation_model: str = "gemini-2.5-flash",
 ) -> list:
     """Translates a transcript using Gemini, preserving timing information."""
     log.info("Translating transcript with Gemini.")
 
     client = genai.Client(api_key=api_key)
     chunks = _chunk_segments(transcript, target_language)
-    translated_segments = _translate_chunks(client, chunks, on_progress)
+    translated_segments = _translate_chunks(
+        client, chunks, on_progress, translation_model
+    )
     return translated_segments
 
 
@@ -70,6 +74,7 @@ def _translate_chunks(
     client,
     chunks: list[dict],
     on_progress: Callable[[float], None] | None,
+    translation_model: str,
 ) -> list[dict]:
     """Iterates chunks, translating each and reporting progress."""
     log.info(f"Translating in {len(chunks)} chunks.")
@@ -80,7 +85,9 @@ def _translate_chunks(
             **chunk_data,
             context_entries=translated_segments[-CONTEXT_ENTRIES:],
         )
-        translated_chunk = _translate_chunk(client, prompt, chunk_data["chunk"])
+        translated_chunk = _translate_chunk(
+            client, prompt, chunk_data["chunk"], translation_model
+        )
         translated_segments.extend(translated_chunk)
 
         if on_progress:
@@ -92,16 +99,46 @@ def _translate_chunks(
     return translated_segments
 
 
-def _translate_chunk(client, prompt: str, chunk: list[dict]) -> list[dict]:
+def _translate_chunk(
+    client, prompt: str, chunk: list[dict], translation_model: str
+) -> list[dict]:
     """Calls the LLM with a prompt and parses the response."""
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config={"system_instruction": SYSTEM_PROMPT},
-    )
+    response = _call_with_retries(client, prompt, translation_model)
     translated_chunk = _parse_srt_response(response.text, chunk)
 
     return translated_chunk
+
+
+def _call_with_retries(
+    client, prompt: str, translation_model: str, max_retries: int = 3
+):
+    """Calls Gemini with exponential backoff on transient failures."""
+    last_error = None
+    for attempt in range(max_retries):
+        result, error = _attempt_generate(client, prompt, translation_model)
+        if result is not None:
+            return result
+        last_error = error
+        if attempt < max_retries - 1:
+            wait = 2 ** (attempt + 1)
+            log.warning(f"Gemini request failed, retrying in {wait}s...")
+            time.sleep(wait)
+
+    raise last_error
+
+
+def _attempt_generate(client, prompt: str, translation_model: str):
+    """Makes a single Gemini API call, returning (response, None) or (None, error)."""
+    try:
+        response = client.models.generate_content(
+            model=translation_model,
+            contents=prompt,
+            config={"system_instruction": SYSTEM_PROMPT},
+        )
+    except APIError as exc:
+        return None, exc
+    else:
+        return response, None
 
 
 def _segments_to_srt(segments: list[dict]) -> str:
