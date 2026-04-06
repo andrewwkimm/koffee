@@ -78,9 +78,9 @@ def cli(
     subtitle_format: Annotated[
         str, Parameter(name=("--subtitle_format", "-sf"))
     ] = options.subtitle_format,
-    overlay_video: Annotated[
-        bool, Parameter(name=("--overlay-video",), group=options_group)
-    ] = options.overlay_video,
+    overlay: Annotated[
+        str, Parameter(name=("--overlay",), group=options_group)
+    ] = options.overlay,
     translation_backend: Annotated[
         str, Parameter(name=("--translation_backend", "-tb"))
     ] = options.translation_backend,
@@ -114,11 +114,11 @@ def cli(
         Name of the output file
     subtitle_format: str
         Format to use for the subtitles
-    overlay_video: bool
-        Embed subtitles into the video as a soft subtitle track instead of
-        outputting a subtitle file. Only valid for video file inputs.
+    overlay: str
+        Subtitle overlay mode: none (subtitle file only), soft (muxed track),
+        or hard (burned into video frames). Only valid for video file inputs.
     source_language: str
-        Source language of the subtitle file (default: ja)
+        Source language of the subtitle file (default: auto)
     target_language: str
         Language to which the file should be translated
     translation_backend: str
@@ -144,7 +144,7 @@ def cli(
         overwrite=overwrite,
         output_dir=output_dir,
         output_name=output_name,
-        overlay_video=overlay_video,
+        overlay=overlay,
         source_language=source_lang,
         subtitle_format=subtitle_format,
         target_language=target_lang,
@@ -183,8 +183,8 @@ def _print_dry_run(resolved_paths: list[Path], config: KoffeeConfig) -> None:
 
     log.info(f"[dry-run] Target language: {config.target_language}")
     log.info(f"[dry-run] Output format: {config.subtitle_format}")
-    if config.overlay_video:
-        log.info("[dry-run] Subtitles will be embedded into video")
+    if config.overlay != "none":
+        log.info(f"[dry-run] Subtitles will be embedded into video ({config.overlay})")
 
 
 def _check_embedded_subtitles(video: Path, config: KoffeeConfig) -> KoffeeConfig:

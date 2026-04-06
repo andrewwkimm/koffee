@@ -27,7 +27,7 @@ class KoffeeConfig(BaseModel):
     model: str = "large-v3"
     output_dir: Path | None = None
     output_name: str | None = None
-    overlay_video: bool = False
+    overlay: Literal["none", "soft", "hard"] = "none"
     source_language: str = "auto"
     subtitle_format: Literal["srt", "vtt", "ass"] = "vtt"
     target_language: str = "en"

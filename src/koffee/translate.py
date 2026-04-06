@@ -129,7 +129,7 @@ def _route_output(
     )
     is_audio = Path(video_file_path).suffix.lower() in AUDIO_EXTENSIONS
 
-    if is_audio or not config.overlay_video:
+    if is_audio or config.overlay == "none":
         target = output_path.with_suffix(f".{config.subtitle_format}")
         _check_output_collision(target, config.overwrite)
         output_file_path = _handle_subtitle_output(
@@ -138,7 +138,7 @@ def _route_output(
     else:
         _check_output_collision(output_path, config.overwrite)
         output_file_path = _finalize_video_output(
-            subtitle_file_path, video_file_path, output_path
+            subtitle_file_path, video_file_path, output_path, config.overlay
         )
 
     return output_file_path
@@ -235,9 +235,12 @@ def _finalize_video_output(
     subtitle_file_path: Path,
     video_file_path: Path,
     output_path: Path,
+    overlay_mode: str = "soft",
 ) -> Path:
-    """Embeds subtitles into the video as a soft subtitle track and deletes it after."""
-    output_video = overlay_subtitles(subtitle_file_path, video_file_path, output_path)
+    """Embeds subtitles into the video and deletes the subtitle file after."""
+    output_video = overlay_subtitles(
+        subtitle_file_path, video_file_path, output_path, mode=overlay_mode
+    )
     subtitle_file_path.unlink()
     log.info("Finished processing video!")
 

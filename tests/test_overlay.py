@@ -37,6 +37,17 @@ def test_overlay(
     assert output_file_path.exists()
 
 
+def test_hard_overlay(
+    video_file_path: Path, subtitle_file_path: Path, output_file_path: Path
+) -> None:
+    """Tests that hard burn-in produces an output file."""
+    overlay_subtitles(
+        subtitle_file_path, video_file_path, output_file_path, mode="hard"
+    )
+
+    assert output_file_path.exists()
+
+
 def test_exception_handling(
     subtitle_file_path: Path,
     video_file_path: Path,
