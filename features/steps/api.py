@@ -10,7 +10,7 @@ from behave.runner import Context
 from koffee.exceptions import InvalidVideoFileError
 from koffee.translate import translate
 
-SUBTITLE_EXTENSIONS = {".srt", ".vtt"}
+SUBTITLE_EXTENSIONS = {".srt", ".vtt", ".ass"}
 
 
 @given("a user has a basic {language} video file")
@@ -41,6 +41,7 @@ def step_impl(context: Context):
             context.video_file_path,
             output_dir=output_dir,
             output_name=output_name,
+            overwrite=True,
         )
     except InvalidVideoFileError as error:
         context.error = error
