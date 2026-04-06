@@ -86,6 +86,9 @@ def cli(
     ] = options.translation_backend,
     api_key: Annotated[str, Parameter(name=("--api_key", "-ak"), group=options_group)]
     | None = None,
+    dry_run: Annotated[
+        bool, Parameter(name=("--dry-run",), group=options_group)
+    ] = False,
     verbose: Annotated[
         bool, Parameter(name=("--verbose", "-V"), group=options_group)
     ] = False,
@@ -119,6 +122,8 @@ def cli(
         The backend service to use for the translation
     api_key: str
         API key for an LLM service
+    dry_run: bool
+        Preview what would be done without running transcription or translation
     verbose: bool
         Print debug log messages
     """
@@ -129,6 +134,7 @@ def cli(
         api_key=api_key,
         compute_type=compute_type,
         device=device,
+        dry_run=dry_run,
         model=model,
         output_dir=output_dir,
         output_name=output_name,
@@ -144,9 +150,32 @@ def cli(
     for video in resolved_paths:
         config = _check_embedded_subtitles(video, config)
 
+    if config.dry_run:
+        _print_dry_run(resolved_paths, config)
+        return
+
     with _create_progress_bar() as progress:
         for video in resolved_paths:
             _translate_with_progress(video, config, progress)
+
+
+def _print_dry_run(resolved_paths: list[Path], config: KoffeeConfig) -> None:
+    """Prints a preview of what would be done without running anything."""
+    log.info("[dry-run] Would process the following files:")
+    for path in resolved_paths:
+        suffix = path.suffix.lower()
+        if suffix in SUBTITLE_EXTENSIONS:
+            mode = "subtitle translation (skip ASR)"
+        elif config.use_embedded_subtitles:
+            mode = "embedded subtitle extraction + translation"
+        else:
+            mode = f"ASR ({config.model}) + translation ({config.translation_backend})"
+        log.info(f"  {path.name} -> {mode}")
+
+    log.info(f"[dry-run] Target language: {config.target_language}")
+    log.info(f"[dry-run] Output format: {config.subtitle_format}")
+    if config.overlay_video:
+        log.info("[dry-run] Subtitles will be embedded into video")
 
 
 def _check_embedded_subtitles(video: Path, config: KoffeeConfig) -> KoffeeConfig:
