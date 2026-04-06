@@ -89,6 +89,9 @@ def cli(
     dry_run: Annotated[
         bool, Parameter(name=("--dry-run",), group=options_group)
     ] = False,
+    overwrite: Annotated[
+        bool, Parameter(name=("--overwrite",), group=options_group)
+    ] = False,
     verbose: Annotated[
         bool, Parameter(name=("--verbose", "-V"), group=options_group)
     ] = False,
@@ -124,6 +127,8 @@ def cli(
         API key for an LLM service
     dry_run: bool
         Preview what would be done without running transcription or translation
+    overwrite: bool
+        Overwrite existing output files instead of raising an error
     verbose: bool
         Print debug log messages
     """
@@ -136,6 +141,7 @@ def cli(
         device=device,
         dry_run=dry_run,
         model=model,
+        overwrite=overwrite,
         output_dir=output_dir,
         output_name=output_name,
         overlay_video=overlay_video,

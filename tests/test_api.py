@@ -35,6 +35,7 @@ def test_api() -> None:
         output_dir=output_directory_path,
         output_name=output_file_name,
         compute_type="int8",
+        overwrite=True,
     )
 
     assert Path(output_file).exists()
