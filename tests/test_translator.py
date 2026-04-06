@@ -5,6 +5,7 @@ from pytest_mock import MockerFixture
 from koffee.translator import (
     _build_prompt,
     _parse_srt_response,
+    _sanitize_response,
     translate_transcript,
 )
 
@@ -136,6 +137,60 @@ def test_translate_transcript_passes_api_key(mocker: MockerFixture) -> None:
     translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key="test-key")
 
     mock_client_cls.assert_called_once_with(api_key="test-key")
+
+
+def test_sanitize_response_strips_markdown_fences() -> None:
+    """Tests that markdown code fences are stripped from the response."""
+    wrapped = "```srt\n1\n00:00:00,000 --> 00:00:01,000\nHello.\n```"
+    result = _sanitize_response(wrapped)
+    assert not result.startswith("```")
+    assert not result.endswith("```")
+    assert "Hello." in result
+
+
+def test_sanitize_response_normalizes_crlf() -> None:
+    """Tests that CRLF line endings are normalized to LF."""
+    crlf_text = "1\r\n00:00:00,000 --> 00:00:01,000\r\nHello."
+    result = _sanitize_response(crlf_text)
+    assert "\r" not in result
+
+
+def test_sanitize_response_returns_empty_for_none() -> None:
+    """Tests that None input returns an empty string."""
+    assert _sanitize_response(None) == ""
+    assert _sanitize_response("") == ""
+
+
+def test_parse_srt_response_empty_returns_originals() -> None:
+    """Tests that an empty response falls back to original segments."""
+    result = _parse_srt_response("", SAMPLE_SEGMENTS)
+    assert result == SAMPLE_SEGMENTS
+
+
+def test_parse_srt_response_none_returns_originals() -> None:
+    """Tests that a None response falls back to original segments."""
+    result = _parse_srt_response(None, SAMPLE_SEGMENTS)
+    assert result == SAMPLE_SEGMENTS
+
+
+def test_parse_srt_response_extra_blank_lines() -> None:
+    """Tests that extra blank lines in the response are filtered out."""
+    response_with_extra_blanks = (
+        "\n\n1\n00:00:00,000 --> 00:00:06,360\nHello.\n\n\n\n"
+        "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?\n\n"
+    )
+    result = _parse_srt_response(response_with_extra_blanks, SAMPLE_SEGMENTS)
+    assert len(result) == 2
+    assert result[0]["text"] == "Hello."
+    assert result[1]["text"] == "How have you been?"
+
+
+def test_parse_srt_response_markdown_fenced() -> None:
+    """Tests that a markdown-fenced SRT response is parsed correctly."""
+    fenced = "```srt\n" + SAMPLE_SRT_RESPONSE + "\n```"
+    result = _parse_srt_response(fenced, SAMPLE_SEGMENTS)
+    assert len(result) == 2
+    assert result[0]["text"] == "Hello."
 
 
 def test_translate_transcript_reports_progress(mocker: MockerFixture) -> None:

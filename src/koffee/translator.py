@@ -160,14 +160,37 @@ def _segments_to_srt(segments: list[dict]) -> str:
     return srt_text
 
 
+def _sanitize_response(response_text: str | None) -> str:
+    """Strips markdown fences and normalizes line endings from LLM output."""
+    if not response_text:
+        return ""
+
+    text = response_text.replace("\r\n", "\n").strip()
+
+    if text.startswith("```"):
+        first_newline = text.find("\n")
+        if first_newline != -1:
+            text = text[first_newline + 1 :]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+
+    return text
+
+
 def _parse_srt_response(
-    response_text: str, original_segments: list[dict]
+    response_text: str | None, original_segments: list[dict]
 ) -> list[dict]:
     """Parses SRT formatted response back into segments."""
     MIN_SRT_BLOCK_LINES = 3
 
+    sanitized = _sanitize_response(response_text)
+    if not sanitized:
+        log.warning("Empty Gemini response, using original segments.")
+        return list(original_segments)
+
     translated_segments = []
-    blocks = response_text.strip().split("\n\n")
+    blocks = [b.strip() for b in sanitized.split("\n\n") if b.strip()]
 
     if len(blocks) < len(original_segments):
         log.warning(
@@ -177,7 +200,7 @@ def _parse_srt_response(
         )
 
     for block, original in zip(blocks, original_segments, strict=False):
-        lines = block.strip().split("\n")
+        lines = block.split("\n")
         if len(lines) < MIN_SRT_BLOCK_LINES:
             log.warning("Unexpected SRT block format, using original text.")
             translated_segments.append(original)
