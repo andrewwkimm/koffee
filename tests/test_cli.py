@@ -50,8 +50,8 @@ def test_script_run() -> None:
     assert result.returncode == 0
 
 
-def test_overlay_video(mocker: MockerFixture) -> None:
-    """Tests that overlay_video flag is passed through to config."""
+def test_overlay_soft(mocker: MockerFixture) -> None:
+    """Tests that overlay flag is passed through to config."""
     mock_translate = mocker.patch("koffee.cli.translate")
 
     cli(
@@ -59,17 +59,17 @@ def test_overlay_video(mocker: MockerFixture) -> None:
         compute_type="int8",
         output_dir=output_directory_path,
         output_name=output_file_name,
-        overlay_video=True,
+        overlay="soft",
     )
 
     mock_translate.assert_called_once()
     config = mock_translate.call_args.kwargs["config"]
 
-    assert config.overlay_video is True
+    assert config.overlay == "soft"
 
 
-def test_overlay_video_defaults_to_false(mocker: MockerFixture) -> None:
-    """Tests that overlay_video defaults to False."""
+def test_overlay_defaults_to_none(mocker: MockerFixture) -> None:
+    """Tests that overlay defaults to none."""
     mock_translate = mocker.patch("koffee.cli.translate")
 
     cli(
@@ -82,7 +82,7 @@ def test_overlay_video_defaults_to_false(mocker: MockerFixture) -> None:
     mock_translate.assert_called_once()
     config = mock_translate.call_args.kwargs["config"]
 
-    assert config.overlay_video is False
+    assert config.overlay == "none"
 
 
 def test_verbose(mocker: MockerFixture) -> None:
@@ -171,7 +171,7 @@ def test_dry_run_with_overlay(mocker: MockerFixture) -> None:
         korean_video_file_path,
         output_dir=output_directory_path,
         dry_run=True,
-        overlay_video=True,
+        overlay="soft",
     )
 
 
