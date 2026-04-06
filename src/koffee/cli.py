@@ -154,8 +154,11 @@ def cli(
         _print_dry_run(resolved_paths, config)
         return
 
+    total = len(resolved_paths)
     with _create_progress_bar() as progress:
-        for video in resolved_paths:
+        for i, video in enumerate(resolved_paths, 1):
+            if total > 1:
+                log.info(f"[{i}/{total}] Processing {video.name}")
             _translate_with_progress(video, config, progress)
 
 
