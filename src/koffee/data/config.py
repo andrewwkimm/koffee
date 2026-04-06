@@ -1,10 +1,10 @@
 """The koffee Configuration."""
 
 import logging
+import tomllib
 from pathlib import Path
 from typing import Literal
 
-import tomllib
 from pydantic import BaseModel, ConfigDict
 
 log = logging.getLogger(__name__)
