@@ -143,7 +143,11 @@ def _get_segments(
         segments = transcript["segments"]
     else:
         segments = translate_transcript(
-            transcript, config.target_language, config.api_key, on_progress
+            transcript,
+            config.target_language,
+            config.api_key,
+            on_progress,
+            translation_model=config.translation_model,
         )
 
     return segments

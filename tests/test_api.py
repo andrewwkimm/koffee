@@ -90,13 +90,18 @@ def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> N
     config.translation_backend = "gemini"
     config.target_language = "en"
     config.api_key = None
+    config.translation_model = "gemini-2.5-flash"
     transcript = {"segments": [], "language": "ko"}
 
     result = _get_segments(transcript, config)
 
     assert result == ["translated"]
     mock_translate.assert_called_once_with(
-        transcript, config.target_language, config.api_key, None
+        transcript,
+        config.target_language,
+        config.api_key,
+        None,
+        translation_model=config.translation_model,
     )
 
 

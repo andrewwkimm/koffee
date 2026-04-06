@@ -2,11 +2,13 @@
 
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class KoffeeConfig(BaseModel):
     """Configuration data model for koffee."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
 
     api_key: str | None = None
     compute_type: str = "default"
@@ -18,8 +20,4 @@ class KoffeeConfig(BaseModel):
     subtitle_format: str = "vtt"
     target_language: str = "en"
     translation_backend: str = "whisper"
-
-    class DictConfig:
-        """Configuration to remove all leading and trailing white space."""
-
-        str_strip_whitespace = True
+    translation_model: str = "gemini-2.5-flash"

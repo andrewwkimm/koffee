@@ -66,7 +66,10 @@ def _consume_segments(
     result = []
     for segment in segments:
         result.append(asdict(segment))
-        if duration:
+        if on_progress and duration:
             on_progress(min(segment.end / duration, 1.0))
+
+    if on_progress:
+        on_progress(1.0)
 
     return result
