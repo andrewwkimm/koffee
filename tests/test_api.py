@@ -10,10 +10,14 @@ import koffee
 from koffee.data.config import KoffeeConfig
 from koffee.exceptions import InvalidVideoFileError
 from koffee.translate import (
+    _apply_config_overrides,
+    _check_output_collision,
     _finalize_video_output,
     _get_output_path,
     _get_segments,
     _handle_subtitle_output,
+    _route_output,
+    translate,
 )
 
 
@@ -133,6 +137,97 @@ def test_handle_subtitle_output_renames_subtitle(tmp_path) -> None:
     assert result == tmp_path / "track.srt"
     assert result.exists()
     assert not subtitle.exists()
+
+
+def test_validate_api_key_raises_without_key() -> None:
+    """Tests that Gemini backend without API key raises ValueError."""
+    with pytest.raises(ValueError, match="API key is required"):
+        koffee.translate(
+            "examples/videos/sample_korean_video.mp4",
+            translation_backend="gemini",
+        )
+
+
+def test_apply_config_overrides_with_existing_config() -> None:
+    """Tests that kwargs override fields on an existing config."""
+    config = KoffeeConfig(target_language="en")
+    result = _apply_config_overrides(config, {"target_language": "fr"})
+
+    assert result.target_language == "fr"
+
+
+def test_check_output_collision_raises(tmp_path) -> None:
+    """Tests that an existing output file raises FileExistsError."""
+    existing = tmp_path / "output.vtt"
+    existing.touch()
+
+    with pytest.raises(FileExistsError, match="already exists"):
+        _check_output_collision(existing, overwrite=False)
+
+
+def test_check_output_collision_allows_overwrite(tmp_path) -> None:
+    """Tests that overwrite=True skips the collision check."""
+    existing = tmp_path / "output.vtt"
+    existing.touch()
+
+    _check_output_collision(existing, overwrite=True)
+
+
+def test_route_output_with_overlay(mocker, translate_module, tmp_path) -> None:
+    """Tests that overlay mode routes to video output."""
+    subtitle = tmp_path / "sub.srt"
+    subtitle.touch()
+    mock_finalize = mocker.patch.object(
+        translate_module,
+        "_finalize_video_output",
+        return_value=tmp_path / "out.mp4",
+    )
+    mocker.patch.object(
+        translate_module, "_get_output_path", return_value=tmp_path / "out.mp4"
+    )
+
+    config = KoffeeConfig(overlay="soft", overwrite=True)
+    _route_output(Path("video.mp4"), subtitle, config)
+
+    mock_finalize.assert_called_once()
+
+
+def test_translate_subtitle_file_input(mocker, translate_module, tmp_path) -> None:
+    """Tests that a subtitle file input skips ASR and translates directly."""
+    srt = tmp_path / "test.srt"
+    srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello.\n")
+
+    mock_parse = mocker.patch.object(
+        translate_module,
+        "parse_subtitle_file",
+        return_value=[{"start": 0.0, "end": 1.0, "text": "Hello."}],
+    )
+    mock_translate = mocker.patch.object(
+        translate_module,
+        "translate_transcript",
+        return_value=[{"start": 0.0, "end": 1.0, "text": "Translated."}],
+    )
+    mock_generate = mocker.patch.object(
+        translate_module,
+        "generate_subtitles",
+        return_value=tmp_path / "out.vtt",
+    )
+    mocker.patch("pathlib.Path.rename", return_value=tmp_path / "test.vtt")
+    mocker.patch.object(translate_module, "_check_output_collision")
+
+    translate(
+        str(srt),
+        config=KoffeeConfig(
+            output_dir=tmp_path,
+            translation_backend="gemini",
+            api_key="test-key",
+            overwrite=True,
+        ),
+    )
+
+    mock_parse.assert_called_once()
+    mock_translate.assert_called_once()
+    mock_generate.assert_called_once()
 
 
 def test_handle_subtitle_output_audio_renames_subtitle(tmp_path) -> None:
