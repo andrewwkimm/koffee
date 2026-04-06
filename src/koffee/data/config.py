@@ -19,7 +19,7 @@ class KoffeeConfig(BaseModel):
     output_name: str | None = None
     overlay_video: bool = False
     source_language: str = "ja"
-    subtitle_format: Literal["srt", "vtt"] = "vtt"
+    subtitle_format: Literal["srt", "vtt", "ass"] = "vtt"
     target_language: str = "en"
     translation_backend: Literal["whisper", "gemini"] = "whisper"
     translation_model: str = "gemini-2.5-flash"
