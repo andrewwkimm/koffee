@@ -43,15 +43,16 @@ def test_api() -> None:
 
 def test_invalid_video_file() -> None:
     """Tests that the appropriate error is raised when an invalid file is given."""
-    error_message = "Inputted file is not a valid video file or does not exist."
+    error_message = "Inputted file is not valid or does not exist."
     with pytest.raises(InvalidVideoFileError, match=error_message):
         koffee.translate("invalid_file.mp4")
 
 
-def test_get_output_path_audio_no_output_name() -> None:
-    """Tests that audio files use the stem as the output name when none is provided."""
+def test_get_output_path_no_output_name() -> None:
+    """Tests that files get date-stamped when no output name is provided."""
     result = _get_output_path("video/track.mp3", output_dir=None, output_name=None)
-    assert result.name == "track.mp3"
+    assert result.stem.startswith("track_")
+    assert result.suffix == ".mp3"
 
 
 def test_get_output_path_with_output_name() -> None:
