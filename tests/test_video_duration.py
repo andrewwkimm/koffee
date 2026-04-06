@@ -1,0 +1,37 @@
+"""Tests for get_video_duration utility."""
+
+import subprocess
+
+import pytest
+
+from koffee.utils.get_video_duration import get_video_duration
+
+
+def test_returns_duration(mocker) -> None:
+    """Tests that a valid ffprobe output is parsed as a float."""
+    mocker.patch(
+        "koffee.utils.get_video_duration.subprocess.run",
+        return_value=subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="123.45\n"
+        ),
+    )
+    assert get_video_duration("video.mp4") == 123.45
+
+
+def test_empty_stdout_returns_zero(mocker) -> None:
+    """Tests that empty ffprobe output returns 0.0."""
+    mocker.patch(
+        "koffee.utils.get_video_duration.subprocess.run",
+        return_value=subprocess.CompletedProcess(args=[], returncode=0, stdout=""),
+    )
+    assert get_video_duration("video.mp4") == 0.0
+
+
+def test_missing_ffprobe_raises(mocker) -> None:
+    """Tests that a missing ffprobe raises FileNotFoundError."""
+    mocker.patch(
+        "koffee.utils.get_video_duration.subprocess.run",
+        side_effect=FileNotFoundError,
+    )
+    with pytest.raises(FileNotFoundError):
+        get_video_duration("video.mp4")
