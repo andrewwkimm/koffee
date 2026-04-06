@@ -18,6 +18,7 @@ class KoffeeConfig(BaseModel):
     output_dir: Path | None = None
     output_name: str | None = None
     overlay_video: bool = False
+    source_language: str = "ja"
     subtitle_format: Literal["srt", "vtt"] = "vtt"
     target_language: str = "en"
     translation_backend: Literal["whisper", "gemini"] = "whisper"
