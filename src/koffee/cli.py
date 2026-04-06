@@ -200,10 +200,39 @@ def _check_embedded_subtitles(video: Path, config: KoffeeConfig) -> KoffeeConfig
     log.info(f"Found {track_count} embedded subtitle track(s) in {video.name}.")
 
     response = input("Translate embedded subtitles instead of running ASR? [Y/n] ")
-    if response.strip().lower() in ("", "y", "yes"):
-        return config.model_copy(update={"use_embedded_subtitles": True})
+    if response.strip().lower() not in ("", "y", "yes"):
+        return config
 
-    return config
+    track_index, source_language = _select_subtitle_track(tracks)
+    updates = {"use_embedded_subtitles": True, "subtitle_track_index": track_index}
+    if source_language:
+        updates["source_language"] = source_language
+
+    return config.model_copy(update=updates)
+
+
+def _select_subtitle_track(tracks: list[dict]) -> tuple[int, str | None]:
+    """Prompts user to select a subtitle track if multiple are available."""
+    if len(tracks) == 1:
+        language = tracks[0].get("tags", {}).get("language")
+        return 0, language
+
+    log.info("Available subtitle tracks:")
+    for i, track in enumerate(tracks):
+        tags = track.get("tags", {})
+        lang = tags.get("language", "unknown")
+        title = tags.get("title", "")
+        label = f"  [{i}] {lang}"
+        if title:
+            label += f" — {title}"
+        log.info(label)
+
+    response = input(f"Select track [0-{len(tracks) - 1}] (default 0): ")
+    index = int(response.strip()) if response.strip().isdigit() else 0
+    index = max(0, min(index, len(tracks) - 1))
+
+    language = tracks[index].get("tags", {}).get("language")
+    return index, language
 
 
 def _resolve_paths(file_path: tuple) -> list[Path]:

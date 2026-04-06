@@ -152,7 +152,9 @@ def _translate_embedded_subtitles(
     """Extracts embedded subtitles from a video and translates them."""
     log.info("Extracting embedded subtitles from video.")
 
-    extracted_path = extract_subtitle_track(video_file_path)
+    extracted_path = extract_subtitle_track(
+        video_file_path, config.subtitle_track_index
+    )
     try:
         result = _translate_subtitle_file(extracted_path, config, on_progress)
     finally:

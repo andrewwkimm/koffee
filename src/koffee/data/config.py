@@ -28,13 +28,14 @@ class KoffeeConfig(BaseModel):
     output_dir: Path | None = None
     output_name: str | None = None
     overlay_video: bool = False
-    source_language: str = "ja"
+    source_language: str = "auto"
     subtitle_format: Literal["srt", "vtt", "ass"] = "vtt"
     target_language: str = "en"
     translation_backend: Literal["whisper", "gemini"] = "whisper"
     translation_model: str = "gemini-2.5-flash"
     dry_run: bool = False
     overwrite: bool = False
+    subtitle_track_index: int = 0
     use_embedded_subtitles: bool = False
 
 

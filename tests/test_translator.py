@@ -44,6 +44,20 @@ def test_build_prompt_with_context() -> None:
     assert "안녕하세요." in result
 
 
+def test_build_prompt_auto_source_language() -> None:
+    """Tests that 'auto' source language omits the source from the prompt."""
+    result = _build_prompt(
+        chunk=SAMPLE_SEGMENTS,
+        context_entries=[],
+        source_language="auto",
+        target_language="en",
+        start_entry=1,
+    )
+
+    assert "Translate the following subtitle entries to en." in result
+    assert "from" not in result.split("\n")[0]
+
+
 def test_build_prompt_without_context() -> None:
     """Tests that the prompt omits context section when no context entries are given."""
     result = _build_prompt(
