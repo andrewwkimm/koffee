@@ -4,6 +4,8 @@ import logging
 import uuid
 from pathlib import Path
 
+from koffee.utils.timestamp_converter import convert_to_timestamp
+
 log = logging.getLogger(__name__)
 
 _STYLE_FORMAT = (
@@ -49,20 +51,10 @@ def convert_text_to_ass(transcript: list, output_dir: Path) -> Path:
         file.write(ASS_HEADER)
 
         for subtitle in transcript:
-            start = _seconds_to_ass_timestamp(subtitle["start"])
-            end = _seconds_to_ass_timestamp(subtitle["end"])
+            start = convert_to_timestamp(subtitle["start"], "ass")
+            end = convert_to_timestamp(subtitle["end"], "ass")
             text = subtitle["text"].strip().replace("\n", "\\N")
             file.write(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{text}\n")
 
     log.debug(repr(output_file_path))
     return output_file_path
-
-
-def _seconds_to_ass_timestamp(seconds: float) -> str:
-    """Converts seconds to ASS timestamp format (H:MM:SS.cc)."""
-    total_cs = int(seconds * 100)
-    h = total_cs // 360000
-    m = (total_cs % 360000) // 6000
-    s = (total_cs % 6000) // 100
-    cs = total_cs % 100
-    return f"{h}:{m:02}:{s:02}.{cs:02}"
