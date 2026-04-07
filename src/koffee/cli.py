@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Annotated
 
 from cyclopts import App, Group, Parameter, validators
-from rich.columns import Columns
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.progress import (
@@ -17,11 +16,13 @@ from rich.progress import (
     TextColumn,
     TimeElapsedColumn,
 )
+from rich.table import Table
 
 from koffee.asr import transcribe_text
 from koffee.data.config import (
     CONFIG_SEARCH_PATHS,
     LANGUAGE_CODES,
+    LANGUAGE_NAMES,
     KoffeeConfig,
     load_config_file,
 )
@@ -387,9 +388,21 @@ def info() -> None:
 @app.command()
 def languages() -> None:
     """List all supported language codes."""
+    num_columns = 4
     codes = sorted(LANGUAGE_CODES - {"auto"})
+    entries = [f"{code} ({LANGUAGE_NAMES.get(code, code)})" for code in codes]
+
+    table = Table(show_header=False, box=None, pad_edge=False, expand=True)
+    for _ in range(num_columns):
+        table.add_column()
+
+    for i in range(0, len(entries), num_columns):
+        row = entries[i : i + num_columns]
+        row += [""] * (num_columns - len(row))
+        table.add_row(*row)
+
     console = Console()
-    console.print(Columns(codes, equal=True, expand=True))
+    console.print(table)
     console.print(f"\n[bold]{len(codes)}[/bold] supported languages")
 
 

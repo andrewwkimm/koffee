@@ -636,8 +636,14 @@ def test_languages_command_excludes_auto(capsys) -> None:
     languages()
 
     captured = capsys.readouterr()
-    lines = captured.out.strip().split("\n")
-    language_lines = [line for line in lines if "supported languages" not in line]
-    language_text = " ".join(language_lines)
-    codes_in_output = set(language_text.split())
-    assert "auto" not in codes_in_output
+    assert "auto" not in captured.out.split()
+
+
+def test_languages_command_shows_names(capsys) -> None:
+    """Tests that languages command displays full language names."""
+    languages()
+
+    captured = capsys.readouterr()
+    assert "ko (Korean)" in captured.out
+    assert "en (English)" in captured.out
+    assert "ja (Japanese)" in captured.out
