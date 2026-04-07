@@ -26,6 +26,7 @@ from koffee.data.config import (
     KoffeeConfig,
     load_config_file,
 )
+from koffee.exceptions import InvalidVideoFileError, SubtitleOverlayError
 from koffee.overlay import overlay_subtitles
 from koffee.subtitle import generate_subtitles
 from koffee.translate import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, translate
@@ -197,7 +198,15 @@ def cli(
                 log.info(f"[{i}/{total}] Processing {video.name}")
             try:
                 _translate_with_progress(video, config, progress)
-            except Exception as exc:
+            except (
+                FileExistsError,
+                FileNotFoundError,
+                InvalidVideoFileError,
+                SubtitleOverlayError,
+                ValueError,
+                subprocess.CalledProcessError,
+                subprocess.TimeoutExpired,
+            ) as exc:
                 log.error(f"Failed to process {video.name}: {exc}")
                 failed.append(video)
 
