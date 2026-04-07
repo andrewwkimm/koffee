@@ -40,14 +40,16 @@ def translate_transcript(
     api_key: str | None,
     on_progress: Callable[[float], None] | None = None,
     translation_model: str = "gemini-2.5-flash",
+    translation_prompt: str | None = None,
 ) -> list:
     """Translates a transcript using Gemini, preserving timing information."""
     log.info("Translating transcript with Gemini.")
 
+    system_prompt = translation_prompt if translation_prompt else SYSTEM_PROMPT
     client = genai.Client(api_key=api_key)
     chunks = _chunk_segments(transcript, target_language)
     translated_segments = _translate_chunks(
-        client, chunks, on_progress, translation_model
+        client, chunks, on_progress, translation_model, system_prompt
     )
     return translated_segments
 
@@ -75,6 +77,7 @@ def _translate_chunks(
     chunks: list[dict],
     on_progress: Callable[[float], None] | None,
     translation_model: str,
+    system_prompt: str,
 ) -> list[dict]:
     """Iterates chunks, translating each and reporting progress."""
     log.info(f"Translating in {len(chunks)} chunks.")
@@ -86,7 +89,7 @@ def _translate_chunks(
             context_entries=translated_segments[-CONTEXT_ENTRIES:],
         )
         translated_chunk = _translate_chunk(
-            client, prompt, chunk_data["chunk"], translation_model
+            client, prompt, chunk_data["chunk"], translation_model, system_prompt
         )
         translated_segments.extend(translated_chunk)
 
@@ -100,22 +103,28 @@ def _translate_chunks(
 
 
 def _translate_chunk(
-    client, prompt: str, chunk: list[dict], translation_model: str
+    client, prompt: str, chunk: list[dict], translation_model: str, system_prompt: str
 ) -> list[dict]:
     """Calls the LLM with a prompt and parses the response."""
-    response = _call_with_retries(client, prompt, translation_model)
+    response = _call_with_retries(client, prompt, translation_model, system_prompt)
     translated_chunk = _parse_srt_response(response.text, chunk)
 
     return translated_chunk
 
 
 def _call_with_retries(
-    client, prompt: str, translation_model: str, max_retries: int = 3
+    client,
+    prompt: str,
+    translation_model: str,
+    system_prompt: str,
+    max_retries: int = 3,
 ):
     """Calls Gemini with exponential backoff on transient failures."""
     last_error = None
     for attempt in range(max_retries):
-        result, error = _attempt_generate(client, prompt, translation_model)
+        result, error = _attempt_generate(
+            client, prompt, translation_model, system_prompt
+        )
         if result is not None:
             return result
         last_error = error
@@ -127,7 +136,7 @@ def _call_with_retries(
     raise last_error
 
 
-def _attempt_generate(client, prompt: str, translation_model: str):
+def _attempt_generate(client, prompt: str, translation_model: str, system_prompt: str):
     """Makes a single Gemini API call, returning (response, None) or (None, error).
 
     Raises ClientError (4xx except 429) immediately since those are not retryable.
@@ -136,7 +145,7 @@ def _attempt_generate(client, prompt: str, translation_model: str):
         response = client.models.generate_content(
             model=translation_model,
             contents=prompt,
-            config={"system_instruction": SYSTEM_PROMPT},
+            config={"system_instruction": system_prompt},
         )
     except ClientError as exc:
         if exc.code == 429:

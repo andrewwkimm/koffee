@@ -180,6 +180,7 @@ def _translate_subtitle_file(
         config.api_key,
         on_progress,
         translation_model=config.translation_model,
+        translation_prompt=config.translation_prompt,
     )
     translated = generate_subtitles(config.subtitle_format, translated_segments)
     output_path = _get_output_path(file_path, config.output_dir, config.output_name)
@@ -231,6 +232,7 @@ def _get_segments(
             config.api_key,
             on_progress,
             translation_model=config.translation_model,
+            translation_prompt=config.translation_prompt,
         )
 
     return segments

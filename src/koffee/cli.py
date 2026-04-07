@@ -98,6 +98,8 @@ def cli(
     translation_backend: Annotated[
         str, Parameter(name=("--translation_backend", "-tb"))
     ] = options.translation_backend,
+    translation_prompt: Annotated[str, Parameter(name=("--translation_prompt", "-tp"))]
+    | None = None,
     config: Annotated[Path, Parameter(name=("--config",), group=options_group)]
     | None = None,
     api_key: Annotated[str, Parameter(name=("--api_key", "-ak"), group=options_group)]
@@ -139,6 +141,8 @@ def cli(
         Language to which the file should be translated
     translation_backend: str
         The backend service to use for the translation
+    translation_prompt: str
+        Custom system prompt for the Gemini translation model
     config: Path
         Path to a koffee.toml configuration file
     api_key: str
@@ -167,6 +171,7 @@ def cli(
         "subtitle_format": subtitle_format,
         "target_language": target_lang,
         "translation_backend": translation_backend,
+        "translation_prompt": translation_prompt,
     }
     defaults = KoffeeConfig().model_dump()
     cli_overrides = {k: v for k, v in cli_args.items() if v != defaults.get(k)}

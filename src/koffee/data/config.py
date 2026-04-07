@@ -39,6 +39,7 @@ class KoffeeConfig(BaseModel):
     target_language: str = "en"
     translation_backend: Literal["whisper", "gemini"] = "whisper"
     translation_model: str = "gemini-2.5-flash"
+    translation_prompt: str | None = None
     dry_run: bool = False
     overwrite: bool = False
     subtitle_track_index: int = 0

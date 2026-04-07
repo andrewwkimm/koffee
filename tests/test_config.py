@@ -102,3 +102,27 @@ def test_api_key_is_none_without_env_var(monkeypatch) -> None:
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     config = KoffeeConfig()
     assert config.api_key is None
+
+
+def test_translation_prompt_defaults_to_none() -> None:
+    """Tests that translation_prompt defaults to None."""
+    config = KoffeeConfig()
+    assert config.translation_prompt is None
+
+
+def test_translation_prompt_accepts_custom_value() -> None:
+    """Tests that translation_prompt accepts a custom string value."""
+    custom_prompt = "You are a medical subtitle translator."
+    config = KoffeeConfig(translation_prompt=custom_prompt)
+    assert config.translation_prompt == custom_prompt
+
+
+def test_translation_prompt_from_config_file(tmp_path) -> None:
+    """Tests that translation_prompt can be loaded from a TOML config file."""
+    config_path = tmp_path / "koffee.toml"
+    config_path.write_text('translation_prompt = "Translate formally."\n')
+
+    file_config = load_config_file(config_path)
+    config = KoffeeConfig(**file_config)
+
+    assert config.translation_prompt == "Translate formally."

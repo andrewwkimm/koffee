@@ -5,6 +5,7 @@ from google.genai.errors import APIError, ClientError
 from pytest_mock import MockerFixture
 
 from koffee.translator import (
+    SYSTEM_PROMPT,
     _attempt_generate,
     _build_prompt,
     _call_with_retries,
@@ -237,7 +238,7 @@ def test_call_with_retries_exhaustion(mocker: MockerFixture) -> None:
     mocker.patch("koffee.translator._attempt_generate", return_value=(None, error))
 
     with pytest.raises(APIError):
-        _call_with_retries(None, "prompt", "model", max_retries=2)
+        _call_with_retries(None, "prompt", "model", SYSTEM_PROMPT, max_retries=2)
 
 
 def test_attempt_generate_non_429_client_error_raises(mocker: MockerFixture) -> None:
@@ -248,7 +249,7 @@ def test_attempt_generate_non_429_client_error_raises(mocker: MockerFixture) -> 
     )
 
     with pytest.raises(ClientError):
-        _attempt_generate(mock_client, "prompt", "model")
+        _attempt_generate(mock_client, "prompt", "model", SYSTEM_PROMPT)
 
 
 def test_attempt_generate_429_returns_error(mocker: MockerFixture) -> None:
@@ -258,7 +259,7 @@ def test_attempt_generate_429_returns_error(mocker: MockerFixture) -> None:
         code=429, response_json={"error": "rate limited"}
     )
 
-    result, error = _attempt_generate(mock_client, "prompt", "model")
+    result, error = _attempt_generate(mock_client, "prompt", "model", SYSTEM_PROMPT)
 
     assert result is None
     assert error.code == 429
@@ -271,7 +272,46 @@ def test_attempt_generate_api_error_returns_error(mocker: MockerFixture) -> None
         code=500, response_json={"error": "server error"}
     )
 
-    result, error = _attempt_generate(mock_client, "prompt", "model")
+    result, error = _attempt_generate(mock_client, "prompt", "model", SYSTEM_PROMPT)
 
     assert result is None
     assert error.code == 500
+
+
+def test_translate_transcript_uses_custom_prompt(mocker: MockerFixture) -> None:
+    """Tests that a custom translation prompt is passed to the Gemini API."""
+    mock_client = mocker.MagicMock()
+    mocker.patch("koffee.translator.genai.Client", return_value=mock_client)
+    mocker.patch("koffee.translator.time.sleep")
+
+    mock_client.models.generate_content.return_value.text = (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello.\n\n"
+        "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
+    )
+
+    custom_prompt = "You are a medical subtitle translator."
+    translate_transcript(
+        SAMPLE_TRANSCRIPT, "en", api_key=None, translation_prompt=custom_prompt
+    )
+
+    call_kwargs = mock_client.models.generate_content.call_args.kwargs
+    assert call_kwargs["config"]["system_instruction"] == custom_prompt
+
+
+def test_translate_transcript_falls_back_to_default_prompt(
+    mocker: MockerFixture,
+) -> None:
+    """Tests that the default system prompt is used when no custom prompt is given."""
+    mock_client = mocker.MagicMock()
+    mocker.patch("koffee.translator.genai.Client", return_value=mock_client)
+    mocker.patch("koffee.translator.time.sleep")
+
+    mock_client.models.generate_content.return_value.text = (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello.\n\n"
+        "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
+    )
+
+    translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key=None)
+
+    call_kwargs = mock_client.models.generate_content.call_args.kwargs
+    assert call_kwargs["config"]["system_instruction"] == SYSTEM_PROMPT
