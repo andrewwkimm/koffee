@@ -61,9 +61,9 @@ def _validate_file(video_file_path: Path | str) -> None:
 
 def _validate_api_key(config: KoffeeConfig) -> None:
     """Raises ValueError if an LLM backend is selected without an API key."""
-    if config.translation_backend != "whisper" and not config.api_key:
+    if config.translator != "whisper" and not config.api_key:
         error_message = (
-            f"An API key is required when using the {config.translation_backend} "
+            f"An API key is required when using the {config.translator} "
             "translation backend. Provide one with --api_key or set the appropriate "
             "environment variable."
         )
@@ -90,8 +90,8 @@ def _transcribe(
         str(video_file_path),
         config.compute_type,
         config.device,
-        config.model,
-        config.translation_backend,
+        config.whisper_model,
+        config.translator,
         on_progress=on_progress,
     )
 
@@ -184,9 +184,9 @@ def _translate_subtitle_file(
         config.target_language,
         config.api_key,
         on_progress,
-        translation_model=config.translation_model,
-        translation_prompt=config.translation_prompt,
-        translation_backend=config.translation_backend,
+        llm_model=config.llm_model,
+        prompt=config.prompt,
+        translator=config.translator,
     )
     translated = generate_subtitles(config.subtitle_format, translated_segments)
     output_path = _get_output_path(file_path, config.output_dir, config.output_name)
@@ -229,7 +229,7 @@ def _get_segments(
     on_progress: Callable[[float], None] | None = None,
 ) -> list:
     """Returns translated or raw segments based on the translation backend."""
-    if config.translation_backend == "whisper":
+    if config.translator == "whisper":
         segments = transcript["segments"]
     else:
         segments = translate_transcript(
@@ -237,9 +237,9 @@ def _get_segments(
             config.target_language,
             config.api_key,
             on_progress,
-            translation_model=config.translation_model,
-            translation_prompt=config.translation_prompt,
-            translation_backend=config.translation_backend,
+            llm_model=config.llm_model,
+            prompt=config.prompt,
+            translator=config.translator,
         )
 
     return segments

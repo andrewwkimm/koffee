@@ -307,20 +307,20 @@ def test_batch_summary_on_partial_failure(mocker: MockerFixture) -> None:
     assert any("boom" in msg for msg in error_messages)
 
 
-def test_translation_prompt_flag(mocker: MockerFixture) -> None:
-    """Tests that --translation_prompt is passed through to config."""
+def test_prompt_flag(mocker: MockerFixture) -> None:
+    """Tests that --prompt is passed through to config."""
     mock_translate = mocker.patch("koffee.cli.translate")
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
 
     cli(
         korean_video_file_path,
         output_dir=output_directory_path,
-        translation_prompt="You are a medical translator.",
+        prompt="You are a medical translator.",
     )
 
     mock_translate.assert_called_once()
     config = mock_translate.call_args.kwargs["config"]
-    assert config.translation_prompt == "You are a medical translator."
+    assert config.prompt == "You are a medical translator."
 
 
 def test_config_flag_loads_file(mocker: MockerFixture, tmp_path) -> None:

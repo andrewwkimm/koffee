@@ -87,7 +87,7 @@ def test_get_segments_whisper_returns_raw(mocker, translate_module) -> None:
     """Tests that whisper backend returns raw segments without translation."""
     mock_translate = mocker.patch.object(translate_module, "translate_transcript")
     config = MagicMock(spec=KoffeeConfig)
-    config.translation_backend = "whisper"
+    config.translator = "whisper"
     transcript = {"segments": [{"start": 0.0, "end": 1.0, "text": "hi"}]}
 
     result = _get_segments(transcript, config)
@@ -102,11 +102,11 @@ def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> N
         translate_module, "translate_transcript", return_value=["translated"]
     )
     config = MagicMock(spec=KoffeeConfig)
-    config.translation_backend = "gemini"
+    config.translator = "gemini"
     config.target_language = "en"
     config.api_key = None
-    config.translation_model = "gemini-2.5-flash"
-    config.translation_prompt = None
+    config.llm_model = "gemini-2.5-flash"
+    config.prompt = None
     transcript = {"segments": [], "language": "ko"}
 
     result = _get_segments(transcript, config)
@@ -117,9 +117,9 @@ def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> N
         config.target_language,
         config.api_key,
         None,
-        translation_model=config.translation_model,
-        translation_prompt=config.translation_prompt,
-        translation_backend=config.translation_backend,
+        llm_model=config.llm_model,
+        prompt=config.prompt,
+        translator=config.translator,
     )
 
 
@@ -156,7 +156,7 @@ def test_validate_api_key_raises_without_key() -> None:
     with pytest.raises(ValueError, match="API key is required"):
         koffee.translate(
             "examples/videos/sample_korean_video.mp4",
-            translation_backend="gemini",
+            translator="gemini",
         )
 
 
@@ -231,7 +231,7 @@ def test_translate_subtitle_file_input(mocker, translate_module, tmp_path) -> No
         str(srt),
         config=KoffeeConfig(
             output_dir=tmp_path,
-            translation_backend="gemini",
+            translator="gemini",
             api_key="test-key",
             overwrite=True,
         ),

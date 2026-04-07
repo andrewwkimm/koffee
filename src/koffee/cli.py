@@ -44,7 +44,7 @@ app = App(
     group_commands=Group("Commands", sort_key=1),
     group_parameters=Group("Parameters", sort_key=2),
     name="koffee",
-    version_flags=["--version", "-v"],
+    version_flags=["--version", "-V"],
 )
 
 options_group = Group("Options", sort_key=3)
@@ -82,29 +82,26 @@ def cli(
         str, Parameter(name=("--compute-type", "-c"))
     ] = options.compute_type,
     device: Annotated[str, Parameter(name=("--device", "-d"))] = options.device,
-    model: Annotated[str, Parameter(name=("--model", "-m"))] = options.model,
-    output_dir: Annotated[Path, Parameter(name=("--output_dir", "-o"))] | None = None,
-    output_name: Annotated[str, Parameter(name=("--output_name", "-n"))] | None = None,
-    source_lang: Annotated[
-        str, Parameter(name=("--source_lang", "-sl"))
+    whisper_model: Annotated[
+        str, Parameter(name=("--whisper-model", "-m"))
+    ] = options.whisper_model,
+    output_dir: Annotated[Path, Parameter(name=("--output-dir", "-o"))] | None = None,
+    output_name: Annotated[str, Parameter(name=("--output-name", "-n"))] | None = None,
+    source_language: Annotated[
+        str, Parameter(name=("--source-language", "-s"))
     ] = options.source_language,
-    target_lang: Annotated[
-        str, Parameter(name=("--target_lang", "-t"))
+    target_language: Annotated[
+        str, Parameter(name=("--target-language", "-t"))
     ] = options.target_language,
     subtitle_format: Annotated[
-        str, Parameter(name=("--subtitle_format", "-sf"))
+        str, Parameter(name=("--subtitle-format", "-f"))
     ] = options.subtitle_format,
-    overlay: Annotated[
-        str, Parameter(name=("--overlay",), group=options_group)
-    ] = options.overlay,
-    translation_backend: Annotated[
-        str, Parameter(name=("--translation_backend", "-tb"))
-    ] = options.translation_backend,
-    translation_prompt: Annotated[str, Parameter(name=("--translation_prompt", "-tp"))]
-    | None = None,
+    overlay: Annotated[str, Parameter(name=("--overlay",))] = options.overlay,
+    translator: Annotated[str, Parameter(name=("--translator",))] = options.translator,
+    llm_model: Annotated[str, Parameter(name=("--llm-model",))] | None = None,
+    prompt: Annotated[str, Parameter(name=("--prompt",))] | None = None,
+    api_key: Annotated[str, Parameter(name=("--api-key",))] | None = None,
     config: Annotated[Path, Parameter(name=("--config",), group=options_group)]
-    | None = None,
-    api_key: Annotated[str, Parameter(name=("--api_key", "-ak"), group=options_group)]
     | None = None,
     dry_run: Annotated[
         bool, Parameter(name=("--dry-run",), group=options_group)
@@ -113,7 +110,7 @@ def cli(
         bool, Parameter(name=("--overwrite",), group=options_group)
     ] = False,
     verbose: Annotated[
-        bool, Parameter(name=("--verbose", "-V"), group=options_group)
+        bool, Parameter(name=("--verbose", "-v"), group=options_group)
     ] = False,
 ) -> None:
     """Automatic video translation and subtitling tool.
@@ -126,7 +123,7 @@ def cli(
         Type to use for computation
     device: str
         Device to use for computation
-    model: str
+    whisper_model: str
         The Whisper model instance to use
     output_dir: Path
         Directory for the output file
@@ -141,9 +138,11 @@ def cli(
         Source language of the subtitle file (default: auto)
     target_language: str
         Language to which the file should be translated
-    translation_backend: str
+    translator: str
         The backend service to use for the translation
-    translation_prompt: str
+    llm_model: str
+        The LLM model to use for translation
+    prompt: str
         Custom system prompt for the LLM translation model
     config: Path
         Path to a koffee.toml configuration file
@@ -164,16 +163,17 @@ def cli(
         "compute_type": compute_type,
         "device": device,
         "dry_run": dry_run,
-        "model": model,
+        "whisper_model": whisper_model,
+        "llm_model": llm_model,
         "overwrite": overwrite,
         "output_dir": output_dir,
         "output_name": output_name,
         "overlay": overlay,
-        "source_language": source_lang,
+        "source_language": source_language,
         "subtitle_format": subtitle_format,
-        "target_language": target_lang,
-        "translation_backend": translation_backend,
-        "translation_prompt": translation_prompt,
+        "target_language": target_language,
+        "translator": translator,
+        "prompt": prompt,
     }
     defaults = KoffeeConfig().model_dump()
     cli_overrides = {k: v for k, v in cli_args.items() if v != defaults.get(k)}
@@ -228,7 +228,7 @@ def _print_dry_run(resolved_paths: list[Path], config: KoffeeConfig) -> None:
         elif config.use_embedded_subtitles:
             mode = "embedded subtitle extraction + translation"
         else:
-            mode = f"ASR ({config.model}) + translation ({config.translation_backend})"
+            mode = f"ASR ({config.whisper_model}) + translation ({config.translator})"
         log.info(f"  {path.name} -> {mode}")
 
     log.info(f"[dry-run] Target language: {config.target_language}")
@@ -328,7 +328,7 @@ def _translate_with_progress(
             on_translate_progress=_make_progress_callback(progress, translate_task),
         )
     else:
-        has_translate_step = config.translation_backend != "whisper"
+        has_translate_step = config.translator != "whisper"
         asr_task = progress.add_task("Transcribing", total=100)
         translate_task = None
         translate_callback = None
@@ -389,8 +389,8 @@ def info() -> None:
         log.info("  torch: not installed")
 
     config = KoffeeConfig(**load_config_file())
-    log.info(f"  default model: {config.model}")
-    log.info(f"  default backend: {config.translation_backend}")
+    log.info(f"  default whisper model: {config.whisper_model}")
+    log.info(f"  default backend: {config.translator}")
     log.info(f"  config file: {_find_config_path() or 'none'}")
 
 
@@ -490,11 +490,13 @@ def transcribe(
         str, Parameter(name=("--compute-type", "-c"))
     ] = options.compute_type,
     device: Annotated[str, Parameter(name=("--device", "-d"))] = options.device,
-    model: Annotated[str, Parameter(name=("--model", "-m"))] = options.model,
-    output_dir: Annotated[Path, Parameter(name=("--output_dir", "-o"))] | None = None,
-    output_name: Annotated[str, Parameter(name=("--output_name", "-n"))] | None = None,
+    whisper_model: Annotated[
+        str, Parameter(name=("--whisper-model", "-m"))
+    ] = options.whisper_model,
+    output_dir: Annotated[Path, Parameter(name=("--output-dir", "-o"))] | None = None,
+    output_name: Annotated[str, Parameter(name=("--output-name", "-n"))] | None = None,
     subtitle_format: Annotated[
-        str, Parameter(name=("--subtitle_format", "-sf"))
+        str, Parameter(name=("--subtitle-format", "-f"))
     ] = options.subtitle_format,
     overwrite: Annotated[
         bool, Parameter(name=("--overwrite",), group=options_group)
@@ -510,7 +512,7 @@ def transcribe(
         Type to use for computation
     device: str
         Device to use for computation
-    model: str
+    whisper_model: str
         The Whisper model instance to use
     output_dir: Path
         Directory for the output file
@@ -528,7 +530,7 @@ def transcribe(
             str(file_path),
             compute_type,
             device,
-            model,
+            whisper_model,
             "whisper",
             on_progress=_make_progress_callback(progress, asr_task),
         )
@@ -557,8 +559,8 @@ def transcribe(
 def convert(
     file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
     subtitle_format: Annotated[str, Parameter(name=("--format", "-f"))] = "vtt",
-    output_dir: Annotated[Path, Parameter(name=("--output_dir", "-o"))] | None = None,
-    output_name: Annotated[str, Parameter(name=("--output_name", "-n"))] | None = None,
+    output_dir: Annotated[Path, Parameter(name=("--output-dir", "-o"))] | None = None,
+    output_name: Annotated[str, Parameter(name=("--output-name", "-n"))] | None = None,
     overwrite: Annotated[
         bool, Parameter(name=("--overwrite",), group=options_group)
     ] = False,
@@ -596,6 +598,14 @@ def convert(
 
     subtitle_file.replace(target)
     log.info(f"Converted {file_path.name} to {target}")
+
+
+app["info"].sort_key = 0
+app["languages"].sort_key = 1
+app["tracks"].sort_key = 2
+app["transcribe"].sort_key = 3
+app["convert"].sort_key = 4
+app["overlay"].sort_key = 5
 
 
 def main() -> None:

@@ -122,7 +122,7 @@ def test_translate_transcript_single_chunk(mocker: MockerFixture) -> None:
     )
 
     result = translate_transcript(
-        SAMPLE_TRANSCRIPT, "en", api_key=None, translation_backend="gemini"
+        SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini"
     )
 
     assert len(result) == 2
@@ -142,9 +142,7 @@ def test_translate_transcript_sleeps_between_chunks(mocker: MockerFixture) -> No
         "1\n00:00:00,000 --> 00:00:06,360\nHello."
     )
 
-    translate_transcript(
-        SAMPLE_TRANSCRIPT, "en", api_key=None, translation_backend="gemini"
-    )
+    translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
 
     # 2 segments with chunk size 1 = 2 chunks, sleep called once (not after last chunk)
     assert mock_sleep.call_count == 1
@@ -160,7 +158,7 @@ def test_translate_transcript_passes_api_key(mocker: MockerFixture) -> None:
     mocker.patch("koffee.translator.time.sleep")
 
     translate_transcript(
-        SAMPLE_TRANSCRIPT, "en", api_key="test-key", translation_backend="gemini"
+        SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="gemini"
     )
 
     mock_create.assert_called_once_with("test-key")
@@ -237,7 +235,7 @@ def test_translate_transcript_reports_progress(mocker: MockerFixture) -> None:
         "en",
         api_key=None,
         on_progress=progress_calls.append,
-        translation_backend="gemini",
+        translator="gemini",
     )
 
     assert progress_calls == [0.5, 1.0]
@@ -317,8 +315,8 @@ def test_translate_transcript_uses_custom_prompt(mocker: MockerFixture) -> None:
         SAMPLE_TRANSCRIPT,
         "en",
         api_key=None,
-        translation_prompt=custom_prompt,
-        translation_backend="gemini",
+        prompt=custom_prompt,
+        translator="gemini",
     )
 
     call_kwargs = mock_client.models.generate_content.call_args.kwargs
@@ -338,9 +336,7 @@ def test_translate_transcript_falls_back_to_default_prompt(
         "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
     )
 
-    translate_transcript(
-        SAMPLE_TRANSCRIPT, "en", api_key=None, translation_backend="gemini"
-    )
+    translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
 
     call_kwargs = mock_client.models.generate_content.call_args.kwargs
     assert call_kwargs["config"]["system_instruction"] == SYSTEM_PROMPT
@@ -399,9 +395,7 @@ def test_translate_transcript_uses_default_model(mocker: MockerFixture) -> None:
         "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
     )
 
-    translate_transcript(
-        SAMPLE_TRANSCRIPT, "en", api_key=None, translation_backend="gemini"
-    )
+    translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
 
     call_kwargs = mock_client.models.generate_content.call_args.kwargs
     assert call_kwargs["model"] == "gemini-2.5-flash"
@@ -497,7 +491,7 @@ def test_chatgpt_translate_transcript(mocker: MockerFixture) -> None:
     mock_client.chat.completions.create.return_value = mock_response
 
     result = translate_transcript(
-        SAMPLE_TRANSCRIPT, "en", api_key="test-key", translation_backend="chatgpt"
+        SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="chatgpt"
     )
 
     assert len(result) == 2
@@ -599,7 +593,7 @@ def test_claude_translate_transcript(mocker: MockerFixture) -> None:
     mock_client.messages.create.return_value = mock_response
 
     result = translate_transcript(
-        SAMPLE_TRANSCRIPT, "en", api_key="test-key", translation_backend="claude"
+        SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="claude"
     )
 
     assert len(result) == 2

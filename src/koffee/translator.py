@@ -31,13 +31,13 @@ should feel natural in English
 - Preserve all subtitle entry numbers and timing markers exactly as given
 - Translate only the text content, never the timestamps or entry numbers"""
 
-BACKENDS = {
+LLM = {
     "gemini": "koffee.llm.gemini",
     "chatgpt": "koffee.llm.chatgpt",
     "claude": "koffee.llm.claude",
 }
 
-DEFAULT_MODELS = {
+DEFAULT_MODEL = {
     "gemini": "gemini-2.5-flash",
     "chatgpt": "gpt-4o",
     "claude": "claude-sonnet-4-20250514",
@@ -48,12 +48,11 @@ def _load_backend(backend_name: str) -> ModuleType:
     """Loads a translation backend module by name."""
     import importlib  # noqa: PLC0415
 
-    module_path = BACKENDS.get(backend_name)
+    module_path = LLM.get(backend_name)
     if module_path is None:
-        available = ", ".join(sorted(BACKENDS.keys()))
+        available = ", ".join(sorted(LLM.keys()))
         error_message = (
-            f"Unknown translation backend: {backend_name!r}. "
-            f"Available backends: {available}"
+            f"Unknown translation backend: {backend_name!r}. Available LLM: {available}"
         )
         raise ValueError(error_message)
 
@@ -76,25 +75,25 @@ def translate_transcript(
     target_language: str,
     api_key: str | None,
     on_progress: Callable[[float], None] | None = None,
-    translation_model: str | None = None,
-    translation_prompt: str | None = None,
-    translation_backend: str = "gemini",
+    llm_model: str | None = None,
+    prompt: str | None = None,
+    translator: str = "gemini",
 ) -> list:
     """Translates a transcript using an LLM backend, preserving timing information."""
-    log.info(f"Translating transcript with {translation_backend}.")
+    log.info(f"Translating transcript with {translator}.")
 
-    system_prompt = translation_prompt if translation_prompt else SYSTEM_PROMPT
-    model = translation_model or DEFAULT_MODELS.get(translation_backend, "")
-    backend = _load_backend(translation_backend)
+    system_prompt = prompt if prompt else SYSTEM_PROMPT
+    model = llm_model or DEFAULT_MODEL.get(translator, "")
+    backend = _load_backend(translator)
     client = backend.create_client(api_key)
     chunks = _chunk_segments(transcript, target_language)
     translated_segments = _translate_chunks(
         backend,
-        backend_name=translation_backend,
+        backend_name=translator,
         client=client,
         chunks=chunks,
         on_progress=on_progress,
-        translation_model=model,
+        llm_model=model,
         system_prompt=system_prompt,
     )
     return translated_segments
@@ -124,7 +123,7 @@ def _translate_chunks(
     client,
     chunks: list[dict],
     on_progress: Callable[[float], None] | None,
-    translation_model: str,
+    llm_model: str,
     system_prompt: str,
 ) -> list[dict]:
     """Iterates chunks, translating each and reporting progress."""
@@ -142,7 +141,7 @@ def _translate_chunks(
             client,
             prompt,
             chunk_data["chunk"],
-            translation_model,
+            llm_model,
             system_prompt,
         )
         translated_segments.extend(translated_chunk)
@@ -162,13 +161,11 @@ def _translate_chunk(
     client,
     prompt: str,
     chunk: list[dict],
-    translation_model: str,
+    llm_model: str,
     system_prompt: str,
 ) -> list[dict]:
     """Calls the LLM with a prompt and parses the response."""
-    response = _call_with_retries(
-        backend, client, prompt, translation_model, system_prompt
-    )
+    response = _call_with_retries(backend, client, prompt, llm_model, system_prompt)
     response_text = _extract_text(response, backend_name)
     translated_chunk = _parse_srt_response(response_text, chunk)
 
@@ -179,7 +176,7 @@ def _call_with_retries(
     backend: ModuleType,
     client,
     prompt: str,
-    translation_model: str,
+    llm_model: str,
     system_prompt: str,
     max_retries: int = 3,
 ):
@@ -187,7 +184,7 @@ def _call_with_retries(
     last_error = None
     for attempt in range(max_retries):
         result, error = backend.attempt_generate(
-            client, prompt, translation_model, system_prompt
+            client, prompt, llm_model, system_prompt
         )
         if result is not None:
             return result
