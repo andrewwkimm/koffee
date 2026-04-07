@@ -91,6 +91,35 @@ Refer below for a list of all arguments, commands, parameters, and options.
     --overlay                   Subtitle overlay mode: none, soft, or hard.
     --overwrite                 Overwrite existing output files.
 
+## Configuration
+
+koffee can be configured with a `koffee.toml` file. It searches for the file in the following locations (in order):
+
+1. Current working directory: `./koffee.toml`
+2. User config directory: `~/.config/koffee/koffee.toml`
+
+Settings follow this precedence: **defaults < config file < CLI arguments**.
+
+Example `koffee.toml`:
+
+```toml
+source_language = "ko"
+target_language = "en"
+subtitle_format = "srt"
+translation_backend = "gemini"
+model = "large-v3"
+device = "cuda"
+compute_type = "float16"
+```
+
+### Compute types
+
+Valid values for `--compute-type`: `default`, `auto`, `int8`, `int8_float16`, `int8_float32`, `int8_bfloat16`, `int16`, `float16`, `bfloat16`, `float32`.
+
+### API key
+
+When using the Gemini translation backend, an API key can be provided via `--api_key` or the `GOOGLE_API_KEY` environment variable.
+
 ## Contributing
 
 The simplest way to start developing is by using either a [DevContainer](https://code.visualstudio.com/docs/devcontainers/containers) or [uv](https://docs.astral.sh/uv/).
