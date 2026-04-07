@@ -244,11 +244,10 @@ def _parse_srt_response(
     translated_segments = []
     blocks = [b.strip() for b in sanitized.split("\n\n") if b.strip()]
 
-    if len(blocks) < len(original_segments):
+    if len(blocks) != len(original_segments):
         log.warning(
             f"LLM returned {len(blocks)} blocks but expected "
-            f"{len(original_segments)}; {len(original_segments) - len(blocks)} "
-            "segments will be missing from output."
+            f"{len(original_segments)}; output may have missing or extra segments."
         )
 
     for block, original in zip(blocks, original_segments, strict=False):
