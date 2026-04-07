@@ -212,7 +212,7 @@ def test_translate_subtitle_file_input(mocker, translate_module, tmp_path) -> No
         "generate_subtitles",
         return_value=tmp_path / "out.vtt",
     )
-    mocker.patch("pathlib.Path.rename", return_value=tmp_path / "test.vtt")
+    mocker.patch("pathlib.Path.replace", return_value=tmp_path / "test.vtt")
     mocker.patch.object(translate_module, "_check_output_collision")
 
     translate(

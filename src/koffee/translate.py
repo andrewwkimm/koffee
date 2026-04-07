@@ -183,7 +183,7 @@ def _translate_subtitle_file(
     output_path = _get_output_path(file_path, config.output_dir, config.output_name)
     output_subtitle_path = output_path.with_suffix(f".{config.subtitle_format}")
     _check_output_collision(output_subtitle_path, config.overwrite)
-    translated.rename(output_subtitle_path)
+    translated.replace(output_subtitle_path)
 
     return output_subtitle_path
 
@@ -252,7 +252,7 @@ def _handle_subtitle_output(
 ) -> Path:
     """Moves the subtitle file to the output path."""
     output_subtitle_path = output_path.with_suffix(f".{subtitle_format}")
-    subtitle_file_path.rename(output_subtitle_path)
+    subtitle_file_path.replace(output_subtitle_path)
     log.info("Finished processing file!")
 
     return output_subtitle_path
