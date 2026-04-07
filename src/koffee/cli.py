@@ -31,12 +31,14 @@ log = logging.getLogger(__name__)
 
 app = App(
     default_parameter=Parameter(negative=""),
-    group_parameters=Group("Parameters", sort_key=1),
+    group_arguments=Group("Arguments", sort_key=0),
+    group_commands=Group("Commands", sort_key=1),
+    group_parameters=Group("Parameters", sort_key=2),
     name="koffee",
     version_flags=["--version", "-v"],
 )
 
-options_group = Group("Options", sort_key=2)
+options_group = Group("Options", sort_key=3)
 
 app["--help"].group = options_group
 app["--version"].group = options_group
