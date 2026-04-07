@@ -58,40 +58,41 @@ Refer below for a list of all arguments, commands, parameters, and options.
 
 ### Arguments
 
-    FILE_PATH                   Path to the video, audio, or subtitle file
+    FILE_PATH  Path to the video, audio, or subtitle file
 
 ### Commands
 
-    info                        Display system information for debugging
-    languages                   Display all supported languages
-    tracks                      List embedded subtitle tracks in a video file
-    transcribe                  Transcribe audio to subtitles without translation
-    convert                     Convert a subtitle file between formats (SRT, VTT, ASS)
-    overlay                     Overlay subtitles onto a video without transcription or
-                                translation
+    info        Display system information for debugging
+    languages   Display all supported languages
+    tracks      List embedded subtitle tracks in a video file
+    transcribe  Transcribe audio to subtitles without translation
+    convert     Convert a subtitle file between formats (SRT, VTT, ASS)
+    overlay     Overlay subtitles onto a video without transcr     translation
 
 ### Parameters
 
-    --compute-type, -c          Type to use for computation
-    --device, -d                Device to use for computation
-    --model, -m                 The Whisper model instance to use
-    --output_dir, -o            Directory for the output file
-    --output_name, -n           Name of the output file
-    --source_lang, -sl          Source language (default: auto)
-    --target_lang, -t           Language to which the file should be translated
-    --subtitle_format, -sf      Format to use for the subtitles (srt, vtt, ass)
-    --translation_backend, -tb  Backend service to use for translation (whisper, gemini)
-    --translation_prompt, -tb   Prompt to be passed on to the LLM for translation
+    --compute-type          -c  Type to use for computation
+    --device                -d  Device to use for computation
+    --whisper-model         -m  The Whisper model instance to use
+    --output-dir            -o  Directory for the output file
+    --output-name           -n  Name of the output file
+    --source-language       -s  Source language of the subtitle file (default: auto)
+    --target-language       -t  Language to which the file should be translated
+    --subtitle-format       -f  Format to use for the subtitles
+    --overlay                   Subtitle overlay mode: none, soft, or hard
+    --translator                The backend service to use for the translation
+    --llm-model                 The LLM model to use for translation
+    --prompt                    Custom system prompt for the LLM translation model
+    --api-key                   API key for an LLM service
 
 ### Options
 
-    --help, -h                  Display this message and exit
-    --version, -v               Display application version
-    --verbose, -V               Print debug logs
-    --api_key, -ak              API key for LLM based translation
-    --dry-run                   Preview what would be done without processing
-    --overlay                   Subtitle overlay mode: none, soft, or hard
-    --overwrite                 Overwrite existing output files
+    --config                    Path to a koffee.toml configuration file
+    --dry-run                   Preview what files would be processed
+    --overwrite                 Overwrite existing output files instead of raising an error
+    --verbose               -v  Print debug log messages
+    --help                  -h  Display this message and exit
+    --version               -V  Display application version
 
 ## Configuration
 
@@ -105,22 +106,29 @@ Settings follow this precedence: **defaults < config file < CLI arguments**.
 Example `koffee.toml`:
 
 ```toml
-source_language = "ko"
-target_language = "en"
-subtitle_format = "srt"
-translation_backend = "gemini"
-model = "large-v3"
+compute-type = "float16"
 device = "cuda"
-compute_type = "float16"
+whisper-model = "large-v3"
+source-language = "ko"
+target-language = "en"
+subtitle-format = "srt"
+translator = "gemini"
+llm-model = "gemini-3.0-pro"
 ```
 
 ### Compute types
 
 Valid values for `--compute-type`: `default`, `auto`, `int8`, `int8_float16`, `int8_float32`, `int8_bfloat16`, `int16`, `float16`, `bfloat16`, `float32`.
 
-### API key
+### LLM Translation
 
-When using the Gemini translation backend, an API key can be provided via `--api_key` or the `GOOGLE_API_KEY` environment variable.
+When using an LLM for translation, an API key can be provided via `--api-key` or by setting an environment variable.
+
+```
+export OPENAI_API_KEY=your-api-key
+export ANTHROPIC_API_KEY=your-api-key
+export GEMINI_API_KEY=your-api-key
+```
 
 ## Contributing
 
