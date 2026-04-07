@@ -1,6 +1,8 @@
 """The koffee CLI."""
 
 import logging
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Annotated
 
@@ -14,7 +16,7 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
-from koffee.data.config import KoffeeConfig, load_config_file
+from koffee.data.config import CONFIG_SEARCH_PATHS, KoffeeConfig, load_config_file
 from koffee.translate import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, translate
 from koffee.utils import get_subtitle_tracks
 
@@ -293,6 +295,75 @@ def _translate_with_progress(
             on_asr_progress=on_asr_progress,
             on_translate_progress=_make_progress_callback(progress, translate_task),
         )
+
+
+@app.command()
+def info() -> None:
+    """Display system information for debugging."""
+    log.info("[koffee info]")
+
+    ffmpeg_path = shutil.which("ffmpeg")
+    if ffmpeg_path:
+        result = subprocess.run(
+            ["ffmpeg", "-version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        version_line = result.stdout.split("\n")[0]
+        log.info(f"  ffmpeg: {version_line}")
+    else:
+        log.info("  ffmpeg: not found")
+
+    ffprobe_path = shutil.which("ffprobe")
+    log.info(f"  ffprobe: {'found' if ffprobe_path else 'not found'}")
+
+    try:
+        import torch  # noqa: PLC0415
+
+        cuda_available = torch.cuda.is_available()
+        device_name = torch.cuda.get_device_name(0) if cuda_available else "N/A"
+        log.info(f"  CUDA: {'available' if cuda_available else 'not available'}")
+        if cuda_available:
+            log.info(f"  GPU: {device_name}")
+    except ImportError:
+        log.info("  torch: not installed")
+
+    config = KoffeeConfig(**load_config_file())
+    log.info(f"  default model: {config.model}")
+    log.info(f"  default backend: {config.translation_backend}")
+    log.info(f"  config file: {_find_config_path() or 'none'}")
+
+
+def _find_config_path() -> Path | None:
+    """Returns the path to the active config file, or None."""
+    for path in CONFIG_SEARCH_PATHS:
+        if path.is_file():
+            return path
+    return None
+
+
+@app.command()
+def tracks(
+    file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
+) -> None:
+    """List embedded subtitle tracks in a video file."""
+    track_list = get_subtitle_tracks(file_path)
+
+    if not track_list:
+        log.info(f"No subtitle tracks found in {file_path.name}.")
+        return
+
+    log.info(f"Subtitle tracks in {file_path.name}:")
+    for i, track in enumerate(track_list):
+        tags = track.get("tags", {})
+        lang = tags.get("language", "unknown")
+        title = tags.get("title", "")
+        label = f"  [{i}] {lang}"
+        if title:
+            label += f" — {title}"
+        log.info(label)
 
 
 def main() -> None:
