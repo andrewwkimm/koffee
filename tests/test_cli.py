@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 from pytest_mock import MockerFixture
 
 from koffee.cli import (
@@ -13,8 +14,11 @@ from koffee.cli import (
     _resolve_paths,
     _select_subtitle_track,
     cli,
+    convert,
     info,
+    overlay,
     tracks,
+    transcribe,
 )
 from koffee.data.config import KoffeeConfig
 
@@ -363,3 +367,175 @@ def test_find_config_path_returns_none(monkeypatch) -> None:
     )
 
     assert _find_config_path() is None
+
+
+def test_overlay_command(mocker: MockerFixture, tmp_path) -> None:
+    """Tests that overlay command calls overlay_subtitles."""
+    video = tmp_path / "video.mp4"
+    video.touch()
+    sub = tmp_path / "sub.srt"
+    sub.touch()
+    output = tmp_path / "out.mp4"
+
+    mock_overlay = mocker.patch("koffee.cli.overlay_subtitles", return_value=output)
+
+    overlay(video, sub, output=output)
+
+    mock_overlay.assert_called_once_with(sub, video, output, mode="soft")
+
+
+def test_overlay_command_hard_mode(mocker: MockerFixture, tmp_path) -> None:
+    """Tests that overlay command passes hard mode."""
+    video = tmp_path / "video.mp4"
+    video.touch()
+    sub = tmp_path / "sub.srt"
+    sub.touch()
+    output = tmp_path / "out.mp4"
+
+    mock_overlay = mocker.patch("koffee.cli.overlay_subtitles", return_value=output)
+
+    overlay(video, sub, output=output, mode="hard")
+
+    mock_overlay.assert_called_once_with(sub, video, output, mode="hard")
+
+
+def test_overlay_command_default_output(mocker: MockerFixture, tmp_path) -> None:
+    """Tests that overlay generates a default output name."""
+    video = tmp_path / "video.mp4"
+    video.touch()
+    sub = tmp_path / "sub.srt"
+    sub.touch()
+    expected_output = tmp_path / "video_overlay.mp4"
+
+    mock_overlay = mocker.patch(
+        "koffee.cli.overlay_subtitles", return_value=expected_output
+    )
+
+    overlay(video, sub)
+
+    mock_overlay.assert_called_once_with(sub, video, expected_output, mode="soft")
+
+
+def test_overlay_command_collision(tmp_path) -> None:
+    """Tests that overlay raises FileExistsError without --overwrite."""
+    video = tmp_path / "video.mp4"
+    video.touch()
+    sub = tmp_path / "sub.srt"
+    sub.touch()
+    output = tmp_path / "out.mp4"
+    output.touch()
+
+    with pytest.raises(FileExistsError, match="already exists"):
+        overlay(video, sub, output=output)
+
+
+def test_transcribe_command(mocker: MockerFixture, tmp_path) -> None:
+    """Tests that transcribe command runs ASR and generates subtitles."""
+    audio = tmp_path / "audio.mp3"
+    audio.touch()
+    subtitle_file = tmp_path / "generated.vtt"
+    subtitle_file.touch()
+
+    mocker.patch(
+        "koffee.cli.transcribe_text",
+        return_value={
+            "segments": [{"start": 0.0, "end": 1.0, "text": "Hello."}],
+            "language": "en",
+        },
+    )
+    mocker.patch(
+        "koffee.cli.generate_subtitles",
+        return_value=subtitle_file,
+    )
+    mocker.patch("pathlib.Path.replace")
+
+    transcribe(audio, output_dir=tmp_path, output_name="output")
+
+
+def test_transcribe_command_collision(mocker: MockerFixture, tmp_path) -> None:
+    """Tests that transcribe raises FileExistsError without --overwrite."""
+    audio = tmp_path / "audio.mp3"
+    audio.touch()
+    existing = tmp_path / "audio.vtt"
+    existing.touch()
+    subtitle_file = tmp_path / "generated.vtt"
+    subtitle_file.touch()
+
+    mocker.patch(
+        "koffee.cli.transcribe_text",
+        return_value={
+            "segments": [{"start": 0.0, "end": 1.0, "text": "Hello."}],
+            "language": "en",
+        },
+    )
+    mocker.patch(
+        "koffee.cli.generate_subtitles",
+        return_value=subtitle_file,
+    )
+
+    with pytest.raises(FileExistsError, match="already exists"):
+        transcribe(audio, output_dir=tmp_path)
+
+
+def test_convert_command(mocker: MockerFixture, tmp_path) -> None:
+    """Tests that convert command parses and regenerates subtitles."""
+    srt = tmp_path / "test.srt"
+    srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello.\n")
+    subtitle_file = tmp_path / "generated.vtt"
+    subtitle_file.touch()
+
+    mock_parse = mocker.patch(
+        "koffee.cli.parse_subtitle_file",
+        return_value=[{"start": 0.0, "end": 1.0, "text": "Hello."}],
+    )
+    mocker.patch(
+        "koffee.cli.generate_subtitles",
+        return_value=subtitle_file,
+    )
+    mocker.patch("pathlib.Path.replace")
+
+    convert(srt, subtitle_format="vtt", output_dir=tmp_path, output_name="output")
+
+    mock_parse.assert_called_once_with(srt)
+
+
+def test_convert_command_default_output(mocker: MockerFixture, tmp_path) -> None:
+    """Tests that convert uses the input filename as default output name."""
+    srt = tmp_path / "test.srt"
+    srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello.\n")
+    subtitle_file = tmp_path / "generated.vtt"
+    subtitle_file.touch()
+
+    mocker.patch(
+        "koffee.cli.parse_subtitle_file",
+        return_value=[{"start": 0.0, "end": 1.0, "text": "Hello."}],
+    )
+    mocker.patch(
+        "koffee.cli.generate_subtitles",
+        return_value=subtitle_file,
+    )
+    mocker.patch("pathlib.Path.replace")
+
+    convert(srt, subtitle_format="vtt", output_dir=tmp_path)
+
+
+def test_convert_command_collision(mocker: MockerFixture, tmp_path) -> None:
+    """Tests that convert raises FileExistsError without --overwrite."""
+    srt = tmp_path / "test.srt"
+    srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello.\n")
+    existing = tmp_path / "test.vtt"
+    existing.touch()
+    subtitle_file = tmp_path / "generated.vtt"
+    subtitle_file.touch()
+
+    mocker.patch(
+        "koffee.cli.parse_subtitle_file",
+        return_value=[{"start": 0.0, "end": 1.0, "text": "Hello."}],
+    )
+    mocker.patch(
+        "koffee.cli.generate_subtitles",
+        return_value=subtitle_file,
+    )
+
+    with pytest.raises(FileExistsError, match="already exists"):
+        convert(srt, subtitle_format="vtt", output_dir=tmp_path)
