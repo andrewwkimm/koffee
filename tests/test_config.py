@@ -37,9 +37,7 @@ def test_config_file_values_apply_to_koffee_config(tmp_path) -> None:
     """Tests that config file values override KoffeeConfig defaults."""
     config_path = tmp_path / "koffee.toml"
     config_path.write_text(
-        'source_language = "ko"\n'
-        'subtitle_format = "srt"\n'
-        'translation_backend = "gemini"\n'
+        'source_language = "ko"\nsubtitle_format = "srt"\ntranslator = "gemini"\n'
     )
 
     file_config = load_config_file(config_path)
@@ -47,7 +45,7 @@ def test_config_file_values_apply_to_koffee_config(tmp_path) -> None:
 
     assert config.source_language == "ko"
     assert config.subtitle_format == "srt"
-    assert config.translation_backend == "gemini"
+    assert config.translator == "gemini"
     # Defaults should still apply for unset fields
     assert config.target_language == "en"
     assert config.device == "auto"
@@ -74,46 +72,46 @@ def test_auto_source_language_is_accepted() -> None:
 def test_invalid_model_raises() -> None:
     """Tests that an unknown Whisper model raises a validation error."""
     with pytest.raises(ValueError, match="Unknown Whisper model"):
-        KoffeeConfig(model="nonexistent-model")
+        KoffeeConfig(whisper_model="nonexistent-model")
 
 
-def test_valid_model_is_accepted() -> None:
+def test_valid_whisper_model_is_accepted() -> None:
     """Tests that a known Whisper model is accepted."""
-    config = KoffeeConfig(model="tiny")
-    assert config.model == "tiny"
+    config = KoffeeConfig(whisper_model="tiny")
+    assert config.whisper_model == "tiny"
 
 
 def test_api_key_falls_back_to_google_env_var(monkeypatch) -> None:
     """Tests that api_key falls back to GOOGLE_API_KEY for gemini backend."""
     monkeypatch.setenv("GOOGLE_API_KEY", "env-key-123")
-    config = KoffeeConfig(translation_backend="gemini")
+    config = KoffeeConfig(translator="gemini")
     assert config.api_key == "env-key-123"
 
 
 def test_api_key_falls_back_to_openai_env_var(monkeypatch) -> None:
     """Tests that api_key falls back to OPENAI_API_KEY for chatgpt backend."""
     monkeypatch.setenv("OPENAI_API_KEY", "openai-key-123")
-    config = KoffeeConfig(translation_backend="chatgpt")
+    config = KoffeeConfig(translator="chatgpt")
     assert config.api_key == "openai-key-123"
 
 
 def test_api_key_falls_back_to_anthropic_env_var(monkeypatch) -> None:
     """Tests that api_key falls back to ANTHROPIC_API_KEY for claude backend."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key-123")
-    config = KoffeeConfig(translation_backend="claude")
+    config = KoffeeConfig(translator="claude")
     assert config.api_key == "anthropic-key-123"
 
 
 def test_api_key_not_resolved_for_whisper() -> None:
     """Tests that no env var is checked for the whisper backend."""
-    config = KoffeeConfig(translation_backend="whisper")
+    config = KoffeeConfig(translator="whisper")
     assert config.api_key is None
 
 
 def test_api_key_prefers_explicit_value(monkeypatch) -> None:
     """Tests that an explicit api_key takes precedence over the env var."""
     monkeypatch.setenv("GOOGLE_API_KEY", "env-key-123")
-    config = KoffeeConfig(api_key="explicit-key", translation_backend="gemini")
+    config = KoffeeConfig(api_key="explicit-key", translator="gemini")
     assert config.api_key == "explicit-key"
 
 
@@ -124,25 +122,25 @@ def test_api_key_is_none_without_env_var(monkeypatch) -> None:
     assert config.api_key is None
 
 
-def test_translation_prompt_defaults_to_none() -> None:
-    """Tests that translation_prompt defaults to None."""
+def test_prompt_defaults_to_none() -> None:
+    """Tests that prompt defaults to None."""
     config = KoffeeConfig()
-    assert config.translation_prompt is None
+    assert config.prompt is None
 
 
-def test_translation_prompt_accepts_custom_value() -> None:
-    """Tests that translation_prompt accepts a custom string value."""
+def test_prompt_accepts_custom_value() -> None:
+    """Tests that prompt accepts a custom string value."""
     custom_prompt = "You are a medical subtitle translator."
-    config = KoffeeConfig(translation_prompt=custom_prompt)
-    assert config.translation_prompt == custom_prompt
+    config = KoffeeConfig(prompt=custom_prompt)
+    assert config.prompt == custom_prompt
 
 
-def test_translation_prompt_from_config_file(tmp_path) -> None:
-    """Tests that translation_prompt can be loaded from a TOML config file."""
+def test_prompt_from_config_file(tmp_path) -> None:
+    """Tests that prompt can be loaded from a TOML config file."""
     config_path = tmp_path / "koffee.toml"
-    config_path.write_text('translation_prompt = "Translate formally."\n')
+    config_path.write_text('prompt = "Translate formally."\n')
 
     file_config = load_config_file(config_path)
     config = KoffeeConfig(**file_config)
 
-    assert config.translation_prompt == "Translate formally."
+    assert config.prompt == "Translate formally."

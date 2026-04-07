@@ -132,16 +132,16 @@ class KoffeeConfig(BaseModel):
     api_key: str | None = None
     compute_type: str = "default"
     device: str = "auto"
-    model: str = "large-v3"
+    whisper_model: str = "large-v3"
     output_dir: Path | None = None
     output_name: str | None = None
     overlay: Literal["none", "soft", "hard"] = "none"
     source_language: str = "auto"
     subtitle_format: Literal["srt", "vtt", "ass"] = "vtt"
     target_language: str = "en"
-    translation_backend: Literal["whisper", "gemini", "chatgpt", "claude"] = "whisper"
-    translation_model: str = "gemini-2.5-flash"
-    translation_prompt: str | None = None
+    translator: Literal["whisper", "gemini", "chatgpt", "claude"] = "whisper"
+    llm_model: str | None = None
+    prompt: str | None = None
     dry_run: bool = False
     overwrite: bool = False
     subtitle_track_index: int = 0
@@ -159,7 +159,7 @@ class KoffeeConfig(BaseModel):
             "chatgpt": "OPENAI_API_KEY",
             "claude": "ANTHROPIC_API_KEY",
         }
-        backend = values.get("translation_backend", "whisper")
+        backend = values.get("translator", "whisper")
         env_var = env_vars.get(backend)
         if env_var:
             values["api_key"] = os.environ.get(env_var)
@@ -178,9 +178,9 @@ class KoffeeConfig(BaseModel):
             raise ValueError(error_message)
         return value
 
-    @field_validator("model")
+    @field_validator("whisper_model")
     @classmethod
-    def _validate_model(cls, value: str) -> str:
+    def _validate_whisper_model(cls, value: str) -> str:
         """Validates that the model name is a known Whisper model."""
         if value not in WHISPER_MODELS:
             error_message = (
