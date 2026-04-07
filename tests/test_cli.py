@@ -271,6 +271,60 @@ def test_batch_progress_logging(mocker: MockerFixture) -> None:
     assert any("[2/2]" in msg for msg in log_messages)
 
 
+def test_batch_summary_on_success(mocker: MockerFixture) -> None:
+    """Tests that batch processing logs a summary when all files succeed."""
+    mocker.patch("koffee.cli.translate")
+    mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
+    mock_log = mocker.patch("koffee.cli.log")
+
+    cli(
+        korean_video_file_path,
+        korean_video_file_path,
+        output_dir=output_directory_path,
+    )
+
+    log_messages = [call.args[0] for call in mock_log.info.call_args_list]
+    assert any("2/2 succeeded" in msg for msg in log_messages)
+
+
+def test_batch_summary_on_partial_failure(mocker: MockerFixture) -> None:
+    """Tests that batch processing logs failed files in the summary."""
+    mocker.patch("koffee.cli.translate", side_effect=[None, RuntimeError("boom")])
+    mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
+    mock_log = mocker.patch("koffee.cli.log")
+
+    cli(
+        korean_video_file_path,
+        korean_video_file_path,
+        output_dir=output_directory_path,
+    )
+
+    info_messages = [call.args[0] for call in mock_log.info.call_args_list]
+    error_messages = [call.args[0] for call in mock_log.error.call_args_list]
+    assert any("1/2 succeeded" in msg for msg in info_messages)
+    assert any("failed" in msg for msg in info_messages)
+    assert any("boom" in msg for msg in error_messages)
+
+
+def test_config_flag_loads_file(mocker: MockerFixture, tmp_path) -> None:
+    """Tests that --config loads the specified config file."""
+    config_file = tmp_path / "custom.toml"
+    config_file.write_text('target_language = "fr"\n')
+
+    mock_translate = mocker.patch("koffee.cli.translate")
+    mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
+
+    cli(
+        korean_video_file_path,
+        config=config_file,
+        output_dir=output_directory_path,
+    )
+
+    mock_translate.assert_called_once()
+    used_config = mock_translate.call_args.kwargs["config"]
+    assert used_config.target_language == "fr"
+
+
 def test_select_subtitle_track_single() -> None:
     """Tests that a single track is selected automatically."""
     tracks = [{"index": 0, "tags": {"language": "ja"}}]
