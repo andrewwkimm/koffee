@@ -60,11 +60,12 @@ def _validate_file(video_file_path: Path | str) -> None:
 
 
 def _validate_api_key(config: KoffeeConfig) -> None:
-    """Raises ValueError if the Gemini backend is selected without an API key."""
-    if config.translation_backend == "gemini" and not config.api_key:
+    """Raises ValueError if an LLM backend is selected without an API key."""
+    if config.translation_backend != "whisper" and not config.api_key:
         error_message = (
-            "An API key is required when using the Gemini translation backend. "
-            "Provide one with --api_key or set the GOOGLE_API_KEY environment variable."
+            f"An API key is required when using the {config.translation_backend} "
+            "translation backend. Provide one with --api_key or set the appropriate "
+            "environment variable."
         )
         raise ValueError(error_message)
 
@@ -181,6 +182,7 @@ def _translate_subtitle_file(
         on_progress,
         translation_model=config.translation_model,
         translation_prompt=config.translation_prompt,
+        translation_backend=config.translation_backend,
     )
     translated = generate_subtitles(config.subtitle_format, translated_segments)
     output_path = _get_output_path(file_path, config.output_dir, config.output_name)
@@ -233,6 +235,7 @@ def _get_segments(
             on_progress,
             translation_model=config.translation_model,
             translation_prompt=config.translation_prompt,
+            translation_backend=config.translation_backend,
         )
 
     return segments

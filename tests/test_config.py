@@ -83,17 +83,37 @@ def test_valid_model_is_accepted() -> None:
     assert config.model == "tiny"
 
 
-def test_api_key_falls_back_to_env_var(monkeypatch) -> None:
-    """Tests that api_key falls back to the GOOGLE_API_KEY environment variable."""
+def test_api_key_falls_back_to_google_env_var(monkeypatch) -> None:
+    """Tests that api_key falls back to GOOGLE_API_KEY for gemini backend."""
     monkeypatch.setenv("GOOGLE_API_KEY", "env-key-123")
-    config = KoffeeConfig()
+    config = KoffeeConfig(translation_backend="gemini")
     assert config.api_key == "env-key-123"
+
+
+def test_api_key_falls_back_to_openai_env_var(monkeypatch) -> None:
+    """Tests that api_key falls back to OPENAI_API_KEY for chatgpt backend."""
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-key-123")
+    config = KoffeeConfig(translation_backend="chatgpt")
+    assert config.api_key == "openai-key-123"
+
+
+def test_api_key_falls_back_to_anthropic_env_var(monkeypatch) -> None:
+    """Tests that api_key falls back to ANTHROPIC_API_KEY for claude backend."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key-123")
+    config = KoffeeConfig(translation_backend="claude")
+    assert config.api_key == "anthropic-key-123"
+
+
+def test_api_key_not_resolved_for_whisper() -> None:
+    """Tests that no env var is checked for the whisper backend."""
+    config = KoffeeConfig(translation_backend="whisper")
+    assert config.api_key is None
 
 
 def test_api_key_prefers_explicit_value(monkeypatch) -> None:
     """Tests that an explicit api_key takes precedence over the env var."""
     monkeypatch.setenv("GOOGLE_API_KEY", "env-key-123")
-    config = KoffeeConfig(api_key="explicit-key")
+    config = KoffeeConfig(api_key="explicit-key", translation_backend="gemini")
     assert config.api_key == "explicit-key"
 
 

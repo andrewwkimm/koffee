@@ -3,9 +3,7 @@
 import logging
 import time
 from collections.abc import Callable
-
-from google import genai
-from google.genai.errors import APIError, ClientError
+from types import ModuleType
 
 from koffee.utils import convert_to_timestamp
 
@@ -33,23 +31,71 @@ should feel natural in English
 - Preserve all subtitle entry numbers and timing markers exactly as given
 - Translate only the text content, never the timestamps or entry numbers"""
 
+BACKENDS = {
+    "gemini": "koffee.llm.gemini",
+    "chatgpt": "koffee.llm.chatgpt",
+    "claude": "koffee.llm.claude",
+}
+
+DEFAULT_MODELS = {
+    "gemini": "gemini-2.5-flash",
+    "chatgpt": "gpt-4o",
+    "claude": "claude-sonnet-4-20250514",
+}
+
+
+def _load_backend(backend_name: str) -> ModuleType:
+    """Loads a translation backend module by name."""
+    import importlib  # noqa: PLC0415
+
+    module_path = BACKENDS.get(backend_name)
+    if module_path is None:
+        available = ", ".join(sorted(BACKENDS.keys()))
+        error_message = (
+            f"Unknown translation backend: {backend_name!r}. "
+            f"Available backends: {available}"
+        )
+        raise ValueError(error_message)
+
+    return importlib.import_module(module_path)
+
+
+def _extract_text(response, backend_name: str) -> str:
+    """Extracts text content from a backend-specific response object."""
+    if backend_name == "gemini":
+        return response.text
+    if backend_name == "chatgpt":
+        return response.choices[0].message.content
+    if backend_name == "claude":
+        return response.content[0].text
+    return str(response)
+
 
 def translate_transcript(
     transcript: dict,
     target_language: str,
     api_key: str | None,
     on_progress: Callable[[float], None] | None = None,
-    translation_model: str = "gemini-2.5-flash",
+    translation_model: str | None = None,
     translation_prompt: str | None = None,
+    translation_backend: str = "gemini",
 ) -> list:
-    """Translates a transcript using Gemini, preserving timing information."""
-    log.info("Translating transcript with Gemini.")
+    """Translates a transcript using an LLM backend, preserving timing information."""
+    log.info(f"Translating transcript with {translation_backend}.")
 
     system_prompt = translation_prompt if translation_prompt else SYSTEM_PROMPT
-    client = genai.Client(api_key=api_key)
+    model = translation_model or DEFAULT_MODELS.get(translation_backend, "")
+    backend = _load_backend(translation_backend)
+    client = backend.create_client(api_key)
     chunks = _chunk_segments(transcript, target_language)
     translated_segments = _translate_chunks(
-        client, chunks, on_progress, translation_model, system_prompt
+        backend,
+        backend_name=translation_backend,
+        client=client,
+        chunks=chunks,
+        on_progress=on_progress,
+        translation_model=model,
+        system_prompt=system_prompt,
     )
     return translated_segments
 
@@ -73,6 +119,8 @@ def _chunk_segments(transcript: dict, target_language: str) -> list[dict]:
 
 
 def _translate_chunks(
+    backend: ModuleType,
+    backend_name: str,
     client,
     chunks: list[dict],
     on_progress: Callable[[float], None] | None,
@@ -89,7 +137,13 @@ def _translate_chunks(
             context_entries=translated_segments[-CONTEXT_ENTRIES:],
         )
         translated_chunk = _translate_chunk(
-            client, prompt, chunk_data["chunk"], translation_model, system_prompt
+            backend,
+            backend_name,
+            client,
+            prompt,
+            chunk_data["chunk"],
+            translation_model,
+            system_prompt,
         )
         translated_segments.extend(translated_chunk)
 
@@ -103,26 +157,36 @@ def _translate_chunks(
 
 
 def _translate_chunk(
-    client, prompt: str, chunk: list[dict], translation_model: str, system_prompt: str
+    backend: ModuleType,
+    backend_name: str,
+    client,
+    prompt: str,
+    chunk: list[dict],
+    translation_model: str,
+    system_prompt: str,
 ) -> list[dict]:
     """Calls the LLM with a prompt and parses the response."""
-    response = _call_with_retries(client, prompt, translation_model, system_prompt)
-    translated_chunk = _parse_srt_response(response.text, chunk)
+    response = _call_with_retries(
+        backend, client, prompt, translation_model, system_prompt
+    )
+    response_text = _extract_text(response, backend_name)
+    translated_chunk = _parse_srt_response(response_text, chunk)
 
     return translated_chunk
 
 
 def _call_with_retries(
+    backend: ModuleType,
     client,
     prompt: str,
     translation_model: str,
     system_prompt: str,
     max_retries: int = 3,
 ):
-    """Calls Gemini with exponential backoff on transient failures."""
+    """Calls an LLM backend with exponential backoff on transient failures."""
     last_error = None
     for attempt in range(max_retries):
-        result, error = _attempt_generate(
+        result, error = backend.attempt_generate(
             client, prompt, translation_model, system_prompt
         )
         if result is not None:
@@ -130,31 +194,10 @@ def _call_with_retries(
         last_error = error
         if attempt < max_retries - 1:
             wait = 2 ** (attempt + 1)
-            log.warning(f"Gemini request failed, retrying in {wait}s...")
+            log.warning(f"LLM request failed, retrying in {wait}s...")
             time.sleep(wait)
 
     raise last_error
-
-
-def _attempt_generate(client, prompt: str, translation_model: str, system_prompt: str):
-    """Makes a single Gemini API call, returning (response, None) or (None, error).
-
-    Raises ClientError (4xx except 429) immediately since those are not retryable.
-    """
-    try:
-        response = client.models.generate_content(
-            model=translation_model,
-            contents=prompt,
-            config={"system_instruction": system_prompt},
-        )
-    except ClientError as exc:
-        if exc.code == 429:
-            return None, exc
-        raise
-    except APIError as exc:
-        return None, exc
-    else:
-        return response, None
 
 
 def _segments_to_srt(segments: list[dict]) -> str:
@@ -195,7 +238,7 @@ def _parse_srt_response(
 
     sanitized = _sanitize_response(response_text)
     if not sanitized:
-        log.warning("Empty Gemini response, using original segments.")
+        log.warning("Empty LLM response, using original segments.")
         return list(original_segments)
 
     translated_segments = []
@@ -203,7 +246,7 @@ def _parse_srt_response(
 
     if len(blocks) < len(original_segments):
         log.warning(
-            f"Gemini returned {len(blocks)} blocks but expected "
+            f"LLM returned {len(blocks)} blocks but expected "
             f"{len(original_segments)}; {len(original_segments) - len(blocks)} "
             "segments will be missing from output."
         )

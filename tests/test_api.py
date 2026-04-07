@@ -119,6 +119,7 @@ def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> N
         None,
         translation_model=config.translation_model,
         translation_prompt=config.translation_prompt,
+        translation_backend=config.translation_backend,
     )
 
 
@@ -151,7 +152,7 @@ def test_handle_subtitle_output_renames_subtitle(tmp_path) -> None:
 
 
 def test_validate_api_key_raises_without_key() -> None:
-    """Tests that Gemini backend without API key raises ValueError."""
+    """Tests that an LLM backend without API key raises ValueError."""
     with pytest.raises(ValueError, match="API key is required"):
         koffee.translate(
             "examples/videos/sample_korean_video.mp4",

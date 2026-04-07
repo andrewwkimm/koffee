@@ -142,7 +142,7 @@ def cli(
     translation_backend: str
         The backend service to use for the translation
     translation_prompt: str
-        Custom system prompt for the Gemini translation model
+        Custom system prompt for the LLM translation model
     config: Path
         Path to a koffee.toml configuration file
     api_key: str

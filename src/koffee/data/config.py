@@ -37,7 +37,7 @@ class KoffeeConfig(BaseModel):
     source_language: str = "auto"
     subtitle_format: Literal["srt", "vtt", "ass"] = "vtt"
     target_language: str = "en"
-    translation_backend: Literal["whisper", "gemini"] = "whisper"
+    translation_backend: Literal["whisper", "gemini", "chatgpt", "claude"] = "whisper"
     translation_model: str = "gemini-2.5-flash"
     translation_prompt: str | None = None
     dry_run: bool = False
@@ -48,9 +48,20 @@ class KoffeeConfig(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _resolve_api_key(cls, values: dict) -> dict:
-        """Falls back to the GOOGLE_API_KEY environment variable."""
-        if values.get("api_key") is None:
-            values["api_key"] = os.environ.get("GOOGLE_API_KEY")
+        """Falls back to environment variables based on the translation backend."""
+        if values.get("api_key") is not None:
+            return values
+
+        env_vars = {
+            "gemini": "GOOGLE_API_KEY",
+            "chatgpt": "OPENAI_API_KEY",
+            "claude": "ANTHROPIC_API_KEY",
+        }
+        backend = values.get("translation_backend", "whisper")
+        env_var = env_vars.get(backend)
+        if env_var:
+            values["api_key"] = os.environ.get(env_var)
+
         return values
 
     @field_validator("source_language", "target_language")
