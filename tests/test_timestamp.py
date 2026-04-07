@@ -11,6 +11,7 @@ from koffee.utils import convert_to_timestamp
     [
         ("srt"),
         ("vtt"),
+        ("ass"),
     ],
 )
 def test_convert_to_timestamp(subtitle_format: str) -> None:
@@ -25,6 +26,11 @@ def test_convert_to_timestamp(subtitle_format: str) -> None:
             10.5: "00:00:10.500",
             60.12: "00:01:00.120",
             3600: "01:00:00.000",
+        },
+        "ass": {
+            10.5: "0:00:10.50",
+            60.12: "0:01:00.12",
+            3600: "1:00:00.00",
         },
     }
 

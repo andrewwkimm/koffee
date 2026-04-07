@@ -25,6 +25,9 @@ def convert_to_timestamp(seconds: float | int, subtitle_format: str) -> str:
         timestamp = f"{hours:02}:{minutes:02}:{seconds:02},{ms:03}"
     elif subtitle_format == "vtt":
         timestamp = f"{hours:02}:{minutes:02}:{seconds:02}.{ms:03}"
+    elif subtitle_format == "ass":
+        cs = ms // 10
+        timestamp = f"{hours}:{minutes:02}:{seconds:02}.{cs:02}"
     else:
         error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
         raise InvalidSubtitleFormatError(error_message)
