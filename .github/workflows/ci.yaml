@@ -22,21 +22,29 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install ffmpeg
-        uses: nick-fields/retry@v3
+      - name: Install ffmpeg (attempt 1)
+        id: ffmpeg1
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        continue-on-error: true
         with:
-          timeout_minutes: 3
-          max_attempts: 3
-          retry_wait_seconds: 5
-          shell: bash
-          command: |
-            if [ "$RUNNER_OS" = "Linux" ]; then
-              sudo apt-get update && sudo apt-get install -y ffmpeg
-            elif [ "$RUNNER_OS" = "macOS" ]; then
-              brew install ffmpeg
-            elif [ "$RUNNER_OS" = "Windows" ]; then
-              choco install ffmpeg -y
-            fi
+          architecture: 'x64'
+          github-token: ${{ github.token }}
+
+      - name: Install ffmpeg (attempt 2)
+        id: ffmpeg2
+        if: steps.ffmpeg1.outcome == 'failure'
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        continue-on-error: true
+        with:
+          architecture: 'x64'
+          github-token: ${{ github.token }}
+
+      - name: Install ffmpeg (attempt 3)
+        if: steps.ffmpeg2.outcome == 'failure'
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        with:
+          architecture: 'x64'
+          github-token: ${{ github.token }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -48,10 +56,10 @@ jobs:
           max_attempts: 3
           retry_wait_seconds: 10
           command: |
-            uv sync $$
-            uv run ruff format . $$
-            uv run ruff check --fix . $$
-            uv run ty check tests $$
+            uv sync &&
+            uv run ruff format . &&
+            uv run ruff check --fix . &&
+            uv run ty check tests &&
             uv run pytest -x --cov
 
       - name: Generate coverage report

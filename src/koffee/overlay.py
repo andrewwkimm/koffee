@@ -80,19 +80,14 @@ def _burn_in_subtitles(
     """Burns subtitles into the video frames (hard subtitles)."""
     log.info("Burning in subtitles (hard).")
 
-    escaped_path = (
-        str(subtitle_file_path)
-        .replace("\\", "/")
-        .replace(":", "\\:")
-        .replace("'", "'\\''")
-    )
+    escaped_path = str(subtitle_file_path).replace("\\", "/").replace(":", "\\:")
 
     cmd = [
         "ffmpeg",
         "-i",
         str(video_file_path),
         "-vf",
-        f"subtitles='{escaped_path}'",
+        f"subtitles={escaped_path}",
         "-c:a",
         "copy",
         "-y",
