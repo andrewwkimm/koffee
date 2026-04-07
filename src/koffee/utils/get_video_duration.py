@@ -29,6 +29,9 @@ def get_video_duration(video_file_path: Path | str) -> float:
     except FileNotFoundError:
         log.error("ffprobe not found. Please install ffmpeg to use this feature.")
         raise
+    except subprocess.TimeoutExpired:
+        log.error("ffprobe timed out while getting video duration.")
+        raise
 
     stdout = result.stdout.strip()
     if not stdout:

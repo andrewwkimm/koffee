@@ -74,3 +74,35 @@ def test_exception_handling(
 
     assert isinstance(exc_info.value.__cause__, subprocess.CalledProcessError)
     assert "FFmpegError" in str(exc_info.value)
+
+
+def test_missing_ffmpeg_raises(
+    subtitle_file_path: Path,
+    video_file_path: Path,
+    output_file_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    """Tests that missing ffmpeg raises FileNotFoundError."""
+    mocker.patch(
+        "subprocess.run",
+        side_effect=FileNotFoundError,
+    )
+
+    with pytest.raises(FileNotFoundError):
+        overlay_subtitles(subtitle_file_path, video_file_path, output_file_path)
+
+
+def test_timeout_raises(
+    subtitle_file_path: Path,
+    video_file_path: Path,
+    output_file_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    """Tests that a timed-out ffmpeg raises TimeoutExpired."""
+    mocker.patch(
+        "subprocess.run",
+        side_effect=subprocess.TimeoutExpired(cmd="ffmpeg", timeout=600),
+    )
+
+    with pytest.raises(subprocess.TimeoutExpired):
+        overlay_subtitles(subtitle_file_path, video_file_path, output_file_path)

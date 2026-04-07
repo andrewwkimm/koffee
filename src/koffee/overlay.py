@@ -66,6 +66,12 @@ def _mux_subtitles(
 
     try:
         subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=600)
+    except FileNotFoundError:
+        log.error("ffmpeg not found. Please install ffmpeg to use this feature.")
+        raise
+    except subprocess.TimeoutExpired:
+        log.error("ffmpeg timed out while muxing subtitles.")
+        raise
     except subprocess.CalledProcessError as error:
         raise SubtitleOverlayError(error.stderr) from error
 
@@ -96,6 +102,12 @@ def _burn_in_subtitles(
 
     try:
         subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=600)
+    except FileNotFoundError:
+        log.error("ffmpeg not found. Please install ffmpeg to use this feature.")
+        raise
+    except subprocess.TimeoutExpired:
+        log.error("ffmpeg timed out while burning in subtitles.")
+        raise
     except subprocess.CalledProcessError as error:
         raise SubtitleOverlayError(error.stderr) from error
 

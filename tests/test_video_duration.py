@@ -35,3 +35,13 @@ def test_missing_ffprobe_raises(mocker) -> None:
     )
     with pytest.raises(FileNotFoundError):
         get_video_duration("video.mp4")
+
+
+def test_timeout_raises(mocker) -> None:
+    """Tests that a timed-out ffprobe raises TimeoutExpired."""
+    mocker.patch(
+        "subprocess.run",
+        side_effect=subprocess.TimeoutExpired(cmd="ffprobe", timeout=30),
+    )
+    with pytest.raises(subprocess.TimeoutExpired):
+        get_video_duration("video.mp4")

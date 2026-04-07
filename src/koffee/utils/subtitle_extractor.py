@@ -32,6 +32,9 @@ def get_subtitle_tracks(video_file_path: Path | str) -> list[dict]:
     except FileNotFoundError:
         log.error("ffprobe not found. Please install ffmpeg to use this feature.")
         raise
+    except subprocess.TimeoutExpired:
+        log.error("ffprobe timed out while reading subtitle tracks.")
+        raise
 
     data = json.loads(result.stdout)
     return data.get("streams", [])
@@ -59,6 +62,12 @@ def extract_subtitle_track(video_file_path: Path | str, track_index: int = 0) ->
             check=True,
             timeout=600,
         )
+    except FileNotFoundError:
+        log.error("ffmpeg not found. Please install ffmpeg to use this feature.")
+        raise
+    except subprocess.TimeoutExpired:
+        log.error("ffmpeg timed out while extracting subtitle track.")
+        raise
     except subprocess.CalledProcessError as error:
         log.error(f"Failed to extract subtitle track: {error.stderr}")
         raise

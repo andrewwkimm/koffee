@@ -83,3 +83,42 @@ def test_extract_subtitle_track_failure(mocker, tmp_path) -> None:
 
     with pytest.raises(subprocess.CalledProcessError):
         extract_subtitle_track(video)
+
+
+def test_extract_subtitle_track_missing_ffmpeg(mocker, tmp_path) -> None:
+    """Tests that missing ffmpeg raises FileNotFoundError."""
+    video = tmp_path / "video.mkv"
+    video.touch()
+
+    mocker.patch(
+        "koffee.utils.subtitle_extractor.subprocess.run",
+        side_effect=FileNotFoundError,
+    )
+
+    with pytest.raises(FileNotFoundError):
+        extract_subtitle_track(video)
+
+
+def test_get_subtitle_tracks_timeout(mocker) -> None:
+    """Tests that a timed-out ffprobe raises TimeoutExpired."""
+    mocker.patch(
+        "koffee.utils.subtitle_extractor.subprocess.run",
+        side_effect=subprocess.TimeoutExpired(cmd="ffprobe", timeout=30),
+    )
+
+    with pytest.raises(subprocess.TimeoutExpired):
+        get_subtitle_tracks("video.mkv")
+
+
+def test_extract_subtitle_track_timeout(mocker, tmp_path) -> None:
+    """Tests that a timed-out ffmpeg raises TimeoutExpired."""
+    video = tmp_path / "video.mkv"
+    video.touch()
+
+    mocker.patch(
+        "koffee.utils.subtitle_extractor.subprocess.run",
+        side_effect=subprocess.TimeoutExpired(cmd="ffmpeg", timeout=600),
+    )
+
+    with pytest.raises(subprocess.TimeoutExpired):
+        extract_subtitle_track(video)
