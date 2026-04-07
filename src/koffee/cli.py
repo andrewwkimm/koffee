@@ -91,6 +91,8 @@ def cli(
     translation_backend: Annotated[
         str, Parameter(name=("--translation_backend", "-tb"))
     ] = options.translation_backend,
+    config: Annotated[Path, Parameter(name=("--config",), group=options_group)]
+    | None = None,
     api_key: Annotated[str, Parameter(name=("--api_key", "-ak"), group=options_group)]
     | None = None,
     dry_run: Annotated[
@@ -130,6 +132,8 @@ def cli(
         Language to which the file should be translated
     translation_backend: str
         The backend service to use for the translation
+    config: Path
+        Path to a koffee.toml configuration file
     api_key: str
         API key for an LLM service
     dry_run: bool
@@ -142,21 +146,26 @@ def cli(
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    config = KoffeeConfig(
-        api_key=api_key,
-        compute_type=compute_type,
-        device=device,
-        dry_run=dry_run,
-        model=model,
-        overwrite=overwrite,
-        output_dir=output_dir,
-        output_name=output_name,
-        overlay=overlay,
-        source_language=source_lang,
-        subtitle_format=subtitle_format,
-        target_language=target_lang,
-        translation_backend=translation_backend,
-    )
+    cli_args = {
+        "api_key": api_key,
+        "compute_type": compute_type,
+        "device": device,
+        "dry_run": dry_run,
+        "model": model,
+        "overwrite": overwrite,
+        "output_dir": output_dir,
+        "output_name": output_name,
+        "overlay": overlay,
+        "source_language": source_lang,
+        "subtitle_format": subtitle_format,
+        "target_language": target_lang,
+        "translation_backend": translation_backend,
+    }
+    defaults = KoffeeConfig().model_dump()
+    cli_overrides = {k: v for k, v in cli_args.items() if v != defaults.get(k)}
+    file_options = load_config_file(config)
+    merged = {**defaults, **file_options, **cli_overrides}
+    config = KoffeeConfig(**merged)
 
     resolved_paths = _resolve_paths(file_path)
 
@@ -168,11 +177,23 @@ def cli(
         return
 
     total = len(resolved_paths)
+    failed = []
     with _create_progress_bar() as progress:
         for i, video in enumerate(resolved_paths, 1):
             if total > 1:
                 log.info(f"[{i}/{total}] Processing {video.name}")
-            _translate_with_progress(video, config, progress)
+            try:
+                _translate_with_progress(video, config, progress)
+            except Exception as exc:
+                log.error(f"Failed to process {video.name}: {exc}")
+                failed.append(video)
+
+    if total > 1:
+        succeeded = total - len(failed)
+        log.info(f"Batch complete: {succeeded}/{total} succeeded.")
+        if failed:
+            for path in failed:
+                log.info(f"  failed: {path.name}")
 
 
 def _print_dry_run(resolved_paths: list[Path], config: KoffeeConfig) -> None:
