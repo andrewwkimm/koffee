@@ -306,20 +306,30 @@ def _translate_with_progress(
             on_translate_progress=_make_progress_callback(progress, translate_task),
         )
     else:
+        has_translate_step = config.translation_backend != "whisper"
         asr_task = progress.add_task("Transcribing", total=100)
-        translate_task = progress.add_task("Translating", total=100, start=False)
+        translate_task = None
+        translate_callback = None
+
+        if has_translate_step:
+            translate_task = progress.add_task(
+                "Translating", total=100, start=False, visible=False
+            )
+            translate_callback = _make_progress_callback(progress, translate_task)
 
         def on_asr_progress(ratio: float) -> None:
             progress.update(asr_task, completed=ratio * 100)
             if ratio >= 1.0:
                 progress.stop_task(asr_task)
-                progress.start_task(translate_task)
+                if translate_task is not None:
+                    progress.update(translate_task, visible=True)
+                    progress.start_task(translate_task)
 
         translate(
             video_file_path=video,
             config=config,
             on_asr_progress=on_asr_progress,
-            on_translate_progress=_make_progress_callback(progress, translate_task),
+            on_translate_progress=translate_callback,
         )
 
 
