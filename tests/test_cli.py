@@ -9,9 +9,12 @@ from pytest_mock import MockerFixture
 
 from koffee.cli import (
     _check_embedded_subtitles,
+    _find_config_path,
     _resolve_paths,
     _select_subtitle_track,
     cli,
+    info,
+    tracks,
 )
 from koffee.data.config import KoffeeConfig
 
@@ -304,9 +307,59 @@ def test_select_subtitle_track_default_on_empty_input(mocker: MockerFixture) -> 
 
 def test_select_subtitle_track_missing_language_tag() -> None:
     """Tests that a track without language tag returns None."""
-    tracks = [{"index": 0, "tags": {}}]
+    track_list = [{"index": 0, "tags": {}}]
 
-    index, lang = _select_subtitle_track(tracks)
+    index, lang = _select_subtitle_track(track_list)
 
     assert index == 0
     assert lang is None
+
+
+def test_info_command(mocker: MockerFixture) -> None:
+    """Tests that info command runs without error."""
+    mocker.patch("koffee.cli.shutil.which", return_value="/usr/bin/ffmpeg")
+    mocker.patch(
+        "koffee.cli.subprocess.run",
+        return_value=subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="ffmpeg version 7.0\n"
+        ),
+    )
+
+    info()
+
+
+def test_info_command_no_ffmpeg(mocker: MockerFixture) -> None:
+    """Tests that info command handles missing ffmpeg."""
+    mocker.patch("koffee.cli.shutil.which", return_value=None)
+
+    info()
+
+
+def test_tracks_command(mocker: MockerFixture) -> None:
+    """Tests that tracks command lists subtitle tracks."""
+    mocker.patch(
+        "koffee.cli.get_subtitle_tracks",
+        return_value=[
+            {"index": 0, "tags": {"language": "ja", "title": "Japanese"}},
+            {"index": 1, "tags": {"language": "en"}},
+        ],
+    )
+
+    tracks(korean_video_file_path)
+
+
+def test_tracks_command_no_tracks(mocker: MockerFixture) -> None:
+    """Tests that tracks command handles no subtitle tracks."""
+    mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
+
+    tracks(korean_video_file_path)
+
+
+def test_find_config_path_returns_none(monkeypatch) -> None:
+    """Tests that _find_config_path returns None when no config exists."""
+    monkeypatch.setattr(
+        "koffee.cli.CONFIG_SEARCH_PATHS",
+        [Path("/nonexistent/koffee.toml")],
+    )
+
+    assert _find_config_path() is None
