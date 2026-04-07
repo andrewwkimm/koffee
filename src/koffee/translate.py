@@ -54,7 +54,7 @@ def translate(
 def _validate_file(video_file_path: Path | str) -> None:
     """Raises InvalidVideoFileError if the file does not exist or is not a file."""
     if not Path(video_file_path).exists() or not Path(video_file_path).is_file():
-        error_message = "Inputted file is not valid or does not exist."
+        error_message = "Input file is not valid or does not exist."
         log.error(error_message)
         raise InvalidVideoFileError(error_message)
 

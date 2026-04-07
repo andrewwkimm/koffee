@@ -48,7 +48,7 @@ def test_api() -> None:
 
 def test_invalid_video_file() -> None:
     """Tests that the appropriate error is raised when an invalid file is given."""
-    error_message = "Inputted file is not valid or does not exist."
+    error_message = "Input file is not valid or does not exist."
     with pytest.raises(InvalidVideoFileError, match=error_message):
         koffee.translate("invalid_file.mp4")
 

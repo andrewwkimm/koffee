@@ -8,4 +8,4 @@ Feature: koffee Exceptions
 
     Examples: message
         | message                                                    |
-        | Inputted file is not valid or does not exist. |
+        | Input file is not valid or does not exist. |
