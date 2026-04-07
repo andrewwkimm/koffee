@@ -23,9 +23,20 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install ffmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
+        uses: nick-fields/retry@v3
         with:
-          architecture: 'x64'
+          timeout_minutes: 3
+          max_attempts: 3
+          retry_wait_seconds: 5
+          shell: bash
+          command: |
+            if [ "$RUNNER_OS" = "Linux" ]; then
+              sudo apt-get update && sudo apt-get install -y ffmpeg
+            elif [ "$RUNNER_OS" = "macOS" ]; then
+              brew install ffmpeg
+            elif [ "$RUNNER_OS" = "Windows" ]; then
+              choco install ffmpeg -y
+            fi
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
