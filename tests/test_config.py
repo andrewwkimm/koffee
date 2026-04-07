@@ -1,5 +1,7 @@
 """Tests for config file loading."""
 
+import pytest
+
 from koffee.data.config import KoffeeConfig, load_config_file
 
 
@@ -49,3 +51,54 @@ def test_config_file_values_apply_to_koffee_config(tmp_path) -> None:
     # Defaults should still apply for unset fields
     assert config.target_language == "en"
     assert config.device == "auto"
+
+
+def test_invalid_language_code_raises() -> None:
+    """Tests that an invalid language code raises a validation error."""
+    with pytest.raises(ValueError, match="Unsupported language code"):
+        KoffeeConfig(target_language="enn")
+
+
+def test_invalid_source_language_code_raises() -> None:
+    """Tests that an invalid source language code raises a validation error."""
+    with pytest.raises(ValueError, match="Unsupported language code"):
+        KoffeeConfig(source_language="xyz")
+
+
+def test_auto_source_language_is_accepted() -> None:
+    """Tests that 'auto' is a valid source language."""
+    config = KoffeeConfig(source_language="auto")
+    assert config.source_language == "auto"
+
+
+def test_invalid_model_raises() -> None:
+    """Tests that an unknown Whisper model raises a validation error."""
+    with pytest.raises(ValueError, match="Unknown Whisper model"):
+        KoffeeConfig(model="nonexistent-model")
+
+
+def test_valid_model_is_accepted() -> None:
+    """Tests that a known Whisper model is accepted."""
+    config = KoffeeConfig(model="tiny")
+    assert config.model == "tiny"
+
+
+def test_api_key_falls_back_to_env_var(monkeypatch) -> None:
+    """Tests that api_key falls back to the GOOGLE_API_KEY environment variable."""
+    monkeypatch.setenv("GOOGLE_API_KEY", "env-key-123")
+    config = KoffeeConfig()
+    assert config.api_key == "env-key-123"
+
+
+def test_api_key_prefers_explicit_value(monkeypatch) -> None:
+    """Tests that an explicit api_key takes precedence over the env var."""
+    monkeypatch.setenv("GOOGLE_API_KEY", "env-key-123")
+    config = KoffeeConfig(api_key="explicit-key")
+    assert config.api_key == "explicit-key"
+
+
+def test_api_key_is_none_without_env_var(monkeypatch) -> None:
+    """Tests that api_key is None when neither flag nor env var is set."""
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    config = KoffeeConfig()
+    assert config.api_key is None
