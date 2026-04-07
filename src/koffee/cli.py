@@ -16,9 +16,12 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
+from koffee.asr import transcribe_text
 from koffee.data.config import CONFIG_SEARCH_PATHS, KoffeeConfig, load_config_file
+from koffee.overlay import overlay_subtitles
+from koffee.subtitle import generate_subtitles
 from koffee.translate import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, translate
-from koffee.utils import get_subtitle_tracks
+from koffee.utils import get_subtitle_tracks, parse_subtitle_file
 
 logging.basicConfig(
     level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
@@ -364,6 +367,159 @@ def tracks(
         if title:
             label += f" — {title}"
         log.info(label)
+
+
+@app.command()
+def overlay(
+    video: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
+    subtitle: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
+    output: Annotated[Path, Parameter(name=("--output", "-o"))] | None = None,
+    mode: Annotated[str, Parameter(name=("--mode", "-m"))] = "soft",
+    overwrite: Annotated[
+        bool, Parameter(name=("--overwrite",), group=options_group)
+    ] = False,
+) -> None:
+    """Overlay subtitles onto a video without transcription or translation.
+
+    Parameters
+    ----------
+    video: Path
+        Path to the video file
+    subtitle: Path
+        Path to the subtitle file
+    output: Path
+        Path for the output video file
+    mode: str
+        Overlay mode: soft (muxed track) or hard (burned into video frames)
+    overwrite: bool
+        Overwrite existing output files instead of raising an error
+    """
+    if output is None:
+        output = video.with_stem(f"{video.stem}_overlay")
+
+    if output.exists() and not overwrite:
+        error_message = (
+            f"Output file already exists: {output}. Use --overwrite to replace it."
+        )
+        raise FileExistsError(error_message)
+
+    result = overlay_subtitles(subtitle, video, output, mode=mode)
+    log.info(f"Output saved to {result}")
+
+
+@app.command()
+def transcribe(
+    file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
+    compute_type: Annotated[
+        str, Parameter(name=("--compute-type", "-c"))
+    ] = options.compute_type,
+    device: Annotated[str, Parameter(name=("--device", "-d"))] = options.device,
+    model: Annotated[str, Parameter(name=("--model", "-m"))] = options.model,
+    output_dir: Annotated[Path, Parameter(name=("--output_dir", "-o"))] | None = None,
+    output_name: Annotated[str, Parameter(name=("--output_name", "-n"))] | None = None,
+    subtitle_format: Annotated[
+        str, Parameter(name=("--subtitle_format", "-sf"))
+    ] = options.subtitle_format,
+    overwrite: Annotated[
+        bool, Parameter(name=("--overwrite",), group=options_group)
+    ] = False,
+) -> None:
+    """Transcribe audio to subtitles without translation.
+
+    Parameters
+    ----------
+    file_path: Path
+        Path to the video or audio file
+    compute_type: str
+        Type to use for computation
+    device: str
+        Device to use for computation
+    model: str
+        The Whisper model instance to use
+    output_dir: Path
+        Directory for the output file
+    output_name: str
+        Name of the output file
+    subtitle_format: str
+        Format to use for the subtitles
+    overwrite: bool
+        Overwrite existing output files instead of raising an error
+    """
+    with _create_progress_bar() as progress:
+        asr_task = progress.add_task("Transcribing", total=100)
+
+        transcript = transcribe_text(
+            str(file_path),
+            compute_type,
+            device,
+            model,
+            "whisper",
+            on_progress=_make_progress_callback(progress, asr_task),
+        )
+
+    segments = transcript["segments"]
+    out_dir = output_dir if output_dir is not None else file_path.parent
+    subtitle_file = generate_subtitles(subtitle_format, segments, out_dir)
+
+    if output_name is not None:
+        target = out_dir / f"{output_name}.{subtitle_format}"
+    else:
+        target = out_dir / f"{file_path.stem}.{subtitle_format}"
+
+    if target.exists() and not overwrite:
+        subtitle_file.unlink(missing_ok=True)
+        error_message = (
+            f"Output file already exists: {target}. Use --overwrite to replace it."
+        )
+        raise FileExistsError(error_message)
+
+    subtitle_file.replace(target)
+    log.info(f"Output saved to {target}")
+
+
+@app.command()
+def convert(
+    file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
+    subtitle_format: Annotated[str, Parameter(name=("--format", "-f"))] = "vtt",
+    output_dir: Annotated[Path, Parameter(name=("--output_dir", "-o"))] | None = None,
+    output_name: Annotated[str, Parameter(name=("--output_name", "-n"))] | None = None,
+    overwrite: Annotated[
+        bool, Parameter(name=("--overwrite",), group=options_group)
+    ] = False,
+) -> None:
+    """Convert a subtitle file between formats (SRT, VTT, ASS).
+
+    Parameters
+    ----------
+    file_path: Path
+        Path to the subtitle file
+    subtitle_format: str
+        Target subtitle format (srt, vtt, or ass)
+    output_dir: Path
+        Directory for the output file
+    output_name: str
+        Name of the output file
+    overwrite: bool
+        Overwrite existing output files instead of raising an error
+    """
+    segments = parse_subtitle_file(file_path)
+    out_dir = output_dir if output_dir is not None else file_path.parent
+    subtitle_file = generate_subtitles(subtitle_format, segments, out_dir)
+
+    if output_name is not None:
+        target = out_dir / f"{output_name}.{subtitle_format}"
+    else:
+        target = out_dir / f"{file_path.stem}.{subtitle_format}"
+
+    if target.exists() and not overwrite:
+        subtitle_file.unlink(missing_ok=True)
+        error_message = (
+            f"Output file already exists: {target}. Use --overwrite to replace it."
+        )
+        raise FileExistsError(error_message)
+
+    subtitle_file.replace(target)
+    log.info(f"Converted {file_path.name} to {target}")
 
 
 def main() -> None:
