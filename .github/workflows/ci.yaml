@@ -55,6 +55,7 @@ jobs:
           timeout_minutes: 30
           max_attempts: 2
           retry_wait_seconds: 10
+          shell: bash
           command: |
             uv sync &&
             uv run ruff format . &&
@@ -63,6 +64,7 @@ jobs:
             uv run pytest -x --cov
 
       - name: Generate coverage report
+        shell: bash
         run: |
           pip install pytest-cov
           coverage report
