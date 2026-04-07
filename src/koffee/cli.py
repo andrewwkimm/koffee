@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Annotated
 
 from cyclopts import App, Group, Parameter, validators
+from rich.columns import Columns
+from rich.console import Console
 from rich.logging import RichHandler
 from rich.progress import (
     BarColumn,
@@ -17,7 +19,12 @@ from rich.progress import (
 )
 
 from koffee.asr import transcribe_text
-from koffee.data.config import CONFIG_SEARCH_PATHS, KoffeeConfig, load_config_file
+from koffee.data.config import (
+    CONFIG_SEARCH_PATHS,
+    LANGUAGE_CODES,
+    KoffeeConfig,
+    load_config_file,
+)
 from koffee.overlay import overlay_subtitles
 from koffee.subtitle import generate_subtitles
 from koffee.translate import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, translate
@@ -370,6 +377,15 @@ def info() -> None:
     log.info(f"  default model: {config.model}")
     log.info(f"  default backend: {config.translation_backend}")
     log.info(f"  config file: {_find_config_path() or 'none'}")
+
+
+@app.command()
+def languages() -> None:
+    """List all supported language codes."""
+    codes = sorted(LANGUAGE_CODES - {"auto"})
+    console = Console()
+    console.print(Columns(codes, equal=True, expand=True))
+    console.print(f"\n[bold]{len(codes)}[/bold] supported languages")
 
 
 def _find_config_path() -> Path | None:

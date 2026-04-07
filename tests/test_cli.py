@@ -16,11 +16,12 @@ from koffee.cli import (
     cli,
     convert,
     info,
+    languages,
     overlay,
     tracks,
     transcribe,
 )
-from koffee.data.config import KoffeeConfig
+from koffee.data.config import LANGUAGE_CODES, KoffeeConfig
 
 korean_video_file_path = Path("examples/videos/sample_korean_video.mp4")
 
@@ -593,3 +594,34 @@ def test_convert_command_collision(mocker: MockerFixture, tmp_path) -> None:
 
     with pytest.raises(FileExistsError, match="already exists"):
         convert(srt, subtitle_format="vtt", output_dir=tmp_path)
+
+
+def test_languages_command(capsys) -> None:
+    """Tests that languages command prints all supported language codes."""
+    languages()
+
+    captured = capsys.readouterr()
+    codes = sorted(LANGUAGE_CODES - {"auto"})
+    for code in codes:
+        assert code in captured.out
+
+
+def test_languages_command_shows_count(capsys) -> None:
+    """Tests that languages command displays the total count."""
+    languages()
+
+    captured = capsys.readouterr()
+    expected_count = len(LANGUAGE_CODES - {"auto"})
+    assert str(expected_count) in captured.out
+
+
+def test_languages_command_excludes_auto(capsys) -> None:
+    """Tests that languages command excludes the 'auto' pseudo-language."""
+    languages()
+
+    captured = capsys.readouterr()
+    lines = captured.out.strip().split("\n")
+    language_lines = [line for line in lines if "supported languages" not in line]
+    language_text = " ".join(language_lines)
+    codes_in_output = set(language_text.split())
+    assert "auto" not in codes_in_output
