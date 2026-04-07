@@ -124,21 +124,23 @@ def _route_output(
     config: KoffeeConfig,
 ) -> Path:
     """Routes to subtitle output or video overlay based on file type and config."""
-    output_path = _get_output_path(
-        video_file_path, config.output_dir, config.output_name
-    )
     is_audio = Path(video_file_path).suffix.lower() in AUDIO_EXTENSIONS
+    has_overlay = not is_audio and config.overlay != "none"
 
-    if is_audio or config.overlay == "none":
+    output_path = _get_output_path(
+        video_file_path, config.output_dir, config.output_name, date_suffix=has_overlay
+    )
+
+    if has_overlay:
+        _check_output_collision(output_path, config.overwrite)
+        output_file_path = _finalize_video_output(
+            subtitle_file_path, video_file_path, output_path, config.overlay
+        )
+    else:
         target = output_path.with_suffix(f".{config.subtitle_format}")
         _check_output_collision(target, config.overwrite)
         output_file_path = _handle_subtitle_output(
             subtitle_file_path, output_path, config.subtitle_format
-        )
-    else:
-        _check_output_collision(output_path, config.overwrite)
-        output_file_path = _finalize_video_output(
-            subtitle_file_path, video_file_path, output_path, config.overlay
         )
 
     return output_file_path
@@ -192,6 +194,7 @@ def _get_output_path(
     video_file_path: Path | str,
     output_dir: Path | None,
     output_name: str | None,
+    date_suffix: bool = False,
 ) -> Path:
     """Gets the output path for the translated output file."""
     log.debug(f"output_name: {output_name!r}")
@@ -202,8 +205,10 @@ def _get_output_path(
 
     if output_name is not None:
         file_name = output_name
-    else:
+    elif date_suffix:
         file_name = f"{file_path.stem}_{datetime.now().strftime('%m-%d-%Y')}"
+    else:
+        file_name = file_path.stem
 
     output_path = file_dir / (file_name + file_path.suffix)
     log.debug(f"output_dir: {output_path!r}")

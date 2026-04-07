@@ -54,10 +54,19 @@ def test_invalid_video_file() -> None:
 
 
 def test_get_output_path_no_output_name() -> None:
-    """Tests that files get date-stamped when no output name is provided."""
+    """Tests that files use the input stem when no output name is provided."""
     result = _get_output_path("video/track.mp3", output_dir=None, output_name=None)
-    assert result.stem.startswith("track_")
+    assert result.stem == "track"
     assert result.suffix == ".mp3"
+
+
+def test_get_output_path_date_suffix() -> None:
+    """Tests that date_suffix adds a date stamp to the filename."""
+    result = _get_output_path(
+        "video/track.mp4", output_dir=None, output_name=None, date_suffix=True
+    )
+    assert result.stem.startswith("track_")
+    assert result.suffix == ".mp4"
 
 
 def test_get_output_path_with_output_name() -> None:
