@@ -58,38 +58,38 @@ Refer below for a list of all arguments, commands, parameters, and options.
 
 ### Arguments
 
-    FILE_PATH                   Path to the video, audio, or subtitle file.
+    FILE_PATH                   Path to the video, audio, or subtitle file
 
 ### Commands
 
     info                        Display system information for debugging
-    tracks                      List embedded subtitle tracks in a video file.
-    transcribe                  Transcribe audio to subtitles without translation.
-    convert                     Convert a subtitle file between formats (SRT, VTT, ASS).
+    tracks                      List embedded subtitle tracks in a video file
+    transcribe                  Transcribe audio to subtitles without translation
+    convert                     Convert a subtitle file between formats (SRT, VTT, ASS)
     overlay                     Overlay subtitles onto a video without transcription or
-                                translation.
+                                translation
 
 ### Parameters
 
-    --compute-type, -c          Type to use for computation.
-    --device, -d                Device to use for computation.
-    --model, -m                 The Whisper model instance to use.
-    --output_dir, -o            Directory for the output file.
-    --output_name, -n           Name of the output file.
-    --source_lang, -sl          Source language (default: auto).
-    --target_lang, -t           Language to which the file should be translated.
-    --subtitle_format, -sf      Format to use for the subtitles (srt, vtt, ass).
-    --translation_backend, -tb  Backend service to use for translation (whisper, gemini).
+    --compute-type, -c          Type to use for computation
+    --device, -d                Device to use for computation
+    --model, -m                 The Whisper model instance to use
+    --output_dir, -o            Directory for the output file
+    --output_name, -n           Name of the output file
+    --source_lang, -sl          Source language (default: auto)
+    --target_lang, -t           Language to which the file should be translated
+    --subtitle_format, -sf      Format to use for the subtitles (srt, vtt, ass)
+    --translation_backend, -tb  Backend service to use for translation (whisper, gemini)
 
 ### Options
 
-    --help, -h                  Display this message and exit.
-    --version, -v               Display application version.
-    --verbose, -V               Print debug logs.
-    --api_key, -ak              API key for LLM based translation.
-    --dry-run                   Preview what would be done without processing.
-    --overlay                   Subtitle overlay mode: none, soft, or hard.
-    --overwrite                 Overwrite existing output files.
+    --help, -h                  Display this message and exit
+    --version, -v               Display application version
+    --verbose, -V               Print debug logs
+    --api_key, -ak              API key for LLM based translation
+    --dry-run                   Preview what would be done without processing
+    --overlay                   Subtitle overlay mode: none, soft, or hard
+    --overwrite                 Overwrite existing output files
 
 ## Configuration
 
