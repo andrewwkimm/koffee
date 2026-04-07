@@ -24,6 +24,7 @@ def overlay_subtitles(
     video_file_path: Path | str,
     output_file_path: Path | str,
     mode: str = "soft",
+    language: str = "eng",
 ) -> Path | str:
     """Overlay subtitles to a video file.
 
@@ -32,16 +33,20 @@ def overlay_subtitles(
         video_file_path: Path to the source video file.
         output_file_path: Path for the output video file.
         mode: "soft" for muxed subtitle track, "hard" for burned-in subtitles.
+        language: ISO 639-2 language code for the subtitle metadata.
     """
     if mode == "hard":
         return _burn_in_subtitles(subtitle_file_path, video_file_path, output_file_path)
-    return _mux_subtitles(subtitle_file_path, video_file_path, output_file_path)
+    return _mux_subtitles(
+        subtitle_file_path, video_file_path, output_file_path, language
+    )
 
 
 def _mux_subtitles(
     subtitle_file_path: Path | str,
     video_file_path: Path | str,
     output_file_path: Path | str,
+    language: str = "eng",
 ) -> Path | str:
     """Muxes subtitles as a soft track (original behavior)."""
     log.info("Overlaying subtitles (soft).")
@@ -59,7 +64,7 @@ def _mux_subtitles(
         "-c:s",
         subtitle_codec,
         "-metadata:s:s:0",
-        "language=eng",
+        f"language={language}",
         "-y",
         str(output_file_path),
     ]

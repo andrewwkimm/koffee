@@ -135,7 +135,11 @@ def _route_output(
     if has_overlay:
         _check_output_collision(output_path, config.overwrite)
         output_file_path = _finalize_video_output(
-            subtitle_file_path, video_file_path, output_path, config.overlay
+            subtitle_file_path,
+            video_file_path,
+            output_path,
+            config.overlay,
+            config.target_language,
         )
     else:
         target = output_path.with_suffix(f".{config.subtitle_format}")
@@ -246,10 +250,15 @@ def _finalize_video_output(
     video_file_path: Path,
     output_path: Path,
     overlay_mode: str = "soft",
+    language: str = "en",
 ) -> Path:
     """Embeds subtitles into the video and deletes the subtitle file after."""
     output_video = overlay_subtitles(
-        subtitle_file_path, video_file_path, output_path, mode=overlay_mode
+        subtitle_file_path,
+        video_file_path,
+        output_path,
+        mode=overlay_mode,
+        language=language,
     )
     subtitle_file_path.unlink()
     log.info("Finished processing video!")
