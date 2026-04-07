@@ -16,19 +16,14 @@ def convert_text_to_vtt(transcript: list, output_dir: Path) -> Path:
     output_file_path = output_dir / f"subtitles_{uuid.uuid4().hex[:8]}.vtt"
     log.debug(f"output_file_path: {output_file_path!r}")
 
+    blocks = []
+    for subtitle in transcript:
+        start = convert_to_timestamp(subtitle["start"], "vtt")
+        end = convert_to_timestamp(subtitle["end"], "vtt")
+        text = subtitle["text"].strip()
+        blocks.append(f"{start} --> {end}\n{text}")
+
     with Path.open(output_file_path, "w", encoding="utf-8") as file:
-        file.write("WEBVTT\n\n")
+        file.write("WEBVTT\n\n" + "\n\n".join(blocks) + "\n")
 
-        for idx, subtitle in enumerate(transcript, 1):
-            start = convert_to_timestamp(subtitle["start"], "vtt")
-            end = convert_to_timestamp(subtitle["end"], "vtt")
-            text = subtitle["text"].strip()
-
-            file.write(f"{start} --> {end}\n")
-            if idx != len(transcript):
-                file.write(f"{text}\n\n")
-            else:
-                file.write(f"{text}\n")
-
-    log.debug(repr(output_file_path))
     return output_file_path

@@ -56,5 +56,4 @@ def convert_text_to_ass(transcript: list, output_dir: Path) -> Path:
             text = subtitle["text"].strip().replace("\n", "\\N")
             file.write(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{text}\n")
 
-    log.debug(repr(output_file_path))
     return output_file_path

@@ -16,18 +16,14 @@ def convert_text_to_srt(transcript: list, output_dir: Path) -> Path:
     output_file_path = output_dir / f"subtitles_{uuid.uuid4().hex[:8]}.srt"
     log.debug(f"output_file_path: {output_file_path!r}")
 
+    blocks = []
+    for idx, subtitle in enumerate(transcript, 1):
+        start = convert_to_timestamp(subtitle["start"], "srt")
+        end = convert_to_timestamp(subtitle["end"], "srt")
+        text = subtitle["text"].strip()
+        blocks.append(f"{idx}\n{start} --> {end}\n{text}")
+
     with Path.open(output_file_path, "w", encoding="utf-8") as file:
-        for idx, subtitle in enumerate(transcript, 1):
-            start = convert_to_timestamp(subtitle["start"], "srt")
-            end = convert_to_timestamp(subtitle["end"], "srt")
-            text = subtitle["text"].strip()
+        file.write("\n\n".join(blocks) + "\n")
 
-            file.write(f"{idx}\n")
-            file.write(f"{start} --> {end}\n")
-            if idx != len(transcript):
-                file.write(f"{text}\n\n")
-            else:
-                file.write(f"{text}\n")
-
-    log.debug(repr(output_file_path))
     return output_file_path
