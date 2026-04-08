@@ -1,6 +1,7 @@
 # See here for image contents: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 
-FROM mcr.microsoft.com/devcontainers/base:jammy
+ARG VARIANT=3.13-trixie
+FROM mcr.microsoft.com/devcontainers/python:${VARIANT}
 
 RUN \
     apt update \
