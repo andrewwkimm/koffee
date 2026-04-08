@@ -4,8 +4,8 @@ ARG VARIANT=3.13-trixie
 FROM mcr.microsoft.com/devcontainers/python:${VARIANT}
 
 RUN \
-    apt update \
-    && apt upgrade -y \
-    && apt install -y bash-completion curl ffmpeg
+    apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y bash-completion curl ffmpeg
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
