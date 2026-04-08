@@ -1,4 +1,5 @@
 # Absolute paths
+/.claude
 /.coverage
 /.env
 /.nox
