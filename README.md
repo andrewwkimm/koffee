@@ -116,20 +116,6 @@ translator = "gemini"
 llm-model = "gemini-3.0-pro"
 ```
 
-### Compute types
-
-Valid values for `--compute-type`: `default`, `auto`, `int8`, `int8_float16`, `int8_float32`, `int8_bfloat16`, `int16`, `float16`, `bfloat16`, `float32`.
-
-### LLM Translation
-
-When using an LLM for translation, an API key can be provided via `--api-key` or by setting an environment variable.
-
-```
-export OPENAI_API_KEY=your-api-key
-export ANTHROPIC_API_KEY=your-api-key
-export GEMINI_API_KEY=your-api-key
-```
-
 ## Contributing
 
 The simplest way to start developing is by using either a [DevContainer](https://code.visualstudio.com/docs/devcontainers/containers) or [uv](https://docs.astral.sh/uv/).
