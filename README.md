@@ -118,7 +118,7 @@ llm-model = "gemini-3.0-pro"
 
 ## Contributing
 
-The simplest way to start developing is by using either a [DevContainer](https://code.visualstudio.com/docs/devcontainers/containers) or [uv](https://docs.astral.sh/uv/).
+The simplest way to start developing is by using either a [DevContainer](https://code.visualstudio.com/docs/devcontainers/containers) or directly only use [uv](https://docs.astral.sh/uv/) in your local machine.
 
 If you are planning to develop inside DevContainer, choose the CUDA setup if you have a NVIDIA graphics card and would like to run koffee with CUDA support; otherwise, the default build is much leaner and recommended.
 
@@ -127,7 +127,6 @@ For uv, run the following commands to set up your environment:
 ```bash
 git clone https://github.com/andrewwkimm/koffee.git
 cd koffee
-pip install pre-commit
 make setup
 ```
 
