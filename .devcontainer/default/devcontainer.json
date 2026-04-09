@@ -4,6 +4,12 @@
     "dockerfile": "Dockerfile",
     "context": ".."
   },
+  "features": {
+      "ghcr.io/devcontainers-extra/features/act:1": {},
+      "ghcr.io/devcontainers/features/docker-in-docker:2": {
+        "moby": false
+      }
+  },
   "customizations": {
     "vscode": {
       "settings": {
@@ -24,7 +30,8 @@
     }
   },
   "mounts": [
-    "source=${localEnv:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached",
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
   ],
   "remoteEnv": {
       "SSH_AUTH_SOCK": "${localEnv:SSH_AUTH_SOCK}"
