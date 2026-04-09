@@ -1,4 +1,4 @@
-name: koffee CI
+name: CI
 
 on: [push, pull_request]
 
