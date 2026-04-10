@@ -44,7 +44,7 @@ koffee.translate("some_dir/some_video_file.mp4")
 
 Here is an example output using a [sample video](examples/videos/sample_korean_video.mp4) from [examples](examples/).
 
-https://github.com/user-attachments/assets/ed534206-811d-4760-9e36-1406cf4e31e9
+https://github.com/user-attachments/assets/92e36d4d-18ff-4f89-a1ec-63bd8ce73f63
 
 ## Usage
 
