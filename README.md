@@ -42,9 +42,9 @@ import koffee
 koffee.translate("some_dir/some_video_file.mp4")
 ```
 
-Here is an example output using a [sample video](examples/videos/sample_korean_video.mp4) from [examples](examples/videos/sample_korean_video.mp4).
+Here is an example output using a [sample video](examples/videos/sample_korean_video.mp4) from [examples](examples/).
 
-https://github.com/user-attachments/assets/3e62d003-5b84-42e4-80b2-13cb89e289e4
+https://github.com/user-attachments/assets/ed534206-811d-4760-9e36-1406cf4e31e9
 
 ## Usage
 
