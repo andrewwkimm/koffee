@@ -241,6 +241,7 @@ def _get_segments(
             prompt=config.prompt,
             translator=config.translator,
             chunk_size=config.chunk_size,
+            context_entries=config.context_entries,
         )
 
     return segments

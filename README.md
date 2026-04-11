@@ -80,8 +80,10 @@ Refer below for a list of all arguments, commands, parameters, and options.
     --target-language       -t  Language to which the file should be translated
     --subtitle-format       -f  Format to use for the subtitles
     --overlay                   Subtitle overlay mode: none, soft, or hard
-    --translator                The backend service to use for the translation
+    --translator                The backend service to use for the translation (whisper, gemini, chatgpt, claude, ollama)
     --llm-model                 The LLM model to use for translation
+    --chunk-size                Number of subtitle entries per LLM request (auto-selected per model if unset)
+    --context-entries           Number of preceding entries passed as context per request (auto-selected per model if unset)
     --prompt                    Custom system prompt for the LLM translation model
     --api-key                   API key for an LLM service
 
@@ -113,7 +115,9 @@ source-language = "ko"
 target-language = "en"
 subtitle-format = "srt"
 translator = "gemini"
-llm-model = "gemini-3.0-pro"
+llm-model = "gemini-2.5-flash"
+chunk-size = 400
+context-entries = 20
 ```
 
 ## Contributing

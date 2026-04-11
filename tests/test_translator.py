@@ -7,7 +7,9 @@ from pytest_mock import MockerFixture
 from koffee.llm import chatgpt, claude, gemini, ollama
 from koffee.translator import (
     CHUNK_SIZE,
+    CONTEXT_ENTRIES,
     MODEL_CHUNK_SIZE,
+    MODEL_CONTEXT_ENTRIES,
     SYSTEM_PROMPT,
     _build_prompt,
     _call_with_retries,
@@ -857,3 +859,91 @@ def test_translate_transcript_explicit_chunk_size_overrides_model_default(
 
     # 5 segments at chunk_size=2 → 3 chunks, not the model default of 80
     assert mock_client.chat.completions.create.call_count == 3
+
+
+# --- Context entries tests ---
+
+
+def test_translate_transcript_uses_model_context_entries(mocker: MockerFixture) -> None:
+    """Tests that a model uses its configured context window."""
+    mock_client = mocker.MagicMock()
+    mocker.patch.object(ollama, "create_client", return_value=mock_client)
+    mock_sleep = mocker.patch("koffee.translator.time.sleep")
+
+    model = "qwen3:14b"
+    expected_context = MODEL_CONTEXT_ENTRIES[model]
+
+    segments = [{"start": float(i), "end": float(i + 1), "text": "x"} for i in range(3)]
+    mock_response = mocker.MagicMock()
+    mock_response.choices = [mocker.MagicMock()]
+    mock_response.choices[0].message.content = "\n\n".join(
+        f"{i + 1}\n00:00:0{i},000 --> 00:00:0{i + 1},000\nHello." for i in range(3)
+    )
+    mock_client.chat.completions.create.return_value = mock_response
+
+    mock_build = mocker.patch("koffee.translator._build_prompt", return_value="prompt")
+
+    translate_transcript(
+        {"segments": segments, "language": "ja"},
+        "ko",
+        api_key=None,
+        translator="ollama",
+        llm_model=model,
+        chunk_size=3,
+    )
+
+    _, kwargs = mock_build.call_args
+    assert len(kwargs["context_entries"]) <= expected_context
+    mock_sleep.assert_not_called()
+
+
+def test_translate_transcript_explicit_context_entries_overrides_model_default(
+    mocker: MockerFixture,
+) -> None:
+    """Tests that an explicit context_entries overrides the per-model default."""
+    mock_client = mocker.MagicMock()
+    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mocker.patch("koffee.translator.time.sleep")
+    mocker.patch("koffee.translator.CHUNK_SIZE", 1)
+
+    mock_client.models.generate_content.return_value.text = (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello."
+    )
+
+    mock_build = mocker.patch("koffee.translator._build_prompt", return_value="prompt")
+    mock_client.models.generate_content.return_value.text = (
+        "1\n00:00:00,000 --> 00:00:01,000\nHello."
+    )
+
+    translate_transcript(
+        SAMPLE_TRANSCRIPT,
+        "en",
+        api_key=None,
+        translator="gemini",
+        context_entries=2,
+    )
+
+    for call in mock_build.call_args_list:
+        _, kwargs = call
+        assert len(kwargs["context_entries"]) <= 2
+
+
+def test_translate_transcript_uses_default_context_entries_for_unknown_model(
+    mocker: MockerFixture,
+) -> None:
+    """Tests that CONTEXT_ENTRIES is used for models not in MODEL_CONTEXT_ENTRIES."""
+    mock_client = mocker.MagicMock()
+    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mocker.patch("koffee.translator.time.sleep")
+
+    mock_client.models.generate_content.return_value.text = (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello.\n\n"
+        "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
+    )
+
+    mock_build = mocker.patch("koffee.translator._build_prompt", return_value="prompt")
+
+    translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
+
+    _, kwargs = mock_build.call_args
+    assert len(kwargs["context_entries"]) <= CONTEXT_ENTRIES
