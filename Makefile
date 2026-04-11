@@ -37,10 +37,11 @@ accept_wip:
 ################################################################################
 
 docs:
-	uv run properdocs build -f properdocs.yml --clean
+	mkdir -p scratch/tmp/site
+	uv run mkdocs build --clean -d scratch/tmp/site
 
 serve:
-	uv run properdocs serve -f properdocs.yml --livereload -o
+	uv run mkdocs serve
 
 ################################################################################
 
@@ -59,10 +60,12 @@ ship:
 	accept \
 	accept_wip \
 	build \
+	docs \
 	dist \
 	help \
 	lint \
 	reformat \
+	serve \
 	setup \
 	ship \
 	test \

@@ -34,7 +34,7 @@ dev = [
 ]
 docs = [
     "cyclopts[mkdocs]>=4.10.2",
-    "mkdocs-materialx>=10.1.3",
+    "mkdocs-material>=9.7.6",
 ]
 
 [project.scripts]

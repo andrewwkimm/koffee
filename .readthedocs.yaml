@@ -9,9 +9,8 @@ build:
     python: "3.13"
   jobs:
     post_install:
-    - pip install uv
-    - uv sync --all-groups
-    - make docs
+    - pip install .
+    - pip install clyclopts[mkdocs] mkdocs-material
 
 mkdocs:
   configuration: properdocs.yml

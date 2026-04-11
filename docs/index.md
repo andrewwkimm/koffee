@@ -1,5 +1,3 @@
-# koffee
-
 ![logo](assets/logo.png)
 
 [![CI](https://github.com/andrewwkimm/koffee/actions/workflows/ci.yaml/badge.svg)](https://github.com/andrewwkimm/koffee/actions)
