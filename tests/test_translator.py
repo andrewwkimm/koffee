@@ -637,7 +637,7 @@ def test_ollama_attempt_generate_success(mocker: MockerFixture) -> None:
     mock_client.chat.completions.create.return_value = mock_response
 
     result, error = ollama.attempt_generate(
-        mock_client, "prompt", "qwen3:8b", SYSTEM_PROMPT
+        mock_client, "prompt", "qwen3:14b", SYSTEM_PROMPT
     )
 
     assert result is mock_response
@@ -661,7 +661,7 @@ def test_ollama_attempt_generate_rate_limit_returns_error(
     mock_client.chat.completions.create.side_effect = exc
 
     result, error = ollama.attempt_generate(
-        mock_client, "prompt", "qwen3:8b", SYSTEM_PROMPT
+        mock_client, "prompt", "qwen3:14b", SYSTEM_PROMPT
     )
 
     assert result is None
@@ -681,7 +681,7 @@ def test_ollama_attempt_generate_non_retryable_raises(mocker: MockerFixture) -> 
     mock_client.chat.completions.create.side_effect = exc
 
     with pytest.raises(APIStatusError):
-        ollama.attempt_generate(mock_client, "prompt", "qwen3:8b", SYSTEM_PROMPT)
+        ollama.attempt_generate(mock_client, "prompt", "qwen3:14b", SYSTEM_PROMPT)
 
 
 def test_ollama_attempt_generate_connection_error_returns_error(
@@ -695,7 +695,7 @@ def test_ollama_attempt_generate_connection_error_returns_error(
     mock_client.chat.completions.create.side_effect = exc
 
     result, error = ollama.attempt_generate(
-        mock_client, "prompt", "qwen3:8b", SYSTEM_PROMPT
+        mock_client, "prompt", "qwen3:14b", SYSTEM_PROMPT
     )
 
     assert result is None
@@ -726,7 +726,7 @@ def test_ollama_translate_transcript(mocker: MockerFixture) -> None:
 
 
 def test_ollama_translate_transcript_uses_default_model(mocker: MockerFixture) -> None:
-    """Tests that the default qwen3:8b model is used when none is specified."""
+    """Tests that the default qwen3:14b model is used when none is specified."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(ollama, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
@@ -742,4 +742,4 @@ def test_ollama_translate_transcript_uses_default_model(mocker: MockerFixture) -
     translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="ollama")
 
     call_kwargs = mock_client.chat.completions.create.call_args.kwargs
-    assert call_kwargs["model"] == "qwen3:8b"
+    assert call_kwargs["model"] == "qwen3:14b"
