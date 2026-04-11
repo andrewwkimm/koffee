@@ -10,7 +10,7 @@ build:
   jobs:
     post_install:
     - pip install .
-    - pip install clyclopts[mkdocs] mkdocs-material
+    - pip install cyclopts[mkdocs] mkdocs-material
 
 mkdocs:
   configuration: properdocs.yml
