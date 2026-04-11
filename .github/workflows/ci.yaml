@@ -58,6 +58,7 @@ jobs:
           shell: bash
           command: |
             uv sync &&
+            uv sync --group docs &&
             uv run ruff format . &&
             uv run ruff check --fix . &&
             uv run ty check tests &&
