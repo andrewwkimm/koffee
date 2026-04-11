@@ -240,6 +240,7 @@ def _get_segments(
             llm_model=config.llm_model,
             prompt=config.prompt,
             translator=config.translator,
+            chunk_size=config.chunk_size,
         )
 
     return segments

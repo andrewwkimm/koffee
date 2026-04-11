@@ -106,6 +106,7 @@ def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> N
     config.target_language = "en"
     config.api_key = None
     config.llm_model = "gemini-2.5-flash"
+    config.chunk_size = None
     config.prompt = None
     transcript = {"segments": [], "language": "ko"}
 
@@ -120,6 +121,7 @@ def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> N
         llm_model=config.llm_model,
         prompt=config.prompt,
         translator=config.translator,
+        chunk_size=config.chunk_size,
     )
 
 

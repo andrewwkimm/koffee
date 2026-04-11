@@ -13,6 +13,15 @@ CHUNK_SIZE = 600
 CONTEXT_ENTRIES = 25
 SLEEP_BETWEEN_REQUESTS = 4
 
+MODEL_CHUNK_SIZE: dict[str, int] = {
+    "qwen3:8b": 40,
+    "qwen3:14b": 80,
+    "qwen3:32b": 150,
+    "llama3.2": 80,
+    "llama3.3": 150,
+    "mistral": 80,
+}
+
 SYSTEM_PROMPT = """You are a professional subtitle translator specializing in Korean
 dramas and Japanese anime. Your translations should feel like they were written
 natively in English - natural, idiomatic, and faithful to the speaker's personality and
@@ -80,15 +89,17 @@ def translate_transcript(
     llm_model: str | None = None,
     prompt: str | None = None,
     translator: str = "gemini",
+    chunk_size: int | None = None,
 ) -> list:
     """Translates a transcript using an LLM backend, preserving timing information."""
     log.info(f"Translating transcript with {translator}.")
 
     system_prompt = prompt if prompt else SYSTEM_PROMPT
     model = llm_model or DEFAULT_MODEL.get(translator, "")
+    resolved_chunk_size = chunk_size or MODEL_CHUNK_SIZE.get(model, CHUNK_SIZE)
     backend = _load_backend(translator)
     client = backend.create_client(api_key)
-    chunks = _chunk_segments(transcript, target_language)
+    chunks = _chunk_segments(transcript, target_language, resolved_chunk_size)
     translated_segments = _translate_chunks(
         backend,
         backend_name=translator,
@@ -101,19 +112,21 @@ def translate_transcript(
     return translated_segments
 
 
-def _chunk_segments(transcript: dict, target_language: str) -> list[dict]:
+def _chunk_segments(
+    transcript: dict, target_language: str, chunk_size: int = CHUNK_SIZE
+) -> list[dict]:
     """Splits transcript segments into prompt-ready chunks."""
     segments = transcript["segments"]
     source_language = transcript["language"]
 
     chunks = [
         {
-            "chunk": segments[i : i + CHUNK_SIZE],
+            "chunk": segments[i : i + chunk_size],
             "source_language": source_language,
             "target_language": target_language,
-            "start_entry": i * CHUNK_SIZE + 1,
+            "start_entry": i * chunk_size + 1,
         }
-        for i in range(0, len(segments), CHUNK_SIZE)
+        for i in range(0, len(segments), chunk_size)
     ]
 
     return chunks

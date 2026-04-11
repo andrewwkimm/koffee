@@ -6,9 +6,12 @@ from pytest_mock import MockerFixture
 
 from koffee.llm import chatgpt, claude, gemini, ollama
 from koffee.translator import (
+    CHUNK_SIZE,
+    MODEL_CHUNK_SIZE,
     SYSTEM_PROMPT,
     _build_prompt,
     _call_with_retries,
+    _chunk_segments,
     _extract_text,
     _load_backend,
     _parse_srt_response,
@@ -743,3 +746,96 @@ def test_ollama_translate_transcript_uses_default_model(mocker: MockerFixture) -
 
     call_kwargs = mock_client.chat.completions.create.call_args.kwargs
     assert call_kwargs["model"] == "qwen3:14b"
+
+
+# --- Chunk size tests ---
+
+
+def test_chunk_segments_default_chunk_size() -> None:
+    """Tests that _chunk_segments uses CHUNK_SIZE when no chunk_size is given."""
+    many_segments = [
+        {"start": float(i), "end": float(i + 1), "text": "x"}
+        for i in range(CHUNK_SIZE + 1)
+    ]
+    transcript = {"segments": many_segments, "language": "ja"}
+
+    chunks = _chunk_segments(transcript, "ko")
+
+    assert len(chunks) == 2
+    assert len(chunks[0]["chunk"]) == CHUNK_SIZE
+    assert len(chunks[1]["chunk"]) == 1
+
+
+def test_chunk_segments_explicit_chunk_size() -> None:
+    """Tests that _chunk_segments respects an explicit chunk_size argument."""
+    segments = [
+        {"start": float(i), "end": float(i + 1), "text": "x"} for i in range(10)
+    ]
+    transcript = {"segments": segments, "language": "ja"}
+
+    chunks = _chunk_segments(transcript, "ko", chunk_size=3)
+
+    assert len(chunks) == 4
+    assert len(chunks[0]["chunk"]) == 3
+    assert len(chunks[-1]["chunk"]) == 1
+
+
+def test_translate_transcript_uses_model_chunk_size(mocker: MockerFixture) -> None:
+    """Tests that a model in MODEL_CHUNK_SIZE uses its configured chunk size."""
+    mock_client = mocker.MagicMock()
+    mocker.patch.object(ollama, "create_client", return_value=mock_client)
+    mocker.patch("koffee.translator.time.sleep")
+
+    model = "qwen3:14b"
+    expected_chunk_size = MODEL_CHUNK_SIZE[model]
+    many_segments = [
+        {"start": float(i), "end": float(i + 1), "text": "x"}
+        for i in range(expected_chunk_size + 1)
+    ]
+
+    mock_response = mocker.MagicMock()
+    mock_response.choices = [mocker.MagicMock()]
+    mock_response.choices[0].message.content = "\n\n".join(
+        f"{i + 1}\n00:00:0{i},000 --> 00:00:0{i + 1},000\nHello."
+        for i in range(expected_chunk_size + 1)
+    )
+    mock_client.chat.completions.create.return_value = mock_response
+
+    translate_transcript(
+        {"segments": many_segments, "language": "ja"},
+        "ko",
+        api_key=None,
+        translator="ollama",
+        llm_model=model,
+    )
+
+    assert mock_client.chat.completions.create.call_count == 2
+
+
+def test_translate_transcript_explicit_chunk_size_overrides_model_default(
+    mocker: MockerFixture,
+) -> None:
+    """Tests that an explicit chunk_size overrides the per-model default."""
+    mock_client = mocker.MagicMock()
+    mocker.patch.object(ollama, "create_client", return_value=mock_client)
+    mocker.patch("koffee.translator.time.sleep")
+
+    segments = [{"start": float(i), "end": float(i + 1), "text": "x"} for i in range(5)]
+    mock_response = mocker.MagicMock()
+    mock_response.choices = [mocker.MagicMock()]
+    mock_response.choices[0].message.content = "\n\n".join(
+        f"{i + 1}\n00:00:0{i},000 --> 00:00:0{i + 1},000\nHello." for i in range(5)
+    )
+    mock_client.chat.completions.create.return_value = mock_response
+
+    translate_transcript(
+        {"segments": segments, "language": "ja"},
+        "ko",
+        api_key=None,
+        translator="ollama",
+        llm_model="qwen3:14b",
+        chunk_size=2,
+    )
+
+    # 5 segments at chunk_size=2 → 3 chunks, not the model default of 80
+    assert mock_client.chat.completions.create.call_count == 3

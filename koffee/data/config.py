@@ -141,6 +141,7 @@ class KoffeeConfig(BaseModel):
     target_language: str = "en"
     translator: Literal["whisper", "gemini", "chatgpt", "claude", "ollama"] = "whisper"
     llm_model: str | None = None
+    chunk_size: int | None = None
     prompt: str | None = None
     dry_run: bool = False
     overwrite: bool = False
