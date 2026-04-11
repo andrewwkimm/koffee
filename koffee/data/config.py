@@ -139,7 +139,7 @@ class KoffeeConfig(BaseModel):
     source_language: str = "auto"
     subtitle_format: Literal["srt", "vtt", "ass"] = "vtt"
     target_language: str = "en"
-    translator: Literal["whisper", "gemini", "chatgpt", "claude"] = "whisper"
+    translator: Literal["whisper", "gemini", "chatgpt", "claude", "ollama"] = "whisper"
     llm_model: str | None = None
     prompt: str | None = None
     dry_run: bool = False

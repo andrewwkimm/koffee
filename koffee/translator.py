@@ -35,12 +35,14 @@ LLM = {
     "gemini": "koffee.llm.gemini",
     "chatgpt": "koffee.llm.chatgpt",
     "claude": "koffee.llm.claude",
+    "ollama": "koffee.llm.ollama",
 }
 
 DEFAULT_MODEL = {
     "gemini": "gemini-2.5-flash",
     "chatgpt": "gpt-4o",
     "claude": "claude-sonnet-4-20250514",
+    "ollama": "llama3.2",
 }
 
 
@@ -63,7 +65,7 @@ def _extract_text(response, backend_name: str) -> str:
     """Extracts text content from a backend-specific response object."""
     if backend_name == "gemini":
         return response.text
-    if backend_name == "chatgpt":
+    if backend_name in ("chatgpt", "ollama"):
         return response.choices[0].message.content
     if backend_name == "claude":
         return response.content[0].text

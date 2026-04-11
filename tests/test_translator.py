@@ -4,7 +4,7 @@ import pytest
 from google.genai.errors import APIError, ClientError
 from pytest_mock import MockerFixture
 
-from koffee.llm import chatgpt, claude, gemini
+from koffee.llm import chatgpt, claude, gemini, ollama
 from koffee.translator import (
     SYSTEM_PROMPT,
     _build_prompt,
@@ -578,6 +578,23 @@ def test_claude_attempt_generate_connection_error_returns_error(
     assert error is exc
 
 
+def test_load_backend_ollama() -> None:
+    """Tests that the ollama backend module is loaded correctly."""
+    backend = _load_backend("ollama")
+    assert hasattr(backend, "create_client")
+    assert hasattr(backend, "attempt_generate")
+
+
+def test_extract_text_ollama() -> None:
+    """Tests that text is extracted from an Ollama response."""
+    from unittest.mock import MagicMock  # noqa: PLC0415
+
+    response = MagicMock()
+    response.choices = [MagicMock()]
+    response.choices[0].message.content = "Hello."
+    assert _extract_text(response, "ollama") == "Hello."
+
+
 def test_claude_translate_transcript(mocker: MockerFixture) -> None:
     """Tests that translate_transcript works with the claude backend."""
     mock_client = mocker.MagicMock()
@@ -599,3 +616,130 @@ def test_claude_translate_transcript(mocker: MockerFixture) -> None:
     assert len(result) == 2
     assert result[0]["text"] == "Hello."
     assert result[1]["text"] == "How have you been?"
+
+
+# --- Ollama backend tests ---
+
+
+def test_ollama_create_client_uses_local_endpoint(mocker: MockerFixture) -> None:
+    """Tests that the Ollama client is configured with the local endpoint."""
+    mock_openai = mocker.patch("koffee.llm.ollama.OpenAI")
+    ollama.create_client(api_key=None)
+    mock_openai.assert_called_once_with(
+        base_url="http://localhost:11434/v1", api_key="ollama"
+    )
+
+
+def test_ollama_attempt_generate_success(mocker: MockerFixture) -> None:
+    """Tests that a successful Ollama call returns (response, None)."""
+    mock_client = mocker.MagicMock()
+    mock_response = mocker.MagicMock()
+    mock_client.chat.completions.create.return_value = mock_response
+
+    result, error = ollama.attempt_generate(
+        mock_client, "prompt", "llama3.2", SYSTEM_PROMPT
+    )
+
+    assert result is mock_response
+    assert error is None
+
+
+def test_ollama_attempt_generate_rate_limit_returns_error(
+    mocker: MockerFixture,
+) -> None:
+    """Tests that a RateLimitError is returned as a retryable error."""
+    from openai import RateLimitError as OpenAIRateLimitError  # noqa: PLC0415
+
+    mock_client = mocker.MagicMock()
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 429
+    mock_response.headers = {}
+    mock_response.json.return_value = {"error": {"message": "rate limited"}}
+    exc = OpenAIRateLimitError(
+        message="rate limited", response=mock_response, body=None
+    )
+    mock_client.chat.completions.create.side_effect = exc
+
+    result, error = ollama.attempt_generate(
+        mock_client, "prompt", "llama3.2", SYSTEM_PROMPT
+    )
+
+    assert result is None
+    assert error is exc
+
+
+def test_ollama_attempt_generate_non_retryable_raises(mocker: MockerFixture) -> None:
+    """Tests that a 400 APIStatusError is raised immediately, not retried."""
+    from openai import APIStatusError  # noqa: PLC0415
+
+    mock_client = mocker.MagicMock()
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 400
+    mock_response.headers = {}
+    mock_response.json.return_value = {"error": {"message": "bad request"}}
+    exc = APIStatusError(message="bad request", response=mock_response, body=None)
+    mock_client.chat.completions.create.side_effect = exc
+
+    with pytest.raises(APIStatusError):
+        ollama.attempt_generate(mock_client, "prompt", "llama3.2", SYSTEM_PROMPT)
+
+
+def test_ollama_attempt_generate_connection_error_returns_error(
+    mocker: MockerFixture,
+) -> None:
+    """Tests that a connection error is returned as a retryable error."""
+    from openai import APIConnectionError as OpenAIConnectionError  # noqa: PLC0415
+
+    mock_client = mocker.MagicMock()
+    exc = OpenAIConnectionError(request=mocker.MagicMock())
+    mock_client.chat.completions.create.side_effect = exc
+
+    result, error = ollama.attempt_generate(
+        mock_client, "prompt", "llama3.2", SYSTEM_PROMPT
+    )
+
+    assert result is None
+    assert error is exc
+
+
+def test_ollama_translate_transcript(mocker: MockerFixture) -> None:
+    """Tests that translate_transcript works with the ollama backend."""
+    mock_client = mocker.MagicMock()
+    mocker.patch.object(ollama, "create_client", return_value=mock_client)
+    mocker.patch("koffee.translator.time.sleep")
+
+    mock_response = mocker.MagicMock()
+    mock_response.choices = [mocker.MagicMock()]
+    mock_response.choices[0].message.content = (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello.\n\n"
+        "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
+    )
+    mock_client.chat.completions.create.return_value = mock_response
+
+    result = translate_transcript(
+        SAMPLE_TRANSCRIPT, "en", api_key=None, translator="ollama"
+    )
+
+    assert len(result) == 2
+    assert result[0]["text"] == "Hello."
+    assert result[1]["text"] == "How have you been?"
+
+
+def test_ollama_translate_transcript_uses_default_model(mocker: MockerFixture) -> None:
+    """Tests that the default llama3.2 model is used when none is specified."""
+    mock_client = mocker.MagicMock()
+    mocker.patch.object(ollama, "create_client", return_value=mock_client)
+    mocker.patch("koffee.translator.time.sleep")
+
+    mock_response = mocker.MagicMock()
+    mock_response.choices = [mocker.MagicMock()]
+    mock_response.choices[0].message.content = (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello.\n\n"
+        "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
+    )
+    mock_client.chat.completions.create.return_value = mock_response
+
+    translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="ollama")
+
+    call_kwargs = mock_client.chat.completions.create.call_args.kwargs
+    assert call_kwargs["model"] == "llama3.2"
