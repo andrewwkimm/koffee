@@ -9,7 +9,7 @@ build:
     python: "3.13"
   jobs:
     post_install:
-      - pip install .
+      - pip install ".[docs]"
 
 mkdocs:
   configuration: properdocs.yml
