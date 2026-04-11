@@ -61,7 +61,7 @@ jobs:
             uv run ruff format . &&
             uv run ruff check --fix . &&
             uv run ty check tests &&
-            uv run pytest -x --cov=koffee
+            uv run pytest -x --cov
 
       - name: Generate coverage report
         shell: bash
@@ -69,9 +69,6 @@ jobs:
           pip install pytest-cov
           coverage report
           coverage xml
-
-      - name: Debug coverage XML
-        run: cat coverage.xml
 
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v6
