@@ -36,6 +36,14 @@ accept_wip:
 
 ################################################################################
 
+docs:
+	uv run properdocs build -f properdocs.yml --clean
+
+serve:
+	uv run properdocs serve -f properdocs.yml --livereload -o
+
+################################################################################
+
 dist:
 	uv build --wheel
 
