@@ -61,7 +61,7 @@ jobs:
             uv run ruff format . &&
             uv run ruff check --fix . &&
             uv run ty check tests &&
-            uv run pytest -x --cov
+            uv run pytest -x --cov=koffee
 
       - name: Generate coverage report
         shell: bash
