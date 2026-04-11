@@ -9,8 +9,8 @@ build:
     python: "3.13"
   jobs:
     post_install:
-      - pip install cyclopts[mkdocs]
-      - pip install mkdocs-materialx
+      - pip install uv
+      - uv sync --all-groups
 
 mkdocs:
   configuration: properdocs.yml
