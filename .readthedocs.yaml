@@ -11,6 +11,7 @@ build:
     post_install:
       - pip install uv
       - uv sync --all-groups
+      - uv pip list
 
 mkdocs:
   configuration: properdocs.yml
