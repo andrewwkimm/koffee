@@ -160,6 +160,14 @@ def test_validate_api_key_raises_without_key() -> None:
         )
 
 
+def test_validate_api_key_ollama_does_not_require_key() -> None:
+    """Tests that ollama backend does not require an API key."""
+    from koffee.translate import _validate_api_key  # noqa: PLC0415
+
+    config = KoffeeConfig(translator="ollama", whisper_model="large-v3")
+    _validate_api_key(config)
+
+
 def test_apply_config_overrides_with_existing_config() -> None:
     """Tests that kwargs override fields on an existing config."""
     config = KoffeeConfig(target_language="en")

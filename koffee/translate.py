@@ -61,7 +61,7 @@ def _validate_file(video_file_path: Path | str) -> None:
 
 def _validate_api_key(config: KoffeeConfig) -> None:
     """Raises ValueError if an LLM backend is selected without an API key."""
-    if config.translator != "whisper" and not config.api_key:
+    if config.translator not in ("whisper", "ollama") and not config.api_key:
         error_message = (
             f"An API key is required when using the {config.translator} "
             "translation backend. Provide one with --api_key or set the appropriate "

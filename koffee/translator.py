@@ -42,7 +42,7 @@ DEFAULT_MODEL = {
     "gemini": "gemini-2.5-flash",
     "chatgpt": "gpt-4o",
     "claude": "claude-sonnet-4-20250514",
-    "ollama": "llama3.2",
+    "ollama": "qwen3:8b",
 }
 
 
