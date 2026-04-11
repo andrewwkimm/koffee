@@ -1,0 +1,44 @@
+site_name: " "
+
+repo_url: https://github.com/andrewwkimm/koffee
+
+repo_name: GitHub
+
+theme:
+  name: materialx
+  logo: assets/favicon.png
+  favicon: assets/favicon.png
+  palette:
+
+    # Palette toggle for light mode
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: cyan
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - cyclopts
+
+nav:
+  - koffee: koffee.md
+  - Getting Started: getting-started.md
+  - CLI Reference: cli.md
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/andrewwkimm/koffee
+
+copyright: © koffee 2026
