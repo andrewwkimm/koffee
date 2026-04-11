@@ -9,9 +9,7 @@ build:
     python: "3.13"
   jobs:
     post_install:
-      - pip install uv
-      - uv sync --all-groups
-      - uv pip list
+      - pip install .
 
 mkdocs:
   configuration: properdocs.yml
