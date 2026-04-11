@@ -70,6 +70,9 @@ jobs:
           coverage report
           coverage xml
 
+      - name: Debug coverage XML
+        run: cat coverage.xml
+
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v6
         with:
