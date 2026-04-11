@@ -22,7 +22,6 @@ def attempt_generate(client, prompt: str, model: str, system_prompt: str):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
-            extra_body={"think": False},
         )
     except RateLimitError as exc:
         return None, exc

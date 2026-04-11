@@ -225,11 +225,18 @@ def _segments_to_srt(segments: list[dict]) -> str:
 
 
 def _sanitize_response(response_text: str | None) -> str:
-    """Strips markdown fences and normalizes line endings from LLM output."""
+    """Strips thinking blocks, markdown fences, and normalizes line endings."""
     if not response_text:
         return ""
 
     text = response_text.replace("\r\n", "\n").strip()
+
+    if "<think>" in text:
+        end = text.find("</think>")
+        if end != -1:
+            text = text[end + len("</think>") :].strip()
+        else:
+            text = text[text.find("<think>") + len("<think>") :].strip()
 
     if text.startswith("```"):
         first_newline = text.find("\n")

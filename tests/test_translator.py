@@ -189,6 +189,24 @@ def test_sanitize_response_returns_empty_for_none() -> None:
     assert _sanitize_response("") == ""
 
 
+def test_sanitize_response_strips_think_block() -> None:
+    """Tests that Qwen3-style <think>...</think> blocks are stripped."""
+    with_think = (
+        "<think>\nsome reasoning\n</think>\n1\n00:00:00,000 --> 00:00:01,000\nHello."
+    )
+    result = _sanitize_response(with_think)
+    assert "<think>" not in result
+    assert "some reasoning" not in result
+    assert "Hello." in result
+
+
+def test_sanitize_response_strips_unclosed_think_block() -> None:
+    """Tests that an unclosed <think> block is stripped from the opening tag onward."""
+    with_unclosed = "<think>\nsome reasoning\n1\n00:00:00,000 --> 00:00:01,000\nHello."
+    result = _sanitize_response(with_unclosed)
+    assert "<think>" not in result
+
+
 def test_parse_srt_response_empty_returns_originals() -> None:
     """Tests that an empty response falls back to original segments."""
     result = _parse_srt_response("", SAMPLE_SEGMENTS)
