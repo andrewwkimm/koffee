@@ -62,6 +62,7 @@ jobs:
             uv run ruff check --fix . &&
             uv run ty check tests &&
             uv run pytest -x --cov
+            uv run properdocs build -f properdocs.yml --clean
 
       - name: Generate coverage report
         shell: bash
