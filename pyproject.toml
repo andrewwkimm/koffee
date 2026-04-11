@@ -38,7 +38,7 @@ koffee = "koffee.cli:main"
 
 [tool.coverage.run]
 branch = true
-source = ["src"]
+source = ["koffee"]
 
 [tool.coverage.report]
 show_missing = true
@@ -46,9 +46,6 @@ fail_under = 80
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-
-[tool.pyright]
-include = ["src"]
 
 [tool.ruff]
 target-version = "py311"

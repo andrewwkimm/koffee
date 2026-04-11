@@ -50,7 +50,7 @@ def test_cli(mocker: MockerFixture) -> None:
 
 def test_script_run() -> None:
     """Tests that the CLI script runs."""
-    cli_path = Path("src/koffee/cli.py")
+    cli_path = Path("koffee/cli.py")
     result = subprocess.run(
         [sys.executable, cli_path], check=False, capture_output=True, text=True
     )
