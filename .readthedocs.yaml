@@ -13,4 +13,4 @@ build:
     - pip install cyclopts[mkdocs] mkdocs-material
 
 mkdocs:
-  configuration: properdocs.yml
+  configuration: mkdocs.yml
