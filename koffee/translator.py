@@ -32,19 +32,18 @@ MODEL_CONTEXT_ENTRIES: dict[str, int] = {
 }
 
 SYSTEM_PROMPT = """You are a professional subtitle translator specializing in Korean
-dramas and Japanese anime. Your translations should feel like they were written
-natively in English - natural, idiomatic, and faithful to the speaker's personality and
-tone rather than the literal words.
+dramas and Japanese anime. Your translations should feel natural and idiomatic in the
+target language - faithful to the speaker's personality and tone rather than the literal
+words.
 
 Guidelines:
 - Preserve each speaker's voice - formal characters stay formal, casual characters \
 stay casual
-- Adapt honorifics and speech levels to convey the relationship dynamic in natural
-English rather than translating them literally
-- Use modern English vernacular for slang and casual speech - avoid stiff or awkward \
-phrasing
+- Adapt honorifics and speech levels to convey the relationship dynamic naturally in \
+the target language rather than translating them literally
+- Use natural vernacular for slang and casual speech - avoid stiff or awkward phrasing
 - Preserve emotional nuance - exclamations, hesitations, and sentence-final particles \
-should feel natural in English
+should feel natural in the target language
 - Never sacrifice readability for literalness
 - Preserve all subtitle entry numbers and timing markers exactly as given
 - Translate only the text content, never the timestamps or entry numbers"""
@@ -269,7 +268,12 @@ def _sanitize_response(response_text: str | None) -> str:
 def _parse_srt_response(
     response_text: str | None, original_segments: list[dict]
 ) -> list[dict]:
-    """Parses SRT formatted response back into segments."""
+    """Parses SRT formatted response back into segments.
+
+    Matches blocks to original segments by entry number rather than position,
+    so skipped or reordered entries fall back to the original text instead of
+    misaligning all subsequent entries.
+    """
     MIN_SRT_BLOCK_LINES = 3
 
     sanitized = _sanitize_response(response_text)
@@ -277,7 +281,6 @@ def _parse_srt_response(
         log.warning("Empty LLM response, using original segments.")
         return list(original_segments)
 
-    translated_segments = []
     blocks = [b.strip() for b in sanitized.split("\n\n") if b.strip()]
 
     if len(blocks) != len(original_segments):
@@ -286,21 +289,31 @@ def _parse_srt_response(
             f"{len(original_segments)}; output may have missing or extra segments."
         )
 
-    for block, original in zip(blocks, original_segments, strict=False):
+    translated_by_index: dict[int, str] = {}
+    for block in blocks:
         lines = block.split("\n")
         if len(lines) < MIN_SRT_BLOCK_LINES:
-            log.warning("Unexpected SRT block format, using original text.")
-            translated_segments.append(original)
             continue
+        try:
+            entry_num = int(lines[0].strip())
+        except ValueError:
+            continue
+        translated_by_index[entry_num] = " ".join(lines[2:])
 
-        text = " ".join(lines[2:])
-        translated_segments.append(
-            {
-                "start": original["start"],
-                "end": original["end"],
-                "text": text,
-            }
-        )
+    translated_segments = []
+    for i, original in enumerate(original_segments, start=1):
+        text = translated_by_index.get(i)
+        if text is None:
+            log.debug(f"Entry {i} missing from LLM response, using original text.")
+            translated_segments.append(original)
+        else:
+            translated_segments.append(
+                {
+                    "start": original["start"],
+                    "end": original["end"],
+                    "text": text,
+                }
+            )
 
     return translated_segments
 
