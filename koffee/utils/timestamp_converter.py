@@ -1,18 +1,13 @@
 """Float to timestamp converter."""
 
-import logging
 from datetime import timedelta
 from decimal import Decimal
 
 from koffee.exceptions import InvalidSubtitleFormatError
 
-log = logging.getLogger(__name__)
-
 
 def convert_to_timestamp(seconds: float | int, subtitle_format: str) -> str:
     """Converts seconds to SRT timestamp format."""
-    log.debug(f"subtitle_format: {subtitle_format!r}")
-
     seconds_decimal = Decimal(str(seconds))
     seconds_int = int(seconds_decimal)
     ms = int((seconds_decimal % 1) * 1000)
