@@ -1,7 +1,11 @@
 """Gemini translation backend."""
 
+import logging
+
 from google import genai
 from google.genai.errors import APIError, ClientError
+
+log = logging.getLogger(__name__)
 
 
 def create_client(api_key: str | None):
@@ -18,7 +22,10 @@ def attempt_generate(client, prompt: str, model: str, system_prompt: str):
         response = client.models.generate_content(
             model=model,
             contents=prompt,
-            config={"system_instruction": system_prompt},
+            config={
+                "system_instruction": system_prompt,
+                "thinking_config": {"thinking_budget": 0},
+            },
         )
     except ClientError as exc:
         if exc.code == 429:
@@ -27,4 +34,12 @@ def attempt_generate(client, prompt: str, model: str, system_prompt: str):
     except APIError as exc:
         return None, exc
     else:
+        usage = response.usage_metadata
+        log.debug(
+            f"Gemini usage — prompt: {usage.prompt_token_count}, "
+            f"output: {usage.candidates_token_count}, "
+            f"thinking: {usage.thoughts_token_count}, "
+            f"finish: {response.candidates[0].finish_reason}"
+        )
+        log.debug(f"Gemini response tail:\n{response.text[-500:]}")
         return response, None
