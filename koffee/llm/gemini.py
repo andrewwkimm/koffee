@@ -24,7 +24,6 @@ def attempt_generate(client, prompt: str, model: str, system_prompt: str):
             contents=prompt,
             config={
                 "system_instruction": system_prompt,
-                "thinking_config": {"thinking_budget": 0},
             },
         )
     except ClientError as exc:
