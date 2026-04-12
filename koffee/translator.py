@@ -274,8 +274,6 @@ def _parse_srt_response(
     so skipped or reordered entries fall back to the original text instead of
     misaligning all subsequent entries.
     """
-    MIN_SRT_BLOCK_LINES = 3
-
     sanitized = _sanitize_response(response_text)
     if not sanitized:
         log.warning("Empty LLM response, using original segments.")
@@ -289,33 +287,44 @@ def _parse_srt_response(
             f"{len(original_segments)}; output may have missing or extra segments."
         )
 
-    translated_by_index: dict[int, str] = {}
+    translation_map = _blocks_to_translation_map(blocks)
+    return _merge_translated_segments(translation_map, original_segments)
+
+
+def _blocks_to_translation_map(blocks: list[str]) -> dict[int, str]:
+    """Parses SRT blocks into a {entry_number: translated_text} mapping."""
+    translation_map: dict[int, str] = {}
     for block in blocks:
         lines = block.split("\n")
-        if len(lines) < MIN_SRT_BLOCK_LINES:
+        if len(lines) < 3:
             continue
         try:
             entry_num = int(lines[0].strip())
         except ValueError:
             continue
-        translated_by_index[entry_num] = " ".join(lines[2:])
+        translation_map[entry_num] = " ".join(lines[2:])
+    return translation_map
 
-    translated_segments = []
+
+def _merge_translated_segments(
+    translation_map: dict[int, str], original_segments: list[dict]
+) -> list[dict]:
+    """Merges translated text onto original segments."""
+    merged_segments = []
     for i, original in enumerate(original_segments, start=1):
-        text = translated_by_index.get(i)
-        if text is None:
+        translated_text = translation_map.get(i)
+        if translated_text is None:
             log.debug(f"Entry {i} missing from LLM response, using original text.")
-            translated_segments.append(original)
+            merged_segments.append(original)
         else:
-            translated_segments.append(
+            merged_segments.append(
                 {
                     "start": original["start"],
                     "end": original["end"],
-                    "text": text,
+                    "text": translated_text,
                 }
             )
-
-    return translated_segments
+    return merged_segments
 
 
 def _build_prompt(
