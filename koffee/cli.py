@@ -106,6 +106,9 @@ def cli(
     api_key: Annotated[str, Parameter(name=("--api-key",))] | None = None,
     config: Annotated[Path, Parameter(name=("--config",), group=options_group)]
     | None = None,
+    no_vad_filter: Annotated[
+        bool, Parameter(name=("--no-vad-filter",), group=options_group)
+    ] = False,
     dry_run: Annotated[
         bool, Parameter(name=("--dry-run",), group=options_group)
     ] = False,
@@ -151,6 +154,8 @@ def cli(
         Path to a koffee.toml configuration file
     api_key: str
         API key for an LLM service
+    no_vad_filter: bool
+        Disable voice activity detection filtering during transcription
     dry_run: bool
         Preview what would be done without running transcription or translation
     overwrite: bool
@@ -179,6 +184,7 @@ def cli(
         "target_language": target_language,
         "translator": translator,
         "prompt": prompt,
+        "vad_filter": not no_vad_filter,
     }
     defaults = KoffeeConfig().model_dump()
     cli_overrides = {k: v for k, v in cli_args.items() if v != defaults.get(k)}
@@ -503,6 +509,9 @@ def transcribe(
     subtitle_format: Annotated[
         str, Parameter(name=("--subtitle-format", "-f"))
     ] = options.subtitle_format,
+    no_vad_filter: Annotated[
+        bool, Parameter(name=("--no-vad-filter",), group=options_group)
+    ] = False,
     overwrite: Annotated[
         bool, Parameter(name=("--overwrite",), group=options_group)
     ] = False,
@@ -525,6 +534,8 @@ def transcribe(
         Name of the output file
     subtitle_format: str
         Format to use for the subtitles
+    no_vad_filter: bool
+        Disable voice activity detection filtering during transcription
     overwrite: bool
         Overwrite existing output files instead of raising an error
     """
@@ -538,6 +549,7 @@ def transcribe(
             whisper_model,
             "whisper",
             on_progress=_make_progress_callback(progress, asr_task),
+            vad_filter=not no_vad_filter,
         )
 
     segments = transcript["segments"]

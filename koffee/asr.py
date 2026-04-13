@@ -19,12 +19,15 @@ def transcribe_text(
     model: str,
     translator: str,
     on_progress: Callable[[float], None] | None = None,
+    vad_filter: bool = True,
 ) -> dict:
     """Transcribes text from a video file."""
     log.info("Transcribing text.")
 
     loaded_model = _load_model(compute_type, device, model)
-    segments, info = _run_transcription(loaded_model, video_file, translator)
+    segments, info = _run_transcription(
+        loaded_model, video_file, translator, vad_filter
+    )
 
     transcript = {
         "segments": _consume_segments(segments, video_file, on_progress),
@@ -47,12 +50,12 @@ def _load_model(compute_type: str, device: str, model: str) -> WhisperModel:
 
 
 def _run_transcription(
-    loaded_model: WhisperModel, video_file: str, translator: str
+    loaded_model: WhisperModel, video_file: str, translator: str, vad_filter: bool
 ) -> tuple:
     """Runs transcription on the video file, returning segments and info."""
     task = "translate" if translator == "whisper" else "transcribe"
     segments, info = loaded_model.transcribe(
-        video_file, task=task, word_timestamps=True, vad_filter=True
+        video_file, task=task, word_timestamps=True, vad_filter=vad_filter
     )
 
     return segments, info

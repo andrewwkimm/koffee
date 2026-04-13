@@ -93,6 +93,7 @@ def _transcribe(
         config.whisper_model,
         config.translator,
         on_progress=on_progress,
+        vad_filter=config.vad_filter,
     )
 
     return transcript

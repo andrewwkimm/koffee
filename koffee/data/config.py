@@ -146,6 +146,7 @@ class KoffeeConfig(BaseModel):
     prompt: str | None = None
     dry_run: bool = False
     overwrite: bool = False
+    vad_filter: bool = True
     subtitle_track_index: int = 0
     use_embedded_subtitles: bool = False
 
