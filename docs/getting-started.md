@@ -9,6 +9,7 @@
 **Install via pip**
 ```console
 pip install git+https://github.com/andrewwkimm/koffee
+```
 
 ## Usage
 
