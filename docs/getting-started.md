@@ -1,6 +1,6 @@
 # Getting started
 
-## Installation
+## **Installation**
 
 **Prerequisites**
 * Python 3.11 – 3.13
@@ -11,7 +11,7 @@
 pip install git+https://github.com/andrewwkimm/koffee
 ```
 
-## Usage
+## **Usage**
 
 Video, audio, and subtitle files are all supported for translation and the translated subtitle file will be outputted to the current directory.
 
