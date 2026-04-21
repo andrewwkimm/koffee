@@ -52,7 +52,7 @@ options_group = Group("Options", sort_key=3)
 app["--help"].group = options_group
 app["--version"].group = options_group
 
-options = KoffeeConfig(**load_config_file())
+defaults = KoffeeConfig(**load_config_file())
 
 
 def _create_progress_bar() -> Progress:
@@ -80,24 +80,24 @@ def cli(
     *file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
     compute_type: Annotated[
         str, Parameter(name=("--compute-type", "-c"))
-    ] = options.compute_type,
-    device: Annotated[str, Parameter(name=("--device", "-d"))] = options.device,
+    ] = defaults.compute_type,
+    device: Annotated[str, Parameter(name=("--device", "-d"))] = defaults.device,
     whisper_model: Annotated[
         str, Parameter(name=("--whisper-model", "-m"))
-    ] = options.whisper_model,
+    ] = defaults.whisper_model,
     output_dir: Annotated[Path, Parameter(name=("--output-dir", "-o"))] | None = None,
     output_name: Annotated[str, Parameter(name=("--output-name", "-n"))] | None = None,
     source_language: Annotated[
         str, Parameter(name=("--source-language", "-s"))
-    ] = options.source_language,
+    ] = defaults.source_language,
     target_language: Annotated[
         str, Parameter(name=("--target-language", "-t"))
-    ] = options.target_language,
+    ] = defaults.target_language,
     subtitle_format: Annotated[
         str, Parameter(name=("--subtitle-format", "-f"))
-    ] = options.subtitle_format,
-    embed: Annotated[str, Parameter(name=("--embed",))] = options.embed,
-    translator: Annotated[str, Parameter(name=("--translator",))] = options.translator,
+    ] = defaults.subtitle_format,
+    embed: Annotated[str, Parameter(name=("--embed",))] = defaults.embed,
+    translator: Annotated[str, Parameter(name=("--translator",))] = defaults.translator,
     llm_model: Annotated[str, Parameter(name=("--llm-model",))] | None = None,
     chunk_size: Annotated[int, Parameter(name=("--chunk-size",))] | None = None,
     context_entries: Annotated[int, Parameter(name=("--context-entries",))]
@@ -186,11 +186,11 @@ def cli(
         "prompt": prompt,
         "vad_filter": not no_vad_filter,
     }
-    defaults = KoffeeConfig().model_dump()
-    cli_overrides = {k: v for k, v in cli_args.items() if v != defaults.get(k)}
-    file_options = load_config_file(config)
-    merged = {**defaults, **file_options, **cli_overrides}
-    config = KoffeeConfig(**merged)
+    default_config = KoffeeConfig().model_dump()
+    cli_overrides = {k: v for k, v in cli_args.items() if v != default_config.get(k)}
+    file_config = load_config_file(config)
+    resolved_config = {**default_config, **file_config, **cli_overrides}
+    config = KoffeeConfig(**resolved_config)
 
     resolved_paths = _resolve_paths(file_path)
 
@@ -260,8 +260,8 @@ def _handle_embedded_subtitles(video: Path, config: KoffeeConfig) -> KoffeeConfi
     track_count = len(tracks)
     log.info(f"Found {track_count} embedded subtitle track(s) in {video.name}.")
 
-    response = input("Translate embedded subtitles instead of running ASR? [Y/n] ")
-    if response.strip().lower() not in ("", "y", "yes"):
+    user_input = input("Translate embedded subtitles instead of running ASR? [Y/n] ")
+    if user_input.strip().lower() not in ("", "y", "yes"):
         return config
 
     track_index, source_language = _select_subtitle_track(tracks)
@@ -281,15 +281,15 @@ def _select_subtitle_track(tracks: list[dict]) -> tuple[int, str | None]:
     log.info("Available subtitle tracks:")
     for i, track in enumerate(tracks):
         tags = track.get("tags", {})
-        lang = tags.get("language", "unknown")
+        language = tags.get("language", "unknown")
         title = tags.get("title", "")
-        label = f"  [{i}] {lang}"
+        label = f"  [{i}] {language}"
         if title:
             label += f" — {title}"
         log.info(label)
 
-    response = input(f"Select track [0-{len(tracks) - 1}] (default 0): ")
-    index = int(response.strip()) if response.strip().isdigit() else 0
+    user_input = input(f"Select track [0-{len(tracks) - 1}] (default 0): ")
+    index = int(user_input.strip()) if user_input.strip().isdigit() else 0
     index = max(0, min(index, len(tracks) - 1))
 
     language = tracks[index].get("tags", {}).get("language")
@@ -448,9 +448,9 @@ def tracks(
     log.info(f"Subtitle tracks in {file_path.name}:")
     for i, track in enumerate(track_list):
         tags = track.get("tags", {})
-        lang = tags.get("language", "unknown")
+        language = tags.get("language", "unknown")
         title = tags.get("title", "")
-        label = f"  [{i}] {lang}"
+        label = f"  [{i}] {language}"
         if title:
             label += f" — {title}"
         log.info(label)
@@ -499,16 +499,16 @@ def transcribe(
     file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
     compute_type: Annotated[
         str, Parameter(name=("--compute-type", "-c"))
-    ] = options.compute_type,
-    device: Annotated[str, Parameter(name=("--device", "-d"))] = options.device,
+    ] = defaults.compute_type,
+    device: Annotated[str, Parameter(name=("--device", "-d"))] = defaults.device,
     whisper_model: Annotated[
         str, Parameter(name=("--whisper-model", "-m"))
-    ] = options.whisper_model,
+    ] = defaults.whisper_model,
     output_dir: Annotated[Path, Parameter(name=("--output-dir", "-o"))] | None = None,
     output_name: Annotated[str, Parameter(name=("--output-name", "-n"))] | None = None,
     subtitle_format: Annotated[
         str, Parameter(name=("--subtitle-format", "-f"))
-    ] = options.subtitle_format,
+    ] = defaults.subtitle_format,
     no_vad_filter: Annotated[
         bool, Parameter(name=("--no-vad-filter",), group=options_group)
     ] = False,
