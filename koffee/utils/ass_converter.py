@@ -40,7 +40,7 @@ ASS_HEADER = (
 )
 
 
-def convert_text_to_ass(transcript: list, output_dir: Path) -> Path:
+def convert_text_to_ass(segments: list, output_dir: Path) -> Path:
     """Converts text to ASS format."""
     log.debug("Converting text to ASS format.")
 
@@ -50,7 +50,7 @@ def convert_text_to_ass(transcript: list, output_dir: Path) -> Path:
     with Path.open(output_file_path, "w", encoding="utf-8") as file:
         file.write(ASS_HEADER)
 
-        for subtitle in transcript:
+        for subtitle in segments:
             start = convert_to_timestamp(subtitle["start"], "ass")
             end = convert_to_timestamp(subtitle["end"], "ass")
             text = subtitle["text"].strip().replace("\n", "\\N")

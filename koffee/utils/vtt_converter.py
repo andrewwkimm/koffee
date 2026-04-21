@@ -9,7 +9,7 @@ from koffee.utils.timestamp_converter import convert_to_timestamp
 log = logging.getLogger(__name__)
 
 
-def convert_text_to_vtt(transcript: list, output_dir: Path) -> Path:
+def convert_text_to_vtt(segments: list, output_dir: Path) -> Path:
     """Converts text to VTT format."""
     log.debug("Converting text to VTT format.")
 
@@ -17,7 +17,7 @@ def convert_text_to_vtt(transcript: list, output_dir: Path) -> Path:
     log.debug(f"output_file_path: {output_file_path!r}")
 
     blocks = []
-    for subtitle in transcript:
+    for subtitle in segments:
         start = convert_to_timestamp(subtitle["start"], "vtt")
         end = convert_to_timestamp(subtitle["end"], "vtt")
         text = subtitle["text"].strip()

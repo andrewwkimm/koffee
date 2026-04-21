@@ -9,7 +9,7 @@ from koffee.utils.timestamp_converter import convert_to_timestamp
 log = logging.getLogger(__name__)
 
 
-def convert_text_to_srt(transcript: list, output_dir: Path) -> Path:
+def convert_text_to_srt(segments: list, output_dir: Path) -> Path:
     """Converts text to SRT format."""
     log.debug("Converting text to SRT format.")
 
@@ -17,7 +17,7 @@ def convert_text_to_srt(transcript: list, output_dir: Path) -> Path:
     log.debug(f"output_file_path: {output_file_path!r}")
 
     blocks = []
-    for idx, subtitle in enumerate(transcript, 1):
+    for idx, subtitle in enumerate(segments, 1):
         start = convert_to_timestamp(subtitle["start"], "srt")
         end = convert_to_timestamp(subtitle["end"], "srt")
         text = subtitle["text"].strip()
