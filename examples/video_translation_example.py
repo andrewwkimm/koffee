@@ -7,4 +7,4 @@ if __name__ == "__main__":
     output_dir = "scratch"
     output_name = "example_video"
 
-    koffee.translate(video_file_path)
+    koffee.run(video_file_path)

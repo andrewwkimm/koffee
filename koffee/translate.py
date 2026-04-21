@@ -11,7 +11,7 @@ from koffee.data.config import KoffeeConfig
 from koffee.exceptions import InvalidVideoFileError
 from koffee.overlay import overlay_subtitles
 from koffee.subtitle import generate_subtitles
-from koffee.translator import translate_transcript
+from koffee.translator import translate
 from koffee.utils import extract_subtitle_track, parse_subtitle_file
 
 log = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".flv", ".wmv"}
 SUPPORTED_EXTENSIONS = AUDIO_EXTENSIONS | VIDEO_EXTENSIONS
 
 
-def translate(
+def run(
     video_file_path: Path | str,
     config: KoffeeConfig | None = None,
     on_asr_progress: Callable[[float], None] | None = None,
@@ -180,7 +180,7 @@ def _translate_subtitle_file(
     log.info("Detected subtitle file input, skipping transcription.")
 
     segments = parse_subtitle_file(file_path)
-    translated_segments = translate_transcript(
+    translated_segments = translate(
         {"segments": segments, "language": config.source_language},
         config.target_language,
         config.api_key,
@@ -233,7 +233,7 @@ def _get_segments(
     if config.translator == "whisper":
         segments = transcript["segments"]
     else:
-        segments = translate_transcript(
+        segments = translate(
             transcript,
             config.target_language,
             config.api_key,

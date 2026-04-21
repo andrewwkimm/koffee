@@ -40,5 +40,5 @@ There is full feature parity between the CLI and the Python library. See the exa
 import koffee
 
 
-koffee.translate("some_dir/some_video_file.mp4")
+koffee.run("some_dir/some_video_file.mp4")
 ```

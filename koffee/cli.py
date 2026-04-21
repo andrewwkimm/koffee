@@ -29,7 +29,7 @@ from koffee.data.config import (
 from koffee.exceptions import InvalidVideoFileError, SubtitleOverlayError
 from koffee.overlay import overlay_subtitles
 from koffee.subtitle import generate_subtitles
-from koffee.translate import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, translate
+from koffee.translate import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, run
 from koffee.utils import get_subtitle_tracks, parse_subtitle_file
 
 logging.basicConfig(
@@ -333,7 +333,7 @@ def _translate_with_progress(
 
     if skip_asr:
         translate_task = progress.add_task("Translating", total=100)
-        translate(
+        run(
             video_file_path=video,
             config=config,
             on_translate_progress=_make_progress_callback(progress, translate_task),
@@ -358,7 +358,7 @@ def _translate_with_progress(
                     progress.update(translate_task, visible=True)
                     progress.start_task(translate_task)
 
-        translate(
+        run(
             video_file_path=video,
             config=config,
             on_asr_progress=on_asr_progress,

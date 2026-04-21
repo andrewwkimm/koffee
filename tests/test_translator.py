@@ -18,7 +18,7 @@ from koffee.translator import (
     _load_backend,
     _parse_srt_response,
     _sanitize_response,
-    translate_transcript,
+    translate,
 )
 
 SAMPLE_SEGMENTS = [
@@ -115,8 +115,8 @@ def test_parse_srt_response_malformed_block_falls_back_to_original() -> None:
     assert result[0] == SAMPLE_SEGMENTS[0]
 
 
-def test_translate_transcript_single_chunk(mocker: MockerFixture) -> None:
-    """Tests translate_transcript with a transcript that fits in one chunk."""
+def test_translate_single_chunk(mocker: MockerFixture) -> None:
+    """Tests translate with a transcript that fits in one chunk."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(gemini, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
@@ -126,9 +126,7 @@ def test_translate_transcript_single_chunk(mocker: MockerFixture) -> None:
         "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
     )
 
-    result = translate_transcript(
-        SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini"
-    )
+    result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
 
     assert len(result) == 2
     assert result[0]["text"] == "Hello."
@@ -136,8 +134,8 @@ def test_translate_transcript_single_chunk(mocker: MockerFixture) -> None:
     mock_client.models.generate_content.assert_called_once()
 
 
-def test_translate_transcript_sleeps_between_chunks(mocker: MockerFixture) -> None:
-    """Tests that translate_transcript sleeps between chunks and stops at last entry."""
+def test_translate_sleeps_between_chunks(mocker: MockerFixture) -> None:
+    """Tests that translate sleeps between chunks and stops at last entry."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(gemini, "create_client", return_value=mock_client)
     mock_sleep = mocker.patch("koffee.translator.time.sleep")
@@ -147,13 +145,13 @@ def test_translate_transcript_sleeps_between_chunks(mocker: MockerFixture) -> No
         "1\n00:00:00,000 --> 00:00:06,360\nHello."
     )
 
-    translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
 
     # 2 segments with chunk size 1 = 2 chunks, sleep called once (not after last chunk)
     assert mock_sleep.call_count == 1
 
 
-def test_translate_transcript_passes_api_key(mocker: MockerFixture) -> None:
+def test_translate_passes_api_key(mocker: MockerFixture) -> None:
     """Tests that the API key is passed through to the backend client."""
     mock_create = mocker.patch.object(gemini, "create_client")
     mock_create.return_value.models.generate_content.return_value.text = (
@@ -162,9 +160,7 @@ def test_translate_transcript_passes_api_key(mocker: MockerFixture) -> None:
     )
     mocker.patch("koffee.translator.time.sleep")
 
-    translate_transcript(
-        SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="gemini"
-    )
+    translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="gemini")
 
     mock_create.assert_called_once_with("test-key")
 
@@ -241,7 +237,7 @@ def test_parse_srt_response_markdown_fenced() -> None:
     assert result[0]["text"] == "Hello."
 
 
-def test_translate_transcript_reports_progress(mocker: MockerFixture) -> None:
+def test_translate_reports_progress(mocker: MockerFixture) -> None:
     """Tests that on_progress is called once per chunk with correct ratio."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(gemini, "create_client", return_value=mock_client)
@@ -253,7 +249,7 @@ def test_translate_transcript_reports_progress(mocker: MockerFixture) -> None:
     )
 
     progress_calls = []
-    translate_transcript(
+    translate(
         SAMPLE_TRANSCRIPT,
         "en",
         api_key=None,
@@ -322,7 +318,7 @@ def test_gemini_attempt_generate_api_error_returns_error(
     assert error.code == 500
 
 
-def test_translate_transcript_uses_custom_prompt(mocker: MockerFixture) -> None:
+def test_translate_uses_custom_prompt(mocker: MockerFixture) -> None:
     """Tests that a custom translation prompt is passed to the LLM backend."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(gemini, "create_client", return_value=mock_client)
@@ -334,7 +330,7 @@ def test_translate_transcript_uses_custom_prompt(mocker: MockerFixture) -> None:
     )
 
     custom_prompt = "You are a medical subtitle translator."
-    translate_transcript(
+    translate(
         SAMPLE_TRANSCRIPT,
         "en",
         api_key=None,
@@ -346,7 +342,7 @@ def test_translate_transcript_uses_custom_prompt(mocker: MockerFixture) -> None:
     assert call_kwargs["config"]["system_instruction"] == custom_prompt
 
 
-def test_translate_transcript_falls_back_to_default_prompt(
+def test_translate_falls_back_to_default_prompt(
     mocker: MockerFixture,
 ) -> None:
     """Tests that the default system prompt is used when no custom prompt is given."""
@@ -359,7 +355,7 @@ def test_translate_transcript_falls_back_to_default_prompt(
         "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
     )
 
-    translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
 
     call_kwargs = mock_client.models.generate_content.call_args.kwargs
     assert call_kwargs["config"]["system_instruction"] == SYSTEM_PROMPT
@@ -407,7 +403,7 @@ def test_extract_text_claude() -> None:
     assert _extract_text(response, "claude") == "Hello."
 
 
-def test_translate_transcript_uses_default_model(mocker: MockerFixture) -> None:
+def test_translate_uses_default_model(mocker: MockerFixture) -> None:
     """Tests that the default model is used when none is specified."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(gemini, "create_client", return_value=mock_client)
@@ -418,7 +414,7 @@ def test_translate_transcript_uses_default_model(mocker: MockerFixture) -> None:
         "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
     )
 
-    translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
 
     call_kwargs = mock_client.models.generate_content.call_args.kwargs
     assert call_kwargs["model"] == "gemini-2.5-flash"
@@ -499,8 +495,8 @@ def test_chatgpt_attempt_generate_connection_error_returns_error(
     assert error is exc
 
 
-def test_chatgpt_translate_transcript(mocker: MockerFixture) -> None:
-    """Tests that translate_transcript works with the chatgpt backend."""
+def test_chatgpt_translate(mocker: MockerFixture) -> None:
+    """Tests that translate works with the chatgpt backend."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(chatgpt, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
@@ -513,7 +509,7 @@ def test_chatgpt_translate_transcript(mocker: MockerFixture) -> None:
     )
     mock_client.chat.completions.create.return_value = mock_response
 
-    result = translate_transcript(
+    result = translate(
         SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="chatgpt"
     )
 
@@ -618,8 +614,8 @@ def test_extract_text_ollama() -> None:
     assert _extract_text(response, "ollama") == "Hello."
 
 
-def test_claude_translate_transcript(mocker: MockerFixture) -> None:
-    """Tests that translate_transcript works with the claude backend."""
+def test_claude_translate(mocker: MockerFixture) -> None:
+    """Tests that translate works with the claude backend."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(claude, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
@@ -632,9 +628,7 @@ def test_claude_translate_transcript(mocker: MockerFixture) -> None:
     )
     mock_client.messages.create.return_value = mock_response
 
-    result = translate_transcript(
-        SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="claude"
-    )
+    result = translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="claude")
 
     assert len(result) == 2
     assert result[0]["text"] == "Hello."
@@ -725,8 +719,8 @@ def test_ollama_attempt_generate_connection_error_returns_error(
     assert error is exc
 
 
-def test_ollama_translate_transcript(mocker: MockerFixture) -> None:
-    """Tests that translate_transcript works with the ollama backend."""
+def test_ollama_translate(mocker: MockerFixture) -> None:
+    """Tests that translate works with the ollama backend."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(ollama, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
@@ -739,16 +733,14 @@ def test_ollama_translate_transcript(mocker: MockerFixture) -> None:
     )
     mock_client.chat.completions.create.return_value = mock_response
 
-    result = translate_transcript(
-        SAMPLE_TRANSCRIPT, "en", api_key=None, translator="ollama"
-    )
+    result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="ollama")
 
     assert len(result) == 2
     assert result[0]["text"] == "Hello."
     assert result[1]["text"] == "How have you been?"
 
 
-def test_ollama_translate_transcript_uses_default_model(mocker: MockerFixture) -> None:
+def test_ollama_translate_uses_default_model(mocker: MockerFixture) -> None:
     """Tests that the default qwen3:14b model is used when none is specified."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(ollama, "create_client", return_value=mock_client)
@@ -762,7 +754,7 @@ def test_ollama_translate_transcript_uses_default_model(mocker: MockerFixture) -
     )
     mock_client.chat.completions.create.return_value = mock_response
 
-    translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="ollama")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="ollama")
 
     call_kwargs = mock_client.chat.completions.create.call_args.kwargs
     assert call_kwargs["model"] == "qwen3:14b"
@@ -800,7 +792,7 @@ def test_chunk_segments_explicit_chunk_size() -> None:
     assert len(chunks[-1]["chunk"]) == 1
 
 
-def test_translate_transcript_uses_model_chunk_size(mocker: MockerFixture) -> None:
+def test_translate_uses_model_chunk_size(mocker: MockerFixture) -> None:
     """Tests that a model in CHUNK_SIZE_BY_MODEL uses its configured chunk size."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(ollama, "create_client", return_value=mock_client)
@@ -821,7 +813,7 @@ def test_translate_transcript_uses_model_chunk_size(mocker: MockerFixture) -> No
     )
     mock_client.chat.completions.create.return_value = mock_response
 
-    translate_transcript(
+    translate(
         {"segments": many_segments, "language": "ja"},
         "ko",
         api_key=None,
@@ -832,7 +824,7 @@ def test_translate_transcript_uses_model_chunk_size(mocker: MockerFixture) -> No
     assert mock_client.chat.completions.create.call_count == 2
 
 
-def test_translate_transcript_explicit_chunk_size_overrides_model_default(
+def test_translate_explicit_chunk_size_overrides_model_default(
     mocker: MockerFixture,
 ) -> None:
     """Tests that an explicit chunk_size overrides the per-model default."""
@@ -848,7 +840,7 @@ def test_translate_transcript_explicit_chunk_size_overrides_model_default(
     )
     mock_client.chat.completions.create.return_value = mock_response
 
-    translate_transcript(
+    translate(
         {"segments": segments, "language": "ja"},
         "ko",
         api_key=None,
@@ -864,7 +856,7 @@ def test_translate_transcript_explicit_chunk_size_overrides_model_default(
 # --- Context entries tests ---
 
 
-def test_translate_transcript_uses_model_context_entries(mocker: MockerFixture) -> None:
+def test_translate_uses_model_context_entries(mocker: MockerFixture) -> None:
     """Tests that a model uses its configured context window."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(ollama, "create_client", return_value=mock_client)
@@ -883,7 +875,7 @@ def test_translate_transcript_uses_model_context_entries(mocker: MockerFixture) 
 
     mock_build = mocker.patch("koffee.translator._build_prompt", return_value="prompt")
 
-    translate_transcript(
+    translate(
         {"segments": segments, "language": "ja"},
         "ko",
         api_key=None,
@@ -897,7 +889,7 @@ def test_translate_transcript_uses_model_context_entries(mocker: MockerFixture) 
     mock_sleep.assert_not_called()
 
 
-def test_translate_transcript_explicit_context_entries_overrides_model_default(
+def test_translate_explicit_context_entries_overrides_model_default(
     mocker: MockerFixture,
 ) -> None:
     """Tests that an explicit context_entries overrides the per-model default."""
@@ -915,7 +907,7 @@ def test_translate_transcript_explicit_context_entries_overrides_model_default(
         "1\n00:00:00,000 --> 00:00:01,000\nHello."
     )
 
-    translate_transcript(
+    translate(
         SAMPLE_TRANSCRIPT,
         "en",
         api_key=None,
@@ -928,7 +920,7 @@ def test_translate_transcript_explicit_context_entries_overrides_model_default(
         assert len(kwargs["context_entries"]) <= 2
 
 
-def test_translate_transcript_uses_default_context_entries_for_unknown_model(
+def test_translate_uses_default_context_entries_for_unknown_model(
     mocker: MockerFixture,
 ) -> None:
     """Tests that CONTEXT_ENTRIES is used for models not in CONTEXT_ENTRIES_BY_MODEL."""
@@ -943,7 +935,7 @@ def test_translate_transcript_uses_default_context_entries_for_unknown_model(
 
     mock_build = mocker.patch("koffee.translator._build_prompt", return_value="prompt")
 
-    translate_transcript(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
 
     _, kwargs = mock_build.call_args
     assert len(kwargs["context_entries"]) <= CONTEXT_ENTRIES

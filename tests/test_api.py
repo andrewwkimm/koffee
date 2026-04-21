@@ -17,7 +17,7 @@ from koffee.translate import (
     _get_segments,
     _handle_subtitle_output,
     _route_output,
-    translate,
+    run,
 )
 
 
@@ -34,7 +34,7 @@ def test_api() -> None:
     output_directory_path = Path("scratch")
     output_file_name = "python_output_video_file"
 
-    output_file = koffee.translate(
+    output_file = koffee.run(
         video_file_path=video_file_path,
         output_dir=output_directory_path,
         output_name=output_file_name,
@@ -50,7 +50,7 @@ def test_invalid_video_file() -> None:
     """Tests that the appropriate error is raised when an invalid file is given."""
     error_message = "Input file is not valid or does not exist."
     with pytest.raises(InvalidVideoFileError, match=error_message):
-        koffee.translate("invalid_file.mp4")
+        koffee.run("invalid_file.mp4")
 
 
 def test_get_output_path_no_output_name() -> None:
@@ -85,7 +85,7 @@ def test_get_output_path_with_output_dir() -> None:
 
 def test_get_segments_whisper_returns_raw(mocker, translate_module) -> None:
     """Tests that whisper backend returns raw segments without translation."""
-    mock_translate = mocker.patch.object(translate_module, "translate_transcript")
+    mock_translate = mocker.patch.object(translate_module, "translate")
     config = MagicMock(spec=KoffeeConfig)
     config.translator = "whisper"
     transcript = {"segments": [{"start": 0.0, "end": 1.0, "text": "hi"}]}
@@ -97,9 +97,9 @@ def test_get_segments_whisper_returns_raw(mocker, translate_module) -> None:
 
 
 def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> None:
-    """Tests that a non-whisper backend calls translate_transcript."""
+    """Tests that a non-whisper backend calls translate."""
     mock_translate = mocker.patch.object(
-        translate_module, "translate_transcript", return_value=["translated"]
+        translate_module, "translate", return_value=["translated"]
     )
     config = MagicMock(spec=KoffeeConfig)
     config.translator = "gemini"
@@ -158,7 +158,7 @@ def test_handle_subtitle_output_renames_subtitle(tmp_path) -> None:
 def test_validate_api_key_raises_without_key() -> None:
     """Tests that an LLM backend without API key raises ValueError."""
     with pytest.raises(ValueError, match="API key is required"):
-        koffee.translate(
+        koffee.run(
             "examples/videos/sample_korean_video.mp4",
             translator="gemini",
         )
@@ -216,7 +216,7 @@ def test_route_output_with_overlay(mocker, translate_module, tmp_path) -> None:
     mock_finalize.assert_called_once()
 
 
-def test_translate_subtitle_file_input(mocker, translate_module, tmp_path) -> None:
+def test_run_subtitle_file_input(mocker, translate_module, tmp_path) -> None:
     """Tests that a subtitle file input skips ASR and translates directly."""
     srt = tmp_path / "test.srt"
     srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello.\n")
@@ -228,7 +228,7 @@ def test_translate_subtitle_file_input(mocker, translate_module, tmp_path) -> No
     )
     mock_translate = mocker.patch.object(
         translate_module,
-        "translate_transcript",
+        "translate",
         return_value=[{"start": 0.0, "end": 1.0, "text": "Translated."}],
     )
     mock_generate = mocker.patch.object(
@@ -239,7 +239,7 @@ def test_translate_subtitle_file_input(mocker, translate_module, tmp_path) -> No
     mocker.patch("pathlib.Path.replace", return_value=tmp_path / "test.vtt")
     mocker.patch.object(translate_module, "_check_output_collision")
 
-    translate(
+    run(
         str(srt),
         config=KoffeeConfig(
             output_dir=tmp_path,
