@@ -7,9 +7,9 @@ from pytest_mock import MockerFixture
 from koffee.llm import chatgpt, claude, gemini, ollama
 from koffee.translator import (
     CHUNK_SIZE,
+    CHUNK_SIZE_BY_MODEL,
     CONTEXT_ENTRIES,
-    MODEL_CHUNK_SIZE,
-    MODEL_CONTEXT_ENTRIES,
+    CONTEXT_ENTRIES_BY_MODEL,
     SYSTEM_PROMPT,
     _build_prompt,
     _call_with_retries,
@@ -801,13 +801,13 @@ def test_chunk_segments_explicit_chunk_size() -> None:
 
 
 def test_translate_transcript_uses_model_chunk_size(mocker: MockerFixture) -> None:
-    """Tests that a model in MODEL_CHUNK_SIZE uses its configured chunk size."""
+    """Tests that a model in CHUNK_SIZE_BY_MODEL uses its configured chunk size."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(ollama, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
 
     model = "qwen3:14b"
-    expected_chunk_size = MODEL_CHUNK_SIZE[model]
+    expected_chunk_size = CHUNK_SIZE_BY_MODEL[model]
     many_segments = [
         {"start": float(i), "end": float(i + 1), "text": "x"}
         for i in range(expected_chunk_size + 1)
@@ -871,7 +871,7 @@ def test_translate_transcript_uses_model_context_entries(mocker: MockerFixture) 
     mock_sleep = mocker.patch("koffee.translator.time.sleep")
 
     model = "qwen3:14b"
-    expected_context = MODEL_CONTEXT_ENTRIES[model]
+    expected_context = CONTEXT_ENTRIES_BY_MODEL[model]
 
     segments = [{"start": float(i), "end": float(i + 1), "text": "x"} for i in range(3)]
     mock_response = mocker.MagicMock()
@@ -931,7 +931,7 @@ def test_translate_transcript_explicit_context_entries_overrides_model_default(
 def test_translate_transcript_uses_default_context_entries_for_unknown_model(
     mocker: MockerFixture,
 ) -> None:
-    """Tests that CONTEXT_ENTRIES is used for models not in MODEL_CONTEXT_ENTRIES."""
+    """Tests that CONTEXT_ENTRIES is used for models not in CONTEXT_ENTRIES_BY_MODEL."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(gemini, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
