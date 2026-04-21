@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from pytest_mock import MockerFixture
 
-from koffee.asr import transcribe_text
+from koffee.asr import transcribe
 
 
 @dataclass
@@ -16,8 +16,8 @@ class MockSegment:
     text: str
 
 
-def test_transcribe_text(mocker: MockerFixture) -> None:
-    """Tests text is transcribed properly for a given video file."""
+def test_transcribe(mocker: MockerFixture) -> None:
+    """Tests a given video file is transcribed properly."""
     mock_segment = MockSegment(start=0.0, end=7.0, text="Mock transcription text.")
     mock_segment.text = "Mock transcription text."
 
@@ -29,9 +29,7 @@ def test_transcribe_text(mocker: MockerFixture) -> None:
 
     mocker.patch("koffee.asr.WhisperModel", return_value=mock_model)
 
-    result = transcribe_text(
-        "mock_video_file.mp4", "int8", "auto", "large-v3", "whisper"
-    )
+    result = transcribe("mock_video_file.mp4", "int8", "auto", "large-v3", "whisper")
 
     mock_model.transcribe.assert_called_once_with(
         "mock_video_file.mp4",
@@ -44,7 +42,7 @@ def test_transcribe_text(mocker: MockerFixture) -> None:
     assert result["segments"][0]["text"] == "Mock transcription text."
 
 
-def test_transcribe_text_reports_progress(mocker: MockerFixture) -> None:
+def test_transcribe_reports_progress(mocker: MockerFixture) -> None:
     """Tests that progress callback is called during transcription."""
     mock_segment = MockSegment(start=0.0, end=5.0, text="Hello.")
 
@@ -58,7 +56,7 @@ def test_transcribe_text_reports_progress(mocker: MockerFixture) -> None:
     mocker.patch("koffee.asr.get_video_duration", return_value=10.0)
 
     progress_calls = []
-    transcribe_text(
+    transcribe(
         "mock_video_file.mp4",
         "int8",
         "auto",

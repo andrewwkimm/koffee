@@ -508,7 +508,7 @@ def test_transcribe_command(mocker: MockerFixture, tmp_path) -> None:
     subtitle_file.touch()
 
     mocker.patch(
-        "koffee.cli.transcribe_text",
+        "koffee.cli.asr.transcribe",
         return_value={
             "segments": [{"start": 0.0, "end": 1.0, "text": "Hello."}],
             "language": "en",
@@ -533,7 +533,7 @@ def test_transcribe_command_collision(mocker: MockerFixture, tmp_path) -> None:
     subtitle_file.touch()
 
     mocker.patch(
-        "koffee.cli.transcribe_text",
+        "koffee.cli.asr.transcribe",
         return_value={
             "segments": [{"start": 0.0, "end": 1.0, "text": "Hello."}],
             "language": "en",

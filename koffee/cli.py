@@ -18,7 +18,7 @@ from rich.progress import (
 )
 from rich.table import Table
 
-from koffee.asr import transcribe_text
+from koffee import asr
 from koffee.data.config import (
     CONFIG_SEARCH_PATHS,
     LANGUAGE_CODES,
@@ -542,7 +542,7 @@ def transcribe(
     with _create_progress_bar() as progress:
         asr_task = progress.add_task("Transcribing", total=100)
 
-        transcript = transcribe_text(
+        transcript = asr.transcribe(
             str(file_path),
             compute_type,
             device,

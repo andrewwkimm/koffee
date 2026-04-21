@@ -12,7 +12,7 @@ from koffee.utils import get_video_duration
 log = logging.getLogger(__name__)
 
 
-def transcribe_text(
+def transcribe(
     video_file: str,
     compute_type: str,
     device: str,
@@ -21,8 +21,8 @@ def transcribe_text(
     on_progress: Callable[[float], None] | None = None,
     vad_filter: bool = True,
 ) -> dict:
-    """Transcribes text from a video file."""
-    log.info("Transcribing text.")
+    """Transcribes a video or audio file."""
+    log.info("Transcribing file.")
 
     loaded_model = _load_model(compute_type, device, model)
     segments, info = _run_transcription(

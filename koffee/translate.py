@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from koffee.asr import transcribe_text
+from koffee.asr import transcribe
 from koffee.data.config import KoffeeConfig
 from koffee.exceptions import InvalidVideoFileError
 from koffee.overlay import overlay_subtitles
@@ -86,7 +86,7 @@ def _transcribe(
     on_progress: Callable[[float], None] | None,
 ) -> dict:
     """Transcribes audio from the file, returning the raw transcript."""
-    transcript = transcribe_text(
+    transcript = transcribe(
         str(video_file_path),
         config.compute_type,
         config.device,
