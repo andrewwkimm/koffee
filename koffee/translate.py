@@ -125,21 +125,21 @@ def _route_output(
     subtitle_file_path: Path,
     config: KoffeeConfig,
 ) -> Path:
-    """Routes to subtitle output or video overlay based on file type and config."""
+    """Routes to subtitle output or video embed based on file type and config."""
     is_audio = Path(video_file_path).suffix.lower() in AUDIO_EXTENSIONS
-    has_overlay = not is_audio and config.overlay != "none"
+    has_embed = not is_audio and config.embed != "none"
 
     output_path = _get_output_path(
-        video_file_path, config.output_dir, config.output_name, date_suffix=has_overlay
+        video_file_path, config.output_dir, config.output_name, date_suffix=has_embed
     )
 
-    if has_overlay:
+    if has_embed:
         _check_output_collision(output_path, config.overwrite)
         output_file_path = _finalize_video_output(
             subtitle_file_path,
             video_file_path,
             output_path,
-            config.overlay,
+            config.embed,
             config.target_language,
         )
     else:
@@ -252,7 +252,7 @@ def _finalize_video_output(
     subtitle_file_path: Path,
     video_file_path: Path,
     output_path: Path,
-    overlay_mode: str = "soft",
+    embed_mode: str = "soft",
     language: str = "en",
 ) -> Path:
     """Embeds subtitles into the video and deletes the subtitle file after."""
@@ -260,7 +260,7 @@ def _finalize_video_output(
         subtitle_file_path,
         video_file_path,
         output_path,
-        mode=overlay_mode,
+        mode=embed_mode,
         language=language,
     )
     subtitle_file_path.unlink()

@@ -58,8 +58,8 @@ def test_script_run() -> None:
     assert result.returncode == 0
 
 
-def test_overlay_soft(mocker: MockerFixture) -> None:
-    """Tests that overlay flag is passed through to config."""
+def test_embed_soft(mocker: MockerFixture) -> None:
+    """Tests that embed flag is passed through to config."""
     mock_translate = mocker.patch("koffee.cli.run")
 
     cli(
@@ -67,17 +67,17 @@ def test_overlay_soft(mocker: MockerFixture) -> None:
         compute_type="int8",
         output_dir=output_directory_path,
         output_name=output_file_name,
-        overlay="soft",
+        embed="soft",
     )
 
     mock_translate.assert_called_once()
     config = mock_translate.call_args.kwargs["config"]
 
-    assert config.overlay == "soft"
+    assert config.embed == "soft"
 
 
-def test_overlay_defaults_to_none(mocker: MockerFixture) -> None:
-    """Tests that overlay defaults to none."""
+def test_embed_defaults_to_none(mocker: MockerFixture) -> None:
+    """Tests that embed defaults to none."""
     mock_translate = mocker.patch("koffee.cli.run")
 
     cli(
@@ -90,7 +90,7 @@ def test_overlay_defaults_to_none(mocker: MockerFixture) -> None:
     mock_translate.assert_called_once()
     config = mock_translate.call_args.kwargs["config"]
 
-    assert config.overlay == "none"
+    assert config.embed == "none"
 
 
 def test_verbose(mocker: MockerFixture) -> None:
@@ -170,8 +170,8 @@ def test_dry_run_subtitle_file(mocker: MockerFixture, tmp_path) -> None:
     mock_translate.assert_not_called()
 
 
-def test_dry_run_with_overlay(mocker: MockerFixture) -> None:
-    """Tests that dry-run shows overlay info when flag is set."""
+def test_dry_run_with_embed(mocker: MockerFixture) -> None:
+    """Tests that dry-run shows embed info when flag is set."""
     mocker.patch("koffee.cli.run")
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
 
@@ -179,7 +179,7 @@ def test_dry_run_with_overlay(mocker: MockerFixture) -> None:
         korean_video_file_path,
         output_dir=output_directory_path,
         dry_run=True,
-        overlay="soft",
+        embed="soft",
     )
 
 

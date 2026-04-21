@@ -130,7 +130,7 @@ def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> N
 def test_finalize_video_output_deletes_subtitle(
     mocker, tmp_path, translate_module
 ) -> None:
-    """Tests that the subtitle file is always deleted after overlay."""
+    """Tests that the subtitle file is always deleted after embed."""
     mocker.patch.object(
         translate_module, "embed_subtitles", return_value=tmp_path / "out.mp4"
     )
@@ -197,8 +197,8 @@ def test_check_output_collision_allows_overwrite(tmp_path) -> None:
     _check_output_collision(existing, overwrite=True)
 
 
-def test_route_output_with_overlay(mocker, translate_module, tmp_path) -> None:
-    """Tests that overlay mode routes to video output."""
+def test_route_output_with_embed(mocker, translate_module, tmp_path) -> None:
+    """Tests that embed mode routes to video output."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
     mock_finalize = mocker.patch.object(
@@ -210,7 +210,7 @@ def test_route_output_with_overlay(mocker, translate_module, tmp_path) -> None:
         translate_module, "_get_output_path", return_value=tmp_path / "out.mp4"
     )
 
-    config = KoffeeConfig(overlay="soft", overwrite=True)
+    config = KoffeeConfig(embed="soft", overwrite=True)
     _route_output(Path("video.mp4"), subtitle, config)
 
     mock_finalize.assert_called_once()

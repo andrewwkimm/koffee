@@ -88,7 +88,7 @@ Refer below for a list of all arguments, commands, parameters, and options.
     --source-language       -s  Source language of the subtitle file (default: auto)
     --target-language       -t  Language to which the file should be translated
     --subtitle-format       -f  Format to use for the subtitles
-    --overlay                   Subtitle overlay mode: none, soft, or hard
+    --embed                     Subtitle embed mode: none, soft, or hard
     --translator                The backend service to use for the translation (whisper, gemini, chatgpt, claude, ollama)
     --llm-model                 The LLM model to use for translation
     --chunk-size                Number of subtitle entries per LLM request (auto-selected per model if unset)
