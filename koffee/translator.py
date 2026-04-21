@@ -63,7 +63,7 @@ DEFAULT_MODEL = {
 }
 
 
-def translate_transcript(
+def translate(
     transcript: dict,
     target_language: str,
     api_key: str | None,
