@@ -13,7 +13,7 @@ CHUNK_SIZE = 200
 CONTEXT_ENTRIES = 20
 SLEEP_BETWEEN_REQUESTS = 4
 
-MODEL_CHUNK_SIZE: dict[str, int] = {
+CHUNK_SIZE_BY_MODEL: dict[str, int] = {
     "qwen3:8b": 40,
     "qwen3:14b": 80,
     "qwen3:32b": 150,
@@ -22,7 +22,7 @@ MODEL_CHUNK_SIZE: dict[str, int] = {
     "mistral": 80,
 }
 
-MODEL_CONTEXT_ENTRIES: dict[str, int] = {
+CONTEXT_ENTRIES_BY_MODEL: dict[str, int] = {
     "qwen3:8b": 5,
     "qwen3:14b": 8,
     "qwen3:32b": 12,
@@ -105,11 +105,11 @@ def translate_transcript(
 
     system_prompt = prompt if prompt else SYSTEM_PROMPT
     model = llm_model or DEFAULT_MODEL.get(translator, "")
-    resolved_chunk_size = chunk_size or MODEL_CHUNK_SIZE.get(model, CHUNK_SIZE)
+    resolved_chunk_size = chunk_size or CHUNK_SIZE_BY_MODEL.get(model, CHUNK_SIZE)
     resolved_context_entries = (
         context_entries
         if context_entries is not None
-        else MODEL_CONTEXT_ENTRIES.get(model, CONTEXT_ENTRIES)
+        else CONTEXT_ENTRIES_BY_MODEL.get(model, CONTEXT_ENTRIES)
     )
     backend = _load_backend(translator)
     client = backend.create_client(api_key)
