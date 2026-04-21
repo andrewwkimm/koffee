@@ -63,33 +63,7 @@ DEFAULT_MODEL = {
 }
 
 
-def _load_backend(backend_name: str) -> ModuleType:
-    """Loads a translation backend module by name."""
-    import importlib  # noqa: PLC0415
-
-    module_path = LLM.get(backend_name)
-    if module_path is None:
-        available = ", ".join(sorted(LLM.keys()))
-        error_message = (
-            f"Unknown translation backend: {backend_name!r}. Available LLM: {available}"
-        )
-        raise ValueError(error_message)
-
-    return importlib.import_module(module_path)
-
-
-def _extract_text(response, backend_name: str) -> str:
-    """Extracts text content from a backend-specific response object."""
-    if backend_name == "gemini":
-        return response.text
-    if backend_name in ("chatgpt", "ollama"):
-        return response.choices[0].message.content
-    if backend_name == "claude":
-        return response.content[0].text
-    return str(response)
-
-
-def translate(
+def translate_transcript(
     transcript: dict,
     target_language: str,
     api_key: str | None,
@@ -125,6 +99,32 @@ def translate(
         context_entries=resolved_context_entries,
     )
     return translated_segments
+
+
+def _load_backend(backend_name: str) -> ModuleType:
+    """Loads a translation backend module by name."""
+    import importlib  # noqa: PLC0415
+
+    module_path = LLM.get(backend_name)
+    if module_path is None:
+        available = ", ".join(sorted(LLM.keys()))
+        error_message = (
+            f"Unknown translation backend: {backend_name!r}. Available LLM: {available}"
+        )
+        raise ValueError(error_message)
+
+    return importlib.import_module(module_path)
+
+
+def _extract_text(response, backend_name: str) -> str:
+    """Extracts text content from a backend-specific response object."""
+    if backend_name == "gemini":
+        return response.text
+    if backend_name in ("chatgpt", "ollama"):
+        return response.choices[0].message.content
+    if backend_name == "claude":
+        return response.content[0].text
+    return str(response)
 
 
 def _chunk_segments(
