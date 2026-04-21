@@ -58,7 +58,7 @@ LLM = {
 DEFAULT_MODEL = {
     "gemini": "gemini-2.5-flash",
     "chatgpt": "gpt-4o",
-    "claude": "claude-sonnet-4-20250514",
+    "claude": "claude-sonnet-4-6",
     "ollama": "qwen3:14b",
 }
 
