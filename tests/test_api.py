@@ -132,7 +132,7 @@ def test_finalize_video_output_deletes_subtitle(
 ) -> None:
     """Tests that the subtitle file is always deleted after overlay."""
     mocker.patch.object(
-        translate_module, "overlay_subtitles", return_value=tmp_path / "out.mp4"
+        translate_module, "embed_subtitles", return_value=tmp_path / "out.mp4"
     )
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()

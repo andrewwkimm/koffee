@@ -7,7 +7,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from koffee.exceptions import SubtitleOverlayError
-from koffee.overlay import _get_subtitle_codec, overlay_subtitles
+from koffee.overlay import _get_subtitle_codec, embed_subtitles
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def test_overlay(
     video_file_path: Path, subtitle_file_path: Path, output_file_path: Path
 ) -> None:
     """Tests that the subtitle has been overlayed onto the video."""
-    overlay_subtitles(subtitle_file_path, video_file_path, output_file_path)
+    embed_subtitles(subtitle_file_path, video_file_path, output_file_path)
 
     assert output_file_path.exists()
 
@@ -41,9 +41,7 @@ def test_hard_overlay(
     video_file_path: Path, subtitle_file_path: Path, output_file_path: Path
 ) -> None:
     """Tests that hard burn-in produces an output file."""
-    overlay_subtitles(
-        subtitle_file_path, video_file_path, output_file_path, mode="hard"
-    )
+    embed_subtitles(subtitle_file_path, video_file_path, output_file_path, mode="hard")
 
     assert output_file_path.exists()
 
@@ -70,7 +68,7 @@ def test_exception_handling(
     )
 
     with pytest.raises(SubtitleOverlayError) as exc_info:
-        overlay_subtitles(subtitle_file_path, video_file_path, output_file_path)
+        embed_subtitles(subtitle_file_path, video_file_path, output_file_path)
 
     assert isinstance(exc_info.value.__cause__, subprocess.CalledProcessError)
     assert "FFmpegError" in str(exc_info.value)
@@ -89,7 +87,7 @@ def test_missing_ffmpeg_raises(
     )
 
     with pytest.raises(FileNotFoundError):
-        overlay_subtitles(subtitle_file_path, video_file_path, output_file_path)
+        embed_subtitles(subtitle_file_path, video_file_path, output_file_path)
 
 
 def test_timeout_raises(
@@ -105,4 +103,4 @@ def test_timeout_raises(
     )
 
     with pytest.raises(subprocess.TimeoutExpired):
-        overlay_subtitles(subtitle_file_path, video_file_path, output_file_path)
+        embed_subtitles(subtitle_file_path, video_file_path, output_file_path)
