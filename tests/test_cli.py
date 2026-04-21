@@ -9,8 +9,8 @@ import pytest
 from pytest_mock import MockerFixture
 
 from koffee.cli import (
-    _check_embedded_subtitles,
     _find_config_path,
+    _handle_embedded_subtitles,
     _resolve_paths,
     _select_subtitle_track,
     cli,
@@ -183,7 +183,7 @@ def test_dry_run_with_embed(mocker: MockerFixture) -> None:
     )
 
 
-def test_check_embedded_subtitles_skips_subtitle_files(
+def test_handle_embedded_subtitles_skips_subtitle_files(
     tmp_path,
 ) -> None:
     """Tests that subtitle files skip the embedded subtitle check."""
@@ -191,24 +191,24 @@ def test_check_embedded_subtitles_skips_subtitle_files(
     srt.touch()
     config = KoffeeConfig()
 
-    result = _check_embedded_subtitles(srt, config)
+    result = _handle_embedded_subtitles(srt, config)
 
     assert result.use_embedded_subtitles is False
 
 
-def test_check_embedded_subtitles_no_tracks(
+def test_handle_embedded_subtitles_no_tracks(
     mocker: MockerFixture,
 ) -> None:
     """Tests that videos with no subtitle tracks return config unchanged."""
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
     config = KoffeeConfig()
 
-    result = _check_embedded_subtitles(korean_video_file_path, config)
+    result = _handle_embedded_subtitles(korean_video_file_path, config)
 
     assert result.use_embedded_subtitles is False
 
 
-def test_check_embedded_subtitles_user_accepts(
+def test_handle_embedded_subtitles_user_accepts(
     mocker: MockerFixture,
 ) -> None:
     """Tests that accepting embedded subtitles updates config."""
@@ -217,13 +217,13 @@ def test_check_embedded_subtitles_user_accepts(
     mocker.patch("builtins.input", return_value="y")
     config = KoffeeConfig()
 
-    result = _check_embedded_subtitles(korean_video_file_path, config)
+    result = _handle_embedded_subtitles(korean_video_file_path, config)
 
     assert result.use_embedded_subtitles is True
     assert result.source_language == "ko"
 
 
-def test_check_embedded_subtitles_user_declines(
+def test_handle_embedded_subtitles_user_declines(
     mocker: MockerFixture,
 ) -> None:
     """Tests that declining embedded subtitles keeps config unchanged."""
@@ -234,7 +234,7 @@ def test_check_embedded_subtitles_user_declines(
     mocker.patch("builtins.input", return_value="n")
     config = KoffeeConfig()
 
-    result = _check_embedded_subtitles(korean_video_file_path, config)
+    result = _handle_embedded_subtitles(korean_video_file_path, config)
 
     assert result.use_embedded_subtitles is False
 

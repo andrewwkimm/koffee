@@ -195,7 +195,7 @@ def cli(
     resolved_paths = _resolve_paths(file_path)
 
     for video in resolved_paths:
-        config = _check_embedded_subtitles(video, config)
+        config = _handle_embedded_subtitles(video, config)
 
     if config.dry_run:
         _print_dry_run(resolved_paths, config)
@@ -248,7 +248,7 @@ def _print_dry_run(resolved_paths: list[Path], config: KoffeeConfig) -> None:
         log.info(f"[dry-run] Subtitles will be embedded into video ({config.embed})")
 
 
-def _check_embedded_subtitles(video: Path, config: KoffeeConfig) -> KoffeeConfig:
+def _handle_embedded_subtitles(video: Path, config: KoffeeConfig) -> KoffeeConfig:
     """Checks for embedded subtitles and prompts user to use them."""
     if video.suffix.lower() in SUBTITLE_EXTENSIONS:
         return config
