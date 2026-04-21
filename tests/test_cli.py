@@ -31,7 +31,7 @@ output_file_name = "cli_output_video_file"
 
 def test_cli(mocker: MockerFixture) -> None:
     """Tests that CLI processes a valid video file."""
-    mock_translate = mocker.patch("koffee.cli.translate")
+    mock_translate = mocker.patch("koffee.cli.run")
 
     cli(
         korean_video_file_path,
@@ -60,7 +60,7 @@ def test_script_run() -> None:
 
 def test_overlay_soft(mocker: MockerFixture) -> None:
     """Tests that overlay flag is passed through to config."""
-    mock_translate = mocker.patch("koffee.cli.translate")
+    mock_translate = mocker.patch("koffee.cli.run")
 
     cli(
         korean_video_file_path,
@@ -78,7 +78,7 @@ def test_overlay_soft(mocker: MockerFixture) -> None:
 
 def test_overlay_defaults_to_none(mocker: MockerFixture) -> None:
     """Tests that overlay defaults to none."""
-    mock_translate = mocker.patch("koffee.cli.translate")
+    mock_translate = mocker.patch("koffee.cli.run")
 
     cli(
         korean_video_file_path,
@@ -95,7 +95,7 @@ def test_overlay_defaults_to_none(mocker: MockerFixture) -> None:
 
 def test_verbose(mocker: MockerFixture) -> None:
     """Tests if verbose flag sets log level to DEBUG."""
-    mocker.patch("koffee.cli.translate")
+    mocker.patch("koffee.cli.run")
     mock_logger = mocker.patch("logging.getLogger")
     logger_instance = mock_logger.return_value
 
@@ -146,7 +146,7 @@ def test_resolve_paths_glob_no_match(tmp_path, monkeypatch) -> None:
 
 def test_dry_run(mocker: MockerFixture) -> None:
     """Tests that dry-run previews actions without translating."""
-    mock_translate = mocker.patch("koffee.cli.translate")
+    mock_translate = mocker.patch("koffee.cli.run")
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
 
     cli(
@@ -160,7 +160,7 @@ def test_dry_run(mocker: MockerFixture) -> None:
 
 def test_dry_run_subtitle_file(mocker: MockerFixture, tmp_path) -> None:
     """Tests that dry-run shows subtitle translation mode for .srt files."""
-    mock_translate = mocker.patch("koffee.cli.translate")
+    mock_translate = mocker.patch("koffee.cli.run")
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
     srt = tmp_path / "test.srt"
     srt.touch()
@@ -172,7 +172,7 @@ def test_dry_run_subtitle_file(mocker: MockerFixture, tmp_path) -> None:
 
 def test_dry_run_with_overlay(mocker: MockerFixture) -> None:
     """Tests that dry-run shows overlay info when flag is set."""
-    mocker.patch("koffee.cli.translate")
+    mocker.patch("koffee.cli.run")
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
 
     cli(
@@ -241,7 +241,7 @@ def test_check_embedded_subtitles_user_declines(
 
 def test_translate_with_progress_subtitle_file(mocker: MockerFixture, tmp_path) -> None:
     """Tests that subtitle files skip the ASR progress bar."""
-    mock_translate = mocker.patch("koffee.cli.translate")
+    mock_translate = mocker.patch("koffee.cli.run")
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
     srt = tmp_path / "test.srt"
     srt.touch()
@@ -256,7 +256,7 @@ def test_translate_with_progress_subtitle_file(mocker: MockerFixture, tmp_path) 
 
 def test_batch_progress_logging(mocker: MockerFixture) -> None:
     """Tests that batch processing logs progress for multiple files."""
-    mock_translate = mocker.patch("koffee.cli.translate")
+    mock_translate = mocker.patch("koffee.cli.run")
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
     mock_log = mocker.patch("koffee.cli.log")
 
@@ -274,7 +274,7 @@ def test_batch_progress_logging(mocker: MockerFixture) -> None:
 
 def test_batch_summary_on_success(mocker: MockerFixture) -> None:
     """Tests that batch processing logs a summary when all files succeed."""
-    mocker.patch("koffee.cli.translate")
+    mocker.patch("koffee.cli.run")
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
     mock_log = mocker.patch("koffee.cli.log")
 
@@ -290,7 +290,7 @@ def test_batch_summary_on_success(mocker: MockerFixture) -> None:
 
 def test_batch_summary_on_partial_failure(mocker: MockerFixture) -> None:
     """Tests that batch processing logs failed files in the summary."""
-    mocker.patch("koffee.cli.translate", side_effect=[None, ValueError("boom")])
+    mocker.patch("koffee.cli.run", side_effect=[None, ValueError("boom")])
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
     mock_log = mocker.patch("koffee.cli.log")
 
@@ -309,7 +309,7 @@ def test_batch_summary_on_partial_failure(mocker: MockerFixture) -> None:
 
 def test_prompt_flag(mocker: MockerFixture) -> None:
     """Tests that --prompt is passed through to config."""
-    mock_translate = mocker.patch("koffee.cli.translate")
+    mock_translate = mocker.patch("koffee.cli.run")
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
 
     cli(
@@ -328,7 +328,7 @@ def test_config_flag_loads_file(mocker: MockerFixture, tmp_path) -> None:
     config_file = tmp_path / "custom.toml"
     config_file.write_text('target_language = "fr"\n')
 
-    mock_translate = mocker.patch("koffee.cli.translate")
+    mock_translate = mocker.patch("koffee.cli.run")
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
 
     cli(

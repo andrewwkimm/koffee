@@ -89,7 +89,7 @@ def _extract_text(response, backend_name: str) -> str:
     return str(response)
 
 
-def translate_transcript(
+def translate(
     transcript: dict,
     target_language: str,
     api_key: str | None,

@@ -8,7 +8,7 @@ from behave import given, then, when
 from behave.runner import Context
 
 from koffee.exceptions import InvalidVideoFileError
-from koffee.translate import translate
+from koffee.translate import run
 
 SUBTITLE_EXTENSIONS = {".srt", ".vtt", ".ass"}
 
@@ -37,7 +37,7 @@ def step_impl(context: Context):
     output_name = getattr(context, "output_name", None)
 
     try:
-        context.output_file_path = translate(
+        context.output_file_path = run(
             context.video_file_path,
             output_dir=output_dir,
             output_name=output_name,

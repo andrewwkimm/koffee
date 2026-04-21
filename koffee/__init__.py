@@ -2,8 +2,8 @@
 
 from importlib.metadata import version
 
-from .translate import translate
+from .translate import run
 
-__all__ = ["translate"]
+__all__ = ["run"]
 
 __version__ = version("koffee")
