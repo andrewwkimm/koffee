@@ -441,14 +441,14 @@ def test_find_config_path_returns_none(monkeypatch) -> None:
 
 
 def test_overlay_command(mocker: MockerFixture, tmp_path) -> None:
-    """Tests that overlay command calls overlay_subtitles."""
+    """Tests that overlay command calls embed_subtitles."""
     video = tmp_path / "video.mp4"
     video.touch()
     sub = tmp_path / "sub.srt"
     sub.touch()
     output = tmp_path / "out.mp4"
 
-    mock_overlay = mocker.patch("koffee.cli.overlay_subtitles", return_value=output)
+    mock_overlay = mocker.patch("koffee.cli.embed_subtitles", return_value=output)
 
     overlay(video, sub, output=output)
 
@@ -463,7 +463,7 @@ def test_overlay_command_hard_mode(mocker: MockerFixture, tmp_path) -> None:
     sub.touch()
     output = tmp_path / "out.mp4"
 
-    mock_overlay = mocker.patch("koffee.cli.overlay_subtitles", return_value=output)
+    mock_overlay = mocker.patch("koffee.cli.embed_subtitles", return_value=output)
 
     overlay(video, sub, output=output, mode="hard")
 
@@ -479,7 +479,7 @@ def test_overlay_command_default_output(mocker: MockerFixture, tmp_path) -> None
     expected_output = tmp_path / "video_overlay.mp4"
 
     mock_overlay = mocker.patch(
-        "koffee.cli.overlay_subtitles", return_value=expected_output
+        "koffee.cli.embed_subtitles", return_value=expected_output
     )
 
     overlay(video, sub)

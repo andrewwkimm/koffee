@@ -19,14 +19,14 @@ def _get_subtitle_codec(output_file_path: Path | str) -> str:
     return "mov_text"
 
 
-def overlay_subtitles(
+def embed_subtitles(
     subtitle_file_path: Path | str,
     video_file_path: Path | str,
     output_file_path: Path | str,
     mode: str = "soft",
     language: str = "eng",
 ) -> Path | str:
-    """Overlay subtitles to a video file.
+    """Embeds subtitles into a video file.
 
     Args:
         subtitle_file_path: Path to the subtitle file.

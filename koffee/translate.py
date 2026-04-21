@@ -9,7 +9,7 @@ from typing import Any
 from koffee.asr import transcribe
 from koffee.data.config import KoffeeConfig
 from koffee.exceptions import InvalidVideoFileError
-from koffee.overlay import overlay_subtitles
+from koffee.overlay import embed_subtitles
 from koffee.subtitle import generate_subtitles
 from koffee.translator import translate
 from koffee.utils import extract_subtitle_track, parse_subtitle_file
@@ -256,7 +256,7 @@ def _finalize_video_output(
     language: str = "en",
 ) -> Path:
     """Embeds subtitles into the video and deletes the subtitle file after."""
-    output_video = overlay_subtitles(
+    output_video = embed_subtitles(
         subtitle_file_path,
         video_file_path,
         output_path,

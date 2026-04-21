@@ -27,7 +27,7 @@ from koffee.data.config import (
     load_config_file,
 )
 from koffee.exceptions import InvalidVideoFileError, SubtitleOverlayError
-from koffee.overlay import overlay_subtitles
+from koffee.overlay import embed_subtitles
 from koffee.subtitle import generate_subtitles
 from koffee.translate import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, run
 from koffee.utils import get_subtitle_tracks, parse_subtitle_file
@@ -490,7 +490,7 @@ def overlay(
         )
         raise FileExistsError(error_message)
 
-    result = overlay_subtitles(subtitle, video, output, mode=mode)
+    result = embed_subtitles(subtitle, video, output, mode=mode)
     log.info(f"Output saved to {result}")
 
 
