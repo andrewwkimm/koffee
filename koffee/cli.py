@@ -96,7 +96,7 @@ def cli(
     subtitle_format: Annotated[
         str, Parameter(name=("--subtitle-format", "-f"))
     ] = options.subtitle_format,
-    overlay: Annotated[str, Parameter(name=("--overlay",))] = options.overlay,
+    embed: Annotated[str, Parameter(name=("--embed",))] = options.embed,
     translator: Annotated[str, Parameter(name=("--translator",))] = options.translator,
     llm_model: Annotated[str, Parameter(name=("--llm-model",))] | None = None,
     chunk_size: Annotated[int, Parameter(name=("--chunk-size",))] | None = None,
@@ -137,8 +137,8 @@ def cli(
         Name of the output file
     subtitle_format: str
         Format to use for the subtitles
-    overlay: str
-        Subtitle overlay mode: none (subtitle file only), soft (muxed track),
+    embed: str
+        Subtitle embed mode: none (subtitle file only), soft (muxed track),
         or hard (burned into video frames). Only valid for video file inputs.
     source_language: str
         Source language of the subtitle file (default: auto)
@@ -178,7 +178,7 @@ def cli(
         "overwrite": overwrite,
         "output_dir": output_dir,
         "output_name": output_name,
-        "overlay": overlay,
+        "embed": embed,
         "source_language": source_language,
         "subtitle_format": subtitle_format,
         "target_language": target_language,
@@ -244,8 +244,8 @@ def _print_dry_run(resolved_paths: list[Path], config: KoffeeConfig) -> None:
 
     log.info(f"[dry-run] Target language: {config.target_language}")
     log.info(f"[dry-run] Output format: {config.subtitle_format}")
-    if config.overlay != "none":
-        log.info(f"[dry-run] Subtitles will be embedded into video ({config.overlay})")
+    if config.embed != "none":
+        log.info(f"[dry-run] Subtitles will be embedded into video ({config.embed})")
 
 
 def _check_embedded_subtitles(video: Path, config: KoffeeConfig) -> KoffeeConfig:
