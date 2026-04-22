@@ -37,7 +37,7 @@ def test_cli(mocker: MockerFixture) -> None:
         korean_video_file_path,
         compute_type="int8",
         output_dir=output_directory_path,
-        output_name=output_file_name,
+        output_stem=output_file_name,
     )
 
     mock_translate.assert_called_once()
@@ -45,7 +45,7 @@ def test_cli(mocker: MockerFixture) -> None:
 
     assert config.compute_type == "int8"
     assert config.output_dir == output_directory_path
-    assert config.output_name == output_file_name
+    assert config.output_stem == output_file_name
 
 
 def test_script_run() -> None:
@@ -66,7 +66,7 @@ def test_embed_soft(mocker: MockerFixture) -> None:
         korean_video_file_path,
         compute_type="int8",
         output_dir=output_directory_path,
-        output_name=output_file_name,
+        output_stem=output_file_name,
         embed="soft",
     )
 
@@ -84,7 +84,7 @@ def test_embed_defaults_to_none(mocker: MockerFixture) -> None:
         korean_video_file_path,
         compute_type="int8",
         output_dir=output_directory_path,
-        output_name=output_file_name,
+        output_stem=output_file_name,
     )
 
     mock_translate.assert_called_once()
@@ -103,7 +103,7 @@ def test_verbose(mocker: MockerFixture) -> None:
         korean_video_file_path,
         compute_type="int8",
         output_dir=output_directory_path,
-        output_name=output_file_name,
+        output_stem=output_file_name,
         verbose=True,
     )
 
@@ -520,7 +520,7 @@ def test_transcribe_command(mocker: MockerFixture, tmp_path) -> None:
     )
     mocker.patch("pathlib.Path.replace")
 
-    transcribe(audio, output_dir=tmp_path, output_name="output")
+    transcribe(audio, output_dir=tmp_path, output_stem="output")
 
 
 def test_transcribe_command_collision(mocker: MockerFixture, tmp_path) -> None:
@@ -565,7 +565,7 @@ def test_convert_command(mocker: MockerFixture, tmp_path) -> None:
     )
     mocker.patch("pathlib.Path.replace")
 
-    convert(srt, subtitle_format="vtt", output_dir=tmp_path, output_name="output")
+    convert(srt, subtitle_format="vtt", output_dir=tmp_path, output_stem="output")
 
     mock_parse.assert_called_once_with(srt)
 

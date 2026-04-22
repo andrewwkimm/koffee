@@ -130,7 +130,7 @@ def _route_output(
     has_embed = not is_audio and config.embed != "none"
 
     output_path = _get_output_path(
-        video_file_path, config.output_dir, config.output_name, date_suffix=has_embed
+        video_file_path, config.output_dir, config.output_stem, date_suffix=has_embed
     )
 
     if has_embed:
@@ -190,7 +190,7 @@ def _translate_subtitle_file(
         provider=config.provider,
     )
     translated_path = generate_subtitles(config.subtitle_format, translated_segments)
-    output_path = _get_output_path(file_path, config.output_dir, config.output_name)
+    output_path = _get_output_path(file_path, config.output_dir, config.output_stem)
     output_subtitle_path = output_path.with_suffix(f".{config.subtitle_format}")
     _check_output_collision(output_subtitle_path, config.overwrite)
     translated_path.replace(output_subtitle_path)
@@ -201,18 +201,18 @@ def _translate_subtitle_file(
 def _get_output_path(
     video_file_path: Path | str,
     output_dir: Path | None,
-    output_name: str | None,
+    output_stem: str | None,
     date_suffix: bool = False,
 ) -> Path:
     """Gets the output path for the translated output file."""
-    log.debug(f"output_name: {output_name!r}")
+    log.debug(f"output_stem: {output_stem!r}")
 
     file_path = Path(video_file_path)
     file_dir = output_dir if output_dir is not None else file_path.parent
     file_dir.mkdir(parents=True, exist_ok=True)
 
-    if output_name is not None:
-        file_name = output_name
+    if output_stem is not None:
+        file_name = output_stem
     elif date_suffix:
         file_name = f"{file_path.stem}_{datetime.now().strftime('%m-%d-%Y')}"
     else:

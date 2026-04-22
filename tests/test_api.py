@@ -37,7 +37,7 @@ def test_api() -> None:
     output_file = koffee.run(
         video_file_path=video_file_path,
         output_dir=output_directory_path,
-        output_name=output_file_name,
+        output_stem=output_file_name,
         compute_type="int8",
         overwrite=True,
     )
@@ -53,9 +53,9 @@ def test_invalid_video_file() -> None:
         koffee.run("invalid_file.mp4")
 
 
-def test_get_output_path_no_output_name() -> None:
-    """Tests that files use the input stem when no output name is provided."""
-    result = _get_output_path("video/track.mp3", output_dir=None, output_name=None)
+def test_get_output_path_no_output_stem() -> None:
+    """Tests that files use the input stem when no output stem is provided."""
+    result = _get_output_path("video/track.mp3", output_dir=None, output_stem=None)
     assert result.stem == "track"
     assert result.suffix == ".mp3"
 
@@ -63,22 +63,22 @@ def test_get_output_path_no_output_name() -> None:
 def test_get_output_path_date_suffix() -> None:
     """Tests that date_suffix adds a date stamp to the filename."""
     result = _get_output_path(
-        "video/track.mp4", output_dir=None, output_name=None, date_suffix=True
+        "video/track.mp4", output_dir=None, output_stem=None, date_suffix=True
     )
     assert result.stem.startswith("track_")
     assert result.suffix == ".mp4"
 
 
-def test_get_output_path_with_output_name() -> None:
-    """Tests that a provided output name is used as-is."""
-    result = _get_output_path("video/track.mp4", output_dir=None, output_name="custom")
+def test_get_output_path_with_output_stem() -> None:
+    """Tests that a provided output stem is used as-is."""
+    result = _get_output_path("video/track.mp4", output_dir=None, output_stem="custom")
     assert result.stem == "custom"
 
 
 def test_get_output_path_with_output_dir() -> None:
     """Tests that a provided output directory is used."""
     result = _get_output_path(
-        "video/track.mp4", output_dir=Path("/tmp"), output_name="custom"
+        "video/track.mp4", output_dir=Path("/tmp"), output_stem="custom"
     )
     assert result.parent == Path("/tmp")
 

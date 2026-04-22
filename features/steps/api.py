@@ -18,10 +18,10 @@ def step_given(context: Context, language: str) -> None:
     """Adds a path to a good video file to the context."""
     if language == "Korean":
         context.video_file_path = Path("examples/videos/sample_korean_video.mp4")
-        context.output_name = "sample_korean_video_test"
+        context.output_stem = "sample_korean_video_test"
     elif language == "Japanese":
         context.video_file_path = Path("examples/videos/sample_japanese_video.mp4")
-        context.output_name = "sample_japanese_video_test"
+        context.output_stem = "sample_japanese_video_test"
 
 
 @given("the user sets the output directory to {path}")
@@ -34,13 +34,13 @@ def step_impl(context: Context, path) -> None:
 def step_impl(context: Context):
     """Invoke the koffee API."""
     output_dir = getattr(context, "output_dir", None)
-    output_name = getattr(context, "output_name", None)
+    output_stem = getattr(context, "output_stem", None)
 
     try:
         context.output_file_path = run(
             context.video_file_path,
             output_dir=output_dir,
-            output_name=output_name,
+            output_stem=output_stem,
             overwrite=True,
         )
     except InvalidVideoFileError as error:

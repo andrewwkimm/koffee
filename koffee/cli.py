@@ -86,7 +86,7 @@ def cli(
         str, Parameter(name=("--whisper-model", "-m"))
     ] = defaults.whisper_model,
     output_dir: Annotated[Path, Parameter(name=("--output-dir", "-o"))] | None = None,
-    output_name: Annotated[str, Parameter(name=("--output-name", "-n"))] | None = None,
+    output_stem: Annotated[str, Parameter(name=("--output-stem", "-n"))] | None = None,
     source_language: Annotated[
         str, Parameter(name=("--source-language", "-s"))
     ] = defaults.source_language,
@@ -132,8 +132,8 @@ def cli(
         The Whisper model instance to use
     output_dir: Path
         Directory for the output file
-    output_name: str
-        Name of the output file
+    output_stem: str
+        Stem (filename without extension) for the output file
     subtitle_format: str
         Format to use for the subtitles
     embed: str
@@ -176,7 +176,7 @@ def cli(
         "context_size": context_size,
         "overwrite": overwrite,
         "output_dir": output_dir,
-        "output_name": output_name,
+        "output_stem": output_stem,
         "embed": embed,
         "source_language": source_language,
         "subtitle_format": subtitle_format,
@@ -518,7 +518,7 @@ def transcribe(
         str, Parameter(name=("--whisper-model", "-m"))
     ] = defaults.whisper_model,
     output_dir: Annotated[Path, Parameter(name=("--output-dir", "-o"))] | None = None,
-    output_name: Annotated[str, Parameter(name=("--output-name", "-n"))] | None = None,
+    output_stem: Annotated[str, Parameter(name=("--output-stem", "-n"))] | None = None,
     subtitle_format: Annotated[
         str, Parameter(name=("--subtitle-format", "-f"))
     ] = defaults.subtitle_format,
@@ -543,8 +543,8 @@ def transcribe(
         The Whisper model instance to use
     output_dir: Path
         Directory for the output file
-    output_name: str
-        Name of the output file
+    output_stem: str
+        Stem (filename without extension) for the output file
     subtitle_format: str
         Format to use for the subtitles
     no_vad_filter: bool
@@ -569,8 +569,8 @@ def transcribe(
     out_dir = output_dir if output_dir is not None else file_path.parent
     subtitle_file_path = generate_subtitles(subtitle_format, segments, out_dir)
 
-    if output_name is not None:
-        target_path = out_dir / f"{output_name}.{subtitle_format}"
+    if output_stem is not None:
+        target_path = out_dir / f"{output_stem}.{subtitle_format}"
     else:
         target_path = out_dir / f"{file_path.stem}.{subtitle_format}"
 
@@ -590,7 +590,7 @@ def convert(
     file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
     subtitle_format: Annotated[str, Parameter(name=("--format", "-f"))] = "vtt",
     output_dir: Annotated[Path, Parameter(name=("--output-dir", "-o"))] | None = None,
-    output_name: Annotated[str, Parameter(name=("--output-name", "-n"))] | None = None,
+    output_stem: Annotated[str, Parameter(name=("--output-stem", "-n"))] | None = None,
     overwrite: Annotated[
         bool, Parameter(name=("--overwrite",), group=options_group)
     ] = False,
@@ -605,8 +605,8 @@ def convert(
         Target subtitle format (srt, vtt, or ass)
     output_dir: Path
         Directory for the output file
-    output_name: str
-        Name of the output file
+    output_stem: str
+        Stem (filename without extension) for the output file
     overwrite: bool
         Overwrite existing output files instead of raising an error
     """
@@ -614,8 +614,8 @@ def convert(
     out_dir = output_dir if output_dir is not None else file_path.parent
     subtitle_file_path = generate_subtitles(subtitle_format, segments, out_dir)
 
-    if output_name is not None:
-        target_path = out_dir / f"{output_name}.{subtitle_format}"
+    if output_stem is not None:
+        target_path = out_dir / f"{output_stem}.{subtitle_format}"
     else:
         target_path = out_dir / f"{file_path.stem}.{subtitle_format}"
 

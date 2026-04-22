@@ -84,7 +84,7 @@ Refer below for a list of all arguments, commands, parameters, and options.
     --device                -d  Device to use for computation
     --whisper-model         -m  The Whisper model instance to use
     --output-dir            -o  Directory for the output file
-    --output-name           -n  Name of the output file
+    --output-stem           -n  Stem (filename without extension) for the output file
     --source-language       -s  Source language of the subtitle file (default: auto)
     --target-language       -t  Language to which the file should be translated
     --subtitle-format       -f  Format to use for the subtitles

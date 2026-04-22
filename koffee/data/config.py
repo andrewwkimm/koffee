@@ -134,7 +134,7 @@ class KoffeeConfig(BaseModel):
     device: str = "auto"
     whisper_model: str = "large-v3"
     output_dir: Path | None = None
-    output_name: str | None = None
+    output_stem: str | None = None
     embed: Literal["none", "soft", "hard"] = "none"
     source_language: str = "auto"
     subtitle_format: Literal["srt", "vtt", "ass"] = "vtt"
