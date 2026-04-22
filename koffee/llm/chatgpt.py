@@ -2,10 +2,18 @@
 
 from openai import APIConnectionError, APIStatusError, OpenAI, RateLimitError
 
+NAME = "chatgpt"
+DEFAULT_MODEL = "gpt-4o"
+
 
 def create_client(api_key: str | None):
     """Creates an OpenAI client."""
     return OpenAI(api_key=api_key)
+
+
+def extract_text(response) -> str:
+    """Extracts the generated text from a ChatGPT response."""
+    return response.choices[0].message.content
 
 
 def attempt_generate(client, prompt: str, model: str, system_prompt: str):
