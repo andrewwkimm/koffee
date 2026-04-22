@@ -26,6 +26,7 @@ from koffee.exceptions import (
     UnsupportedFileError,
 )
 from koffee.schemas.config import KoffeeConfig
+from koffee.schemas.types import Transcript
 
 
 @pytest.fixture
@@ -95,7 +96,10 @@ def test_get_segments_whisper_returns_raw(mocker, api_module) -> None:
     mock_translate = mocker.patch.object(api_module, "translate")
     config = MagicMock(spec=KoffeeConfig)
     config.provider = "whisper"
-    transcript = {"segments": [{"start": 0.0, "end": 1.0, "text": "hi"}]}
+    transcript: Transcript = {
+        "segments": [{"start": 0.0, "end": 1.0, "text": "hi"}],
+        "language": "en",
+    }
 
     result = _get_segments(transcript, config)
 
@@ -117,7 +121,7 @@ def test_get_segments_non_whisper_calls_translate(mocker, api_module) -> None:
     config.context_size = None
     config.sleep_requests = None
     config.prompt = None
-    transcript = {"segments": [], "language": "ko"}
+    transcript: Transcript = {"segments": [], "language": "ko"}
 
     result = _get_segments(transcript, config)
 

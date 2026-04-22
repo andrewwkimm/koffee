@@ -5,6 +5,7 @@ from google.genai.errors import APIError, ClientError
 from pytest_mock import MockerFixture
 
 from koffee.llm import chatgpt, claude, gemini, ollama
+from koffee.schemas.types import Segment, Transcript
 from koffee.translator import (
     CHUNK_SIZE,
     CHUNK_SIZE_BY_MODEL,
@@ -20,7 +21,7 @@ from koffee.translator import (
     translate,
 )
 
-SAMPLE_SEGMENTS = [
+SAMPLE_SEGMENTS: list[Segment] = [
     {"start": 0.0, "end": 6.36, "text": "안녕하세요."},
     {"start": 7.8, "end": 10.74, "text": "잘 지내셨어요?"},
 ]
@@ -30,7 +31,7 @@ SAMPLE_SRT_RESPONSE = (
     "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
 )
 
-SAMPLE_TRANSCRIPT = {
+SAMPLE_TRANSCRIPT: Transcript = {
     "segments": SAMPLE_SEGMENTS,
     "language": "ko",
 }
@@ -38,7 +39,9 @@ SAMPLE_TRANSCRIPT = {
 
 def test_build_prompt_with_context() -> None:
     """Tests that the prompt includes context section when they are provided."""
-    context = [{"start": 0.0, "end": 1.0, "text": "시대를 초월하는 마음."}]
+    context: list[Segment] = [
+        {"start": 0.0, "end": 1.0, "text": "시대를 초월하는 마음."}
+    ]
 
     result = _build_prompt(
         chunk=SAMPLE_SEGMENTS,
@@ -811,11 +814,11 @@ def test_ollama_translate_uses_default_model(mocker: MockerFixture) -> None:
 
 def test_chunk_segments_default_chunk_size() -> None:
     """Tests that _chunk_segments uses CHUNK_SIZE when no chunk_size is given."""
-    many_segments = [
+    many_segments: list[Segment] = [
         {"start": float(i), "end": float(i + 1), "text": "x"}
         for i in range(CHUNK_SIZE + 1)
     ]
-    transcript = {"segments": many_segments, "language": "ja"}
+    transcript: Transcript = {"segments": many_segments, "language": "ja"}
 
     chunks = _chunk_segments(transcript, "ko")
 
@@ -826,10 +829,10 @@ def test_chunk_segments_default_chunk_size() -> None:
 
 def test_chunk_segments_explicit_chunk_size() -> None:
     """Tests that _chunk_segments respects an explicit chunk_size argument."""
-    segments = [
+    segments: list[Segment] = [
         {"start": float(i), "end": float(i + 1), "text": "x"} for i in range(10)
     ]
-    transcript = {"segments": segments, "language": "ja"}
+    transcript: Transcript = {"segments": segments, "language": "ja"}
 
     chunks = _chunk_segments(transcript, "ko", chunk_size=3)
 
@@ -846,7 +849,7 @@ def test_translate_uses_model_chunk_size(mocker: MockerFixture) -> None:
 
     model = "qwen3:14b"
     expected_chunk_size = CHUNK_SIZE_BY_MODEL[model]
-    many_segments = [
+    many_segments: list[Segment] = [
         {"start": float(i), "end": float(i + 1), "text": "x"}
         for i in range(expected_chunk_size + 1)
     ]
@@ -860,7 +863,7 @@ def test_translate_uses_model_chunk_size(mocker: MockerFixture) -> None:
     mock_client.chat.completions.create.return_value = mock_response
 
     translate(
-        {"segments": many_segments, "language": "ja"},
+        Transcript(segments=many_segments, language="ja"),
         "ko",
         api_key=None,
         provider="ollama",
@@ -878,7 +881,9 @@ def test_translate_explicit_chunk_size_overrides_model_default(
     mocker.patch.object(ollama, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
 
-    segments = [{"start": float(i), "end": float(i + 1), "text": "x"} for i in range(5)]
+    segments: list[Segment] = [
+        {"start": float(i), "end": float(i + 1), "text": "x"} for i in range(5)
+    ]
     mock_response = mocker.MagicMock()
     mock_response.choices = [mocker.MagicMock()]
     mock_response.choices[0].message.content = "\n\n".join(
@@ -887,7 +892,7 @@ def test_translate_explicit_chunk_size_overrides_model_default(
     mock_client.chat.completions.create.return_value = mock_response
 
     translate(
-        {"segments": segments, "language": "ja"},
+        Transcript(segments=segments, language="ja"),
         "ko",
         api_key=None,
         provider="ollama",
@@ -911,7 +916,9 @@ def test_translate_uses_model_context_size(mocker: MockerFixture) -> None:
     model = "qwen3:14b"
     expected_context = CONTEXT_SIZE_BY_MODEL[model]
 
-    segments = [{"start": float(i), "end": float(i + 1), "text": "x"} for i in range(3)]
+    segments: list[Segment] = [
+        {"start": float(i), "end": float(i + 1), "text": "x"} for i in range(3)
+    ]
     mock_response = mocker.MagicMock()
     mock_response.choices = [mocker.MagicMock()]
     mock_response.choices[0].message.content = "\n\n".join(
@@ -922,7 +929,7 @@ def test_translate_uses_model_context_size(mocker: MockerFixture) -> None:
     mock_build = mocker.patch("koffee.translator._build_prompt", return_value="prompt")
 
     translate(
-        {"segments": segments, "language": "ja"},
+        Transcript(segments=segments, language="ja"),
         "ko",
         api_key=None,
         provider="ollama",

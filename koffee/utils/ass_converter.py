@@ -4,6 +4,7 @@ import logging
 import uuid
 from pathlib import Path
 
+from koffee.schemas.types import Segment
 from koffee.utils.timestamp_converter import convert_to_timestamp
 
 log = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ ASS_HEADER = (
 )
 
 
-def convert_segments_to_ass(segments: list, output_dir: Path) -> Path:
+def convert_segments_to_ass(segments: list[Segment], output_dir: Path) -> Path:
     """Converts segments to ASS format."""
     log.debug("Converting segments to ASS format.")
 

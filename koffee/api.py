@@ -16,6 +16,7 @@ from koffee.exceptions import (
     UnsupportedFileError,
 )
 from koffee.schemas.config import KoffeeConfig
+from koffee.schemas.types import Segment, Transcript
 from koffee.subtitle import generate_subtitles
 from koffee.translator import translate
 from koffee.utils import (
@@ -159,7 +160,7 @@ def _transcribe(
     video_file_path: Path | str,
     config: KoffeeConfig,
     on_progress: Callable[[float], None] | None,
-) -> dict:
+) -> Transcript:
     """Transcribes audio from the file, returning the raw transcript."""
     transcript = transcribe(
         str(video_file_path),
@@ -175,7 +176,7 @@ def _transcribe(
 
 
 def _translate(
-    transcript: dict,
+    transcript: Transcript,
     config: KoffeeConfig,
     on_progress: Callable[[float], None] | None,
 ) -> Path:
@@ -308,10 +309,10 @@ def _get_output_path(
 
 
 def _get_segments(
-    transcript: dict,
+    transcript: Transcript,
     config: KoffeeConfig,
     on_progress: Callable[[float], None] | None = None,
-) -> list:
+) -> list[Segment]:
     """Returns translated or raw segments based on the translation backend."""
     if config.provider == "whisper":
         segments = transcript["segments"]

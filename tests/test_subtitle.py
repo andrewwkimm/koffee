@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from koffee.exceptions import InvalidSubtitleFormatError
+from koffee.schemas.types import Segment
 from koffee.subtitle import generate_subtitles
 
 
@@ -24,7 +25,7 @@ def test_subtitle_generator(
     output_dir: Path,
 ) -> None:
     """Tests that the text is converted to the correct subtitle format."""
-    text = [
+    text: list[Segment] = [
         {
             "start": 0.0,
             "end": 6.28,
@@ -112,7 +113,7 @@ On the other side, a virgin approached and opened a window in front of the Shimm
 @pytest.mark.parametrize("subtitle_format", ["csv", "pdf", "txt"])
 def test_invalid_format(subtitle_format: str) -> None:
     """Tests that the appropriate error is raised when an invalid format is given."""
-    sample_text = [{"start": 10.5, "end": 15.0, "text": "Hello, world!"}]
+    sample_text: list[Segment] = [{"start": 10.5, "end": 15.0, "text": "Hello, world!"}]
 
     error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
     with pytest.raises(InvalidSubtitleFormatError, match=error_message):
