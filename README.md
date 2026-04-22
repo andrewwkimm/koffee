@@ -89,7 +89,7 @@ Refer below for a list of all arguments, commands, parameters, and options.
     --target-language       -t  Language to which the file should be translated
     --subtitle-format       -f  Format to use for the subtitles
     --embed                     Subtitle embed mode: none, soft, or hard
-    --translator                The backend service to use for the translation (whisper, gemini, chatgpt, claude, ollama)
+    --provider                  The backend service to use for the translation (whisper, gemini, chatgpt, claude, ollama)
     --llm-model                 The LLM model to use for translation
     --chunk-size                Number of subtitle entries per LLM request (auto-selected per model if unset)
     --context-size              Number of preceding entries passed as context per request (auto-selected per model if unset)
@@ -123,7 +123,7 @@ whisper-model = "large-v3"
 source-language = "ko"
 target-language = "en"
 subtitle-format = "srt"
-translator = "gemini"
+provider = "gemini"
 llm-model = "gemini-2.5-flash"
 chunk-size = 400
 context-size = 20

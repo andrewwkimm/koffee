@@ -126,7 +126,7 @@ def test_translate_single_chunk(mocker: MockerFixture) -> None:
         "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
     )
 
-    result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
+    result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
 
     assert len(result) == 2
     assert result[0]["text"] == "Hello."
@@ -145,7 +145,7 @@ def test_translate_sleeps_between_chunks(mocker: MockerFixture) -> None:
         "1\n00:00:00,000 --> 00:00:06,360\nHello."
     )
 
-    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
 
     # 2 segments with chunk size 1 = 2 chunks, sleep called once (not after last chunk)
     assert mock_sleep.call_count == 1
@@ -160,7 +160,7 @@ def test_translate_passes_api_key(mocker: MockerFixture) -> None:
     )
     mocker.patch("koffee.translator.time.sleep")
 
-    translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", provider="gemini")
 
     mock_create.assert_called_once_with("test-key")
 
@@ -254,7 +254,7 @@ def test_translate_reports_progress(mocker: MockerFixture) -> None:
         "en",
         api_key=None,
         on_progress=progress_calls.append,
-        translator="gemini",
+        provider="gemini",
     )
 
     assert progress_calls == [0.5, 1.0]
@@ -335,7 +335,7 @@ def test_translate_uses_custom_prompt(mocker: MockerFixture) -> None:
         "en",
         api_key=None,
         prompt=custom_prompt,
-        translator="gemini",
+        provider="gemini",
     )
 
     call_kwargs = mock_client.models.generate_content.call_args.kwargs
@@ -355,7 +355,7 @@ def test_translate_falls_back_to_default_prompt(
         "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
     )
 
-    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
 
     call_kwargs = mock_client.models.generate_content.call_args.kwargs
     assert call_kwargs["config"]["system_instruction"] == SYSTEM_PROMPT
@@ -414,7 +414,7 @@ def test_translate_uses_default_model(mocker: MockerFixture) -> None:
         "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
     )
 
-    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
 
     call_kwargs = mock_client.models.generate_content.call_args.kwargs
     assert call_kwargs["model"] == "gemini-2.5-flash"
@@ -509,9 +509,7 @@ def test_chatgpt_translate(mocker: MockerFixture) -> None:
     )
     mock_client.chat.completions.create.return_value = mock_response
 
-    result = translate(
-        SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="chatgpt"
-    )
+    result = translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", provider="chatgpt")
 
     assert len(result) == 2
     assert result[0]["text"] == "Hello."
@@ -628,7 +626,7 @@ def test_claude_translate(mocker: MockerFixture) -> None:
     )
     mock_client.messages.create.return_value = mock_response
 
-    result = translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="claude")
+    result = translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", provider="claude")
 
     assert len(result) == 2
     assert result[0]["text"] == "Hello."
@@ -733,7 +731,7 @@ def test_ollama_translate(mocker: MockerFixture) -> None:
     )
     mock_client.chat.completions.create.return_value = mock_response
 
-    result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="ollama")
+    result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="ollama")
 
     assert len(result) == 2
     assert result[0]["text"] == "Hello."
@@ -754,7 +752,7 @@ def test_ollama_translate_uses_default_model(mocker: MockerFixture) -> None:
     )
     mock_client.chat.completions.create.return_value = mock_response
 
-    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="ollama")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="ollama")
 
     call_kwargs = mock_client.chat.completions.create.call_args.kwargs
     assert call_kwargs["model"] == "qwen3:14b"
@@ -817,7 +815,7 @@ def test_translate_uses_model_chunk_size(mocker: MockerFixture) -> None:
         {"segments": many_segments, "language": "ja"},
         "ko",
         api_key=None,
-        translator="ollama",
+        provider="ollama",
         llm_model=model,
     )
 
@@ -844,7 +842,7 @@ def test_translate_explicit_chunk_size_overrides_model_default(
         {"segments": segments, "language": "ja"},
         "ko",
         api_key=None,
-        translator="ollama",
+        provider="ollama",
         llm_model="qwen3:14b",
         chunk_size=2,
     )
@@ -879,7 +877,7 @@ def test_translate_uses_model_context_size(mocker: MockerFixture) -> None:
         {"segments": segments, "language": "ja"},
         "ko",
         api_key=None,
-        translator="ollama",
+        provider="ollama",
         llm_model=model,
         chunk_size=3,
     )
@@ -911,7 +909,7 @@ def test_translate_explicit_context_size_overrides_model_default(
         SAMPLE_TRANSCRIPT,
         "en",
         api_key=None,
-        translator="gemini",
+        provider="gemini",
         context_size=2,
     )
 
@@ -935,7 +933,7 @@ def test_translate_uses_default_context_size_for_unknown_model(
 
     mock_build = mocker.patch("koffee.translator._build_prompt", return_value="prompt")
 
-    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
 
     _, kwargs = mock_build.call_args
     assert len(kwargs["context_segments"]) <= CONTEXT_SIZE

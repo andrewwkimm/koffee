@@ -139,7 +139,7 @@ class KoffeeConfig(BaseModel):
     source_language: str = "auto"
     subtitle_format: Literal["srt", "vtt", "ass"] = "vtt"
     target_language: str = "en"
-    translator: Literal["whisper", "gemini", "chatgpt", "claude", "ollama"] = "whisper"
+    provider: Literal["whisper", "gemini", "chatgpt", "claude", "ollama"] = "whisper"
     llm_model: str | None = None
     chunk_size: int | None = None
     context_size: int | None = None
@@ -162,7 +162,7 @@ class KoffeeConfig(BaseModel):
             "chatgpt": "OPENAI_API_KEY",
             "claude": "ANTHROPIC_API_KEY",
         }
-        backend = values.get("translator", "whisper")
+        backend = values.get("provider", "whisper")
         env_var = env_vars.get(backend)
         if env_var:
             values["api_key"] = os.environ.get(env_var)

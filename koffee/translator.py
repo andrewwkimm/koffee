@@ -70,27 +70,27 @@ def translate(
     on_progress: Callable[[float], None] | None = None,
     llm_model: str | None = None,
     prompt: str | None = None,
-    translator: str = "gemini",
+    provider: str = "gemini",
     chunk_size: int | None = None,
     context_size: int | None = None,
 ) -> list:
     """Translates a transcript using an LLM backend, preserving timing information."""
-    log.info(f"Translating transcript with {translator}.")
+    log.info(f"Translating transcript with {provider}.")
 
     system_prompt = prompt if prompt else SYSTEM_PROMPT
-    model = llm_model or DEFAULT_MODEL.get(translator, "")
+    model = llm_model or DEFAULT_MODEL.get(provider, "")
     resolved_chunk_size = chunk_size or CHUNK_SIZE_BY_MODEL.get(model, CHUNK_SIZE)
     resolved_context_size = (
         context_size
         if context_size is not None
         else CONTEXT_SIZE_BY_MODEL.get(model, CONTEXT_SIZE)
     )
-    backend = _load_backend(translator)
+    backend = _load_backend(provider)
     client = backend.create_client(api_key)
     chunks = _chunk_segments(transcript, target_language, resolved_chunk_size)
     translated_segments = _translate_chunks(
         backend,
-        backend_name=translator,
+        backend_name=provider,
         client=client,
         chunks=chunks,
         on_progress=on_progress,

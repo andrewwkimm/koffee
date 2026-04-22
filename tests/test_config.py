@@ -37,7 +37,7 @@ def test_config_file_values_apply_to_koffee_config(tmp_path) -> None:
     """Tests that config file values override KoffeeConfig defaults."""
     config_path = tmp_path / "koffee.toml"
     config_path.write_text(
-        'source_language = "ko"\nsubtitle_format = "srt"\ntranslator = "gemini"\n'
+        'source_language = "ko"\nsubtitle_format = "srt"\nprovider = "gemini"\n'
     )
 
     file_config = load_config_file(config_path)
@@ -45,7 +45,7 @@ def test_config_file_values_apply_to_koffee_config(tmp_path) -> None:
 
     assert config.source_language == "ko"
     assert config.subtitle_format == "srt"
-    assert config.translator == "gemini"
+    assert config.provider == "gemini"
     # Defaults should still apply for unset fields
     assert config.target_language == "en"
     assert config.device == "auto"
@@ -84,34 +84,34 @@ def test_valid_whisper_model_is_accepted() -> None:
 def test_api_key_falls_back_to_google_env_var(monkeypatch) -> None:
     """Tests that api_key falls back to GOOGLE_API_KEY for gemini backend."""
     monkeypatch.setenv("GOOGLE_API_KEY", "env-key-123")
-    config = KoffeeConfig(translator="gemini")
+    config = KoffeeConfig(provider="gemini")
     assert config.api_key == "env-key-123"
 
 
 def test_api_key_falls_back_to_openai_env_var(monkeypatch) -> None:
     """Tests that api_key falls back to OPENAI_API_KEY for chatgpt backend."""
     monkeypatch.setenv("OPENAI_API_KEY", "openai-key-123")
-    config = KoffeeConfig(translator="chatgpt")
+    config = KoffeeConfig(provider="chatgpt")
     assert config.api_key == "openai-key-123"
 
 
 def test_api_key_falls_back_to_anthropic_env_var(monkeypatch) -> None:
     """Tests that api_key falls back to ANTHROPIC_API_KEY for claude backend."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key-123")
-    config = KoffeeConfig(translator="claude")
+    config = KoffeeConfig(provider="claude")
     assert config.api_key == "anthropic-key-123"
 
 
 def test_api_key_not_resolved_for_whisper() -> None:
     """Tests that no env var is checked for the whisper backend."""
-    config = KoffeeConfig(translator="whisper")
+    config = KoffeeConfig(provider="whisper")
     assert config.api_key is None
 
 
 def test_api_key_prefers_explicit_value(monkeypatch) -> None:
     """Tests that an explicit api_key takes precedence over the env var."""
     monkeypatch.setenv("GOOGLE_API_KEY", "env-key-123")
-    config = KoffeeConfig(api_key="explicit-key", translator="gemini")
+    config = KoffeeConfig(api_key="explicit-key", provider="gemini")
     assert config.api_key == "explicit-key"
 
 
