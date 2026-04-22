@@ -2,7 +2,7 @@
 
 from importlib.metadata import version
 
-from .translate import run
+from .api import run
 
 __all__ = ["run"]
 

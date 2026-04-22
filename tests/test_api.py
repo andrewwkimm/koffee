@@ -7,9 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 
 import koffee
-from koffee.data.config import KoffeeConfig
-from koffee.exceptions import InvalidVideoFileError
-from koffee.translate import (
+from koffee.api import (
     _apply_config_overrides,
     _check_output_collision,
     _finalize_video_output,
@@ -19,12 +17,14 @@ from koffee.translate import (
     _route_output,
     run,
 )
+from koffee.data.config import KoffeeConfig
+from koffee.exceptions import InvalidVideoFileError
 
 
 @pytest.fixture
-def translate_module():
-    """Fixture to import the translate module for mocking purposes."""
-    return importlib.import_module("koffee.translate")
+def api_module():
+    """Fixture to import the api module for mocking purposes."""
+    return importlib.import_module("koffee.api")
 
 
 @pytest.mark.integration
@@ -83,9 +83,9 @@ def test_get_output_path_with_output_dir() -> None:
     assert result.parent == Path("/tmp")
 
 
-def test_get_segments_whisper_returns_raw(mocker, translate_module) -> None:
+def test_get_segments_whisper_returns_raw(mocker, api_module) -> None:
     """Tests that whisper backend returns raw segments without translation."""
-    mock_translate = mocker.patch.object(translate_module, "translate")
+    mock_translate = mocker.patch.object(api_module, "translate")
     config = MagicMock(spec=KoffeeConfig)
     config.translator = "whisper"
     transcript = {"segments": [{"start": 0.0, "end": 1.0, "text": "hi"}]}
@@ -96,10 +96,10 @@ def test_get_segments_whisper_returns_raw(mocker, translate_module) -> None:
     mock_translate.assert_not_called()
 
 
-def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> None:
+def test_get_segments_non_whisper_calls_translate(mocker, api_module) -> None:
     """Tests that a non-whisper backend calls translate."""
     mock_translate = mocker.patch.object(
-        translate_module, "translate", return_value=["translated"]
+        api_module, "translate", return_value=["translated"]
     )
     config = MagicMock(spec=KoffeeConfig)
     config.translator = "gemini"
@@ -127,12 +127,10 @@ def test_get_segments_non_whisper_calls_translate(mocker, translate_module) -> N
     )
 
 
-def test_finalize_video_output_deletes_subtitle(
-    mocker, tmp_path, translate_module
-) -> None:
+def test_finalize_video_output_deletes_subtitle(mocker, tmp_path, api_module) -> None:
     """Tests that the subtitle file is always deleted after embed."""
     mocker.patch.object(
-        translate_module, "embed_subtitles", return_value=tmp_path / "out.mp4"
+        api_module, "embed_subtitles", return_value=tmp_path / "out.mp4"
     )
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
@@ -166,7 +164,7 @@ def test_validate_api_key_raises_without_key() -> None:
 
 def test_validate_api_key_ollama_does_not_require_key() -> None:
     """Tests that ollama backend does not require an API key."""
-    from koffee.translate import _validate_api_key  # noqa: PLC0415
+    from koffee.api import _validate_api_key  # noqa: PLC0415
 
     config = KoffeeConfig(translator="ollama", whisper_model="large-v3")
     _validate_api_key(config)
@@ -197,17 +195,17 @@ def test_check_output_collision_allows_overwrite(tmp_path) -> None:
     _check_output_collision(existing, overwrite=True)
 
 
-def test_route_output_with_embed(mocker, translate_module, tmp_path) -> None:
+def test_route_output_with_embed(mocker, api_module, tmp_path) -> None:
     """Tests that embed mode routes to video output."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
     mock_finalize = mocker.patch.object(
-        translate_module,
+        api_module,
         "_finalize_video_output",
         return_value=tmp_path / "out.mp4",
     )
     mocker.patch.object(
-        translate_module, "_get_output_path", return_value=tmp_path / "out.mp4"
+        api_module, "_get_output_path", return_value=tmp_path / "out.mp4"
     )
 
     config = KoffeeConfig(embed="soft", overwrite=True)
@@ -216,28 +214,28 @@ def test_route_output_with_embed(mocker, translate_module, tmp_path) -> None:
     mock_finalize.assert_called_once()
 
 
-def test_run_subtitle_file_input(mocker, translate_module, tmp_path) -> None:
+def test_run_subtitle_file_input(mocker, api_module, tmp_path) -> None:
     """Tests that a subtitle file input skips ASR and translates directly."""
     srt = tmp_path / "test.srt"
     srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello.\n")
 
     mock_parse = mocker.patch.object(
-        translate_module,
+        api_module,
         "parse_subtitle_file",
         return_value=[{"start": 0.0, "end": 1.0, "text": "Hello."}],
     )
     mock_translate = mocker.patch.object(
-        translate_module,
+        api_module,
         "translate",
         return_value=[{"start": 0.0, "end": 1.0, "text": "Translated."}],
     )
     mock_generate = mocker.patch.object(
-        translate_module,
+        api_module,
         "generate_subtitles",
         return_value=tmp_path / "out.vtt",
     )
     mocker.patch("pathlib.Path.replace", return_value=tmp_path / "test.vtt")
-    mocker.patch.object(translate_module, "_check_output_collision")
+    mocker.patch.object(api_module, "_check_output_collision")
 
     run(
         str(srt),
