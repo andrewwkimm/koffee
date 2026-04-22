@@ -97,7 +97,7 @@ def cli(
         str, Parameter(name=("--subtitle-format", "-f"))
     ] = defaults.subtitle_format,
     embed: Annotated[str, Parameter(name=("--embed",))] = defaults.embed,
-    translator: Annotated[str, Parameter(name=("--translator",))] = defaults.translator,
+    provider: Annotated[str, Parameter(name=("--provider",))] = defaults.provider,
     llm_model: Annotated[str, Parameter(name=("--llm-model",))] | None = None,
     chunk_size: Annotated[int, Parameter(name=("--chunk-size",))] | None = None,
     context_size: Annotated[int, Parameter(name=("--context-size",))] | None = None,
@@ -143,7 +143,7 @@ def cli(
         Source language of the subtitle file (default: auto)
     target_language: str
         Language to which the file should be translated
-    translator: str
+    provider: str
         The backend service to use for the translation
     llm_model: str
         The LLM model to use for translation
@@ -181,7 +181,7 @@ def cli(
         "source_language": source_language,
         "subtitle_format": subtitle_format,
         "target_language": target_language,
-        "translator": translator,
+        "provider": provider,
         "prompt": prompt,
         "vad_filter": not no_vad_filter,
     }
@@ -238,7 +238,7 @@ def _print_dry_run(resolved_paths: list[Path], config: KoffeeConfig) -> None:
         elif config.use_embedded_subtitles:
             mode = "embedded subtitle extraction + translation"
         else:
-            mode = f"ASR ({config.whisper_model}) + translation ({config.translator})"
+            mode = f"ASR ({config.whisper_model}) + translation ({config.provider})"
         log.info(f"  {path.name} -> {mode}")
 
     log.info(f"[dry-run] Target language: {config.target_language}")
@@ -352,7 +352,7 @@ def _translate_with_progress(
             on_translate_progress=_make_progress_callback(progress, translate_task),
         )
     else:
-        has_translate_step = config.translator != "whisper"
+        has_translate_step = config.provider != "whisper"
         asr_task = progress.add_task("Transcribing", total=100)
         translate_task = None
         translate_callback = None
@@ -414,7 +414,7 @@ def info() -> None:
 
     config = KoffeeConfig(**load_config_file())
     log.info(f"  default whisper model: {config.whisper_model}")
-    log.info(f"  default backend: {config.translator}")
+    log.info(f"  default backend: {config.provider}")
     log.info(f"  config file: {_find_config_path() or 'none'}")
 
 

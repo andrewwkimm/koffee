@@ -87,7 +87,7 @@ def test_get_segments_whisper_returns_raw(mocker, api_module) -> None:
     """Tests that whisper backend returns raw segments without translation."""
     mock_translate = mocker.patch.object(api_module, "translate")
     config = MagicMock(spec=KoffeeConfig)
-    config.translator = "whisper"
+    config.provider = "whisper"
     transcript = {"segments": [{"start": 0.0, "end": 1.0, "text": "hi"}]}
 
     result = _get_segments(transcript, config)
@@ -102,7 +102,7 @@ def test_get_segments_non_whisper_calls_translate(mocker, api_module) -> None:
         api_module, "translate", return_value=["translated"]
     )
     config = MagicMock(spec=KoffeeConfig)
-    config.translator = "gemini"
+    config.provider = "gemini"
     config.target_language = "en"
     config.api_key = None
     config.llm_model = "gemini-2.5-flash"
@@ -121,7 +121,7 @@ def test_get_segments_non_whisper_calls_translate(mocker, api_module) -> None:
         None,
         llm_model=config.llm_model,
         prompt=config.prompt,
-        translator=config.translator,
+        provider=config.provider,
         chunk_size=config.chunk_size,
         context_size=config.context_size,
     )
@@ -158,7 +158,7 @@ def test_validate_api_key_raises_without_key() -> None:
     with pytest.raises(ValueError, match="API key is required"):
         koffee.run(
             "examples/videos/sample_korean_video.mp4",
-            translator="gemini",
+            provider="gemini",
         )
 
 
@@ -166,7 +166,7 @@ def test_validate_api_key_ollama_does_not_require_key() -> None:
     """Tests that ollama backend does not require an API key."""
     from koffee.api import _validate_api_key  # noqa: PLC0415
 
-    config = KoffeeConfig(translator="ollama", whisper_model="large-v3")
+    config = KoffeeConfig(provider="ollama", whisper_model="large-v3")
     _validate_api_key(config)
 
 
@@ -241,7 +241,7 @@ def test_run_subtitle_file_input(mocker, api_module, tmp_path) -> None:
         str(srt),
         config=KoffeeConfig(
             output_dir=tmp_path,
-            translator="gemini",
+            provider="gemini",
             api_key="test-key",
             overwrite=True,
         ),

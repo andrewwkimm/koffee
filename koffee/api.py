@@ -61,9 +61,9 @@ def _validate_file(video_file_path: Path | str) -> None:
 
 def _validate_api_key(config: KoffeeConfig) -> None:
     """Raises ValueError if an LLM backend is selected without an API key."""
-    if config.translator not in ("whisper", "ollama") and not config.api_key:
+    if config.provider not in ("whisper", "ollama") and not config.api_key:
         error_message = (
-            f"An API key is required when using the {config.translator} "
+            f"An API key is required when using the {config.provider} "
             "translation backend. Provide one with --api_key or set the appropriate "
             "environment variable."
         )
@@ -91,7 +91,7 @@ def _transcribe(
         config.compute_type,
         config.device,
         config.whisper_model,
-        config.translator,
+        config.provider,
         on_progress=on_progress,
         vad_filter=config.vad_filter,
     )
@@ -187,7 +187,7 @@ def _translate_subtitle_file(
         on_progress,
         llm_model=config.llm_model,
         prompt=config.prompt,
-        translator=config.translator,
+        provider=config.provider,
     )
     translated_path = generate_subtitles(config.subtitle_format, translated_segments)
     output_path = _get_output_path(file_path, config.output_dir, config.output_name)
@@ -230,7 +230,7 @@ def _get_segments(
     on_progress: Callable[[float], None] | None = None,
 ) -> list:
     """Returns translated or raw segments based on the translation backend."""
-    if config.translator == "whisper":
+    if config.provider == "whisper":
         segments = transcript["segments"]
     else:
         segments = translate(
@@ -240,7 +240,7 @@ def _get_segments(
             on_progress,
             llm_model=config.llm_model,
             prompt=config.prompt,
-            translator=config.translator,
+            provider=config.provider,
             chunk_size=config.chunk_size,
             context_size=config.context_size,
         )
