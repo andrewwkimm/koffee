@@ -10,7 +10,7 @@ from koffee.utils import convert_to_timestamp
 log = logging.getLogger(__name__)
 
 CHUNK_SIZE = 200
-CONTEXT_ENTRIES = 20
+CONTEXT_SIZE = 20
 SLEEP_BETWEEN_REQUESTS = 4
 
 CHUNK_SIZE_BY_MODEL: dict[str, int] = {
@@ -22,7 +22,7 @@ CHUNK_SIZE_BY_MODEL: dict[str, int] = {
     "mistral": 80,
 }
 
-CONTEXT_ENTRIES_BY_MODEL: dict[str, int] = {
+CONTEXT_SIZE_BY_MODEL: dict[str, int] = {
     "qwen3:8b": 5,
     "qwen3:14b": 8,
     "qwen3:32b": 12,
@@ -72,7 +72,7 @@ def translate(
     prompt: str | None = None,
     translator: str = "gemini",
     chunk_size: int | None = None,
-    context_entries: int | None = None,
+    context_size: int | None = None,
 ) -> list:
     """Translates a transcript using an LLM backend, preserving timing information."""
     log.info(f"Translating transcript with {translator}.")
@@ -80,10 +80,10 @@ def translate(
     system_prompt = prompt if prompt else SYSTEM_PROMPT
     model = llm_model or DEFAULT_MODEL.get(translator, "")
     resolved_chunk_size = chunk_size or CHUNK_SIZE_BY_MODEL.get(model, CHUNK_SIZE)
-    resolved_context_entries = (
-        context_entries
-        if context_entries is not None
-        else CONTEXT_ENTRIES_BY_MODEL.get(model, CONTEXT_ENTRIES)
+    resolved_context_size = (
+        context_size
+        if context_size is not None
+        else CONTEXT_SIZE_BY_MODEL.get(model, CONTEXT_SIZE)
     )
     backend = _load_backend(translator)
     client = backend.create_client(api_key)
@@ -96,7 +96,7 @@ def translate(
         on_progress=on_progress,
         llm_model=model,
         system_prompt=system_prompt,
-        context_entries=resolved_context_entries,
+        context_size=resolved_context_size,
     )
     return translated_segments
 
@@ -155,7 +155,7 @@ def _translate_chunks(
     on_progress: Callable[[float], None] | None,
     llm_model: str,
     system_prompt: str,
-    context_entries: int = CONTEXT_ENTRIES,
+    context_size: int = CONTEXT_SIZE,
 ) -> list[dict]:
     """Iterates chunks, translating each and reporting progress."""
     log.info(f"Translating in {len(chunks)} chunks.")
@@ -164,7 +164,7 @@ def _translate_chunks(
     for i, chunk_data in enumerate(chunks):
         prompt = _build_prompt(
             **chunk_data,
-            context_entries=translated_segments[-context_entries:],
+            context_segments=translated_segments[-context_size:],
         )
         translated_chunk = _translate_chunk(
             backend,
@@ -329,7 +329,7 @@ def _merge_translated_segments(
 
 def _build_prompt(
     chunk: list[dict],
-    context_entries: list[dict],
+    context_segments: list[dict],
     source_language: str,
     target_language: str,
     start_entry: int,
@@ -345,15 +345,15 @@ def _build_prompt(
 
     prompt_parts = [instruction]
 
-    if context_entries:
+    if context_segments:
         prompt_parts.extend(
             [
-                f"The following {len(context_entries)} entries are provided as context "
-                "only to maintain narrative continuity. Do not include them in your "
-                "translation."
+                f"The following {len(context_segments)} entries are provided as "
+                "context only to maintain narrative continuity. Do not include them "
+                "in your translation."
                 f" output. Begin your translation from entry {start_entry} only.\n",
                 "[CONTEXT - DO NOT TRANSLATE]\n",
-                _segments_to_srt(context_entries),
+                _segments_to_srt(context_segments),
                 "\n[TRANSLATE FROM HERE]\n",
             ]
         )

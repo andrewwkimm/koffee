@@ -92,7 +92,7 @@ Refer below for a list of all arguments, commands, parameters, and options.
     --translator                The backend service to use for the translation (whisper, gemini, chatgpt, claude, ollama)
     --llm-model                 The LLM model to use for translation
     --chunk-size                Number of subtitle entries per LLM request (auto-selected per model if unset)
-    --context-entries           Number of preceding entries passed as context per request (auto-selected per model if unset)
+    --context-size              Number of preceding entries passed as context per request (auto-selected per model if unset)
     --prompt                    Custom system prompt for the LLM translation model
     --api-key                   API key for an LLM service
 
@@ -126,7 +126,7 @@ subtitle-format = "srt"
 translator = "gemini"
 llm-model = "gemini-2.5-flash"
 chunk-size = 400
-context-entries = 20
+context-size = 20
 ```
 
 ## Contributing
