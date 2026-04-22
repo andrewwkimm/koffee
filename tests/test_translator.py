@@ -148,6 +148,60 @@ def test_translate_sleeps_between_chunks(mocker: MockerFixture) -> None:
 
     # 2 segments with chunk size 1 = 2 chunks, sleep called once (not after last chunk)
     assert mock_sleep.call_count == 1
+    assert mock_sleep.call_args.args[0] == 4
+
+
+def test_translate_skips_sleep_when_zero(mocker: MockerFixture) -> None:
+    """Tests that sleep_requests=0 skips time.sleep between chunks entirely."""
+    mock_client = mocker.MagicMock()
+    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mock_sleep = mocker.patch("koffee.translator.time.sleep")
+    mocker.patch("koffee.translator.CHUNK_SIZE", 1)
+    mock_client.models.generate_content.return_value.text = (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello."
+    )
+
+    translate(
+        SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini", sleep_requests=0
+    )
+
+    assert mock_sleep.call_count == 0
+
+
+def test_translate_ollama_defaults_to_no_sleep(mocker: MockerFixture) -> None:
+    """Tests that the ollama provider uses zero sleep by default."""
+    mock_client = mocker.MagicMock()
+    mocker.patch("koffee.llm.ollama.create_client", return_value=mock_client)
+    mock_sleep = mocker.patch("koffee.translator.time.sleep")
+    mocker.patch("koffee.translator.CHUNK_SIZE", 1)
+    mock_client.chat.completions.create.return_value.choices = [
+        mocker.MagicMock(
+            message=mocker.MagicMock(
+                content=("1\n00:00:00,000 --> 00:00:06,360\nHello.")
+            )
+        )
+    ]
+
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="ollama")
+
+    assert mock_sleep.call_count == 0
+
+
+def test_translate_explicit_sleep_overrides_default(mocker: MockerFixture) -> None:
+    """Tests that an explicit sleep_requests value overrides the provider default."""
+    mock_client = mocker.MagicMock()
+    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mock_sleep = mocker.patch("koffee.translator.time.sleep")
+    mocker.patch("koffee.translator.CHUNK_SIZE", 1)
+    mock_client.models.generate_content.return_value.text = (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello."
+    )
+
+    translate(
+        SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini", sleep_requests=9
+    )
+
+    assert mock_sleep.call_args.args[0] == 9
 
 
 def test_translate_passes_api_key(mocker: MockerFixture) -> None:
