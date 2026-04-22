@@ -261,10 +261,11 @@ def test_translate_reports_progress(mocker: MockerFixture) -> None:
 
 def test_call_with_retries_exhaustion(mocker: MockerFixture) -> None:
     """Tests that retry exhaustion raises the last error."""
-    mocker.patch("koffee.translator.time.sleep")
+    mocker.patch("koffee.utils.retry.time.sleep")
     error = APIError(code=500, response_json={"error": "server error"})
     mock_backend = mocker.MagicMock()
-    mock_backend.attempt_generate.return_value = (None, error)
+    mock_backend.attempt_generate.side_effect = error
+    mock_backend.is_retryable.return_value = True
 
     with pytest.raises(APIError):
         _call_with_retries(
@@ -272,10 +273,8 @@ def test_call_with_retries_exhaustion(mocker: MockerFixture) -> None:
         )
 
 
-def test_gemini_attempt_generate_non_429_client_error_raises(
-    mocker: MockerFixture,
-) -> None:
-    """Tests that non-429 ClientError is raised immediately, not retried."""
+def test_gemini_attempt_generate_raises_on_error(mocker: MockerFixture) -> None:
+    """Tests that errors from the Gemini client propagate out."""
     mock_client = mocker.MagicMock()
     mock_client.models.generate_content.side_effect = ClientError(
         code=400, response_json={"error": "bad request"}
@@ -285,36 +284,27 @@ def test_gemini_attempt_generate_non_429_client_error_raises(
         gemini.attempt_generate(mock_client, "prompt", "model", SYSTEM_PROMPT)
 
 
-def test_gemini_attempt_generate_429_returns_error(mocker: MockerFixture) -> None:
-    """Tests that 429 ClientError is returned as a retryable error."""
-    mock_client = mocker.MagicMock()
-    mock_client.models.generate_content.side_effect = ClientError(
-        code=429, response_json={"error": "rate limited"}
-    )
-
-    result, error = gemini.attempt_generate(
-        mock_client, "prompt", "model", SYSTEM_PROMPT
-    )
-
-    assert result is None
-    assert error.code == 429
+def test_gemini_is_retryable_429() -> None:
+    """Tests that a 429 ClientError is classified as retryable."""
+    exc = ClientError(code=429, response_json={"error": "rate limited"})
+    assert gemini.is_retryable(exc) is True
 
 
-def test_gemini_attempt_generate_api_error_returns_error(
-    mocker: MockerFixture,
-) -> None:
-    """Tests that generic APIError is returned as a retryable error."""
-    mock_client = mocker.MagicMock()
-    mock_client.models.generate_content.side_effect = APIError(
-        code=500, response_json={"error": "server error"}
-    )
+def test_gemini_is_retryable_non_429_client_error() -> None:
+    """Tests that a non-429 ClientError is classified as non-retryable."""
+    exc = ClientError(code=400, response_json={"error": "bad request"})
+    assert gemini.is_retryable(exc) is False
 
-    result, error = gemini.attempt_generate(
-        mock_client, "prompt", "model", SYSTEM_PROMPT
-    )
 
-    assert result is None
-    assert error.code == 500
+def test_gemini_is_retryable_api_error() -> None:
+    """Tests that a generic APIError is classified as retryable."""
+    exc = APIError(code=500, response_json={"error": "server error"})
+    assert gemini.is_retryable(exc) is True
+
+
+def test_gemini_is_retryable_unrelated_exception() -> None:
+    """Tests that an unrelated exception is classified as non-retryable."""
+    assert gemini.is_retryable(ValueError("nope")) is False
 
 
 def test_translate_uses_custom_prompt(mocker: MockerFixture) -> None:
@@ -423,45 +413,18 @@ def test_translate_uses_default_model(mocker: MockerFixture) -> None:
 
 
 def test_chatgpt_attempt_generate_success(mocker: MockerFixture) -> None:
-    """Tests that a successful ChatGPT call returns (response, None)."""
+    """Tests that a successful ChatGPT call returns the response."""
     mock_client = mocker.MagicMock()
     mock_response = mocker.MagicMock()
     mock_client.chat.completions.create.return_value = mock_response
 
-    result, error = chatgpt.attempt_generate(
-        mock_client, "prompt", "gpt-4o", SYSTEM_PROMPT
-    )
+    result = chatgpt.attempt_generate(mock_client, "prompt", "gpt-4o", SYSTEM_PROMPT)
 
     assert result is mock_response
-    assert error is None
 
 
-def test_chatgpt_attempt_generate_rate_limit_returns_error(
-    mocker: MockerFixture,
-) -> None:
-    """Tests that a RateLimitError is returned as a retryable error."""
-    from openai import RateLimitError as OpenAIRateLimitError  # noqa: PLC0415
-
-    mock_client = mocker.MagicMock()
-    mock_response = mocker.MagicMock()
-    mock_response.status_code = 429
-    mock_response.headers = {}
-    mock_response.json.return_value = {"error": {"message": "rate limited"}}
-    exc = OpenAIRateLimitError(
-        message="rate limited", response=mock_response, body=None
-    )
-    mock_client.chat.completions.create.side_effect = exc
-
-    result, error = chatgpt.attempt_generate(
-        mock_client, "prompt", "gpt-4o", SYSTEM_PROMPT
-    )
-
-    assert result is None
-    assert error is exc
-
-
-def test_chatgpt_attempt_generate_non_retryable_raises(mocker: MockerFixture) -> None:
-    """Tests that a 400 APIStatusError is raised immediately, not retried."""
+def test_chatgpt_attempt_generate_raises_on_error(mocker: MockerFixture) -> None:
+    """Tests that errors from the OpenAI client propagate out."""
     from openai import APIStatusError  # noqa: PLC0415
 
     mock_client = mocker.MagicMock()
@@ -476,22 +439,50 @@ def test_chatgpt_attempt_generate_non_retryable_raises(mocker: MockerFixture) ->
         chatgpt.attempt_generate(mock_client, "prompt", "gpt-4o", SYSTEM_PROMPT)
 
 
-def test_chatgpt_attempt_generate_connection_error_returns_error(
-    mocker: MockerFixture,
-) -> None:
-    """Tests that a connection error is returned as a retryable error."""
+def test_chatgpt_is_retryable_rate_limit(mocker: MockerFixture) -> None:
+    """Tests that a RateLimitError is classified as retryable."""
+    from openai import RateLimitError as OpenAIRateLimitError  # noqa: PLC0415
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 429
+    mock_response.headers = {}
+    mock_response.json.return_value = {"error": {"message": "rate limited"}}
+    exc = OpenAIRateLimitError(
+        message="rate limited", response=mock_response, body=None
+    )
+    assert chatgpt.is_retryable(exc) is True
+
+
+def test_chatgpt_is_retryable_connection_error(mocker: MockerFixture) -> None:
+    """Tests that a connection error is classified as retryable."""
     from openai import APIConnectionError as OpenAIConnectionError  # noqa: PLC0415
 
-    mock_client = mocker.MagicMock()
     exc = OpenAIConnectionError(request=mocker.MagicMock())
-    mock_client.chat.completions.create.side_effect = exc
+    assert chatgpt.is_retryable(exc) is True
 
-    result, error = chatgpt.attempt_generate(
-        mock_client, "prompt", "gpt-4o", SYSTEM_PROMPT
-    )
 
-    assert result is None
-    assert error is exc
+def test_chatgpt_is_retryable_5xx(mocker: MockerFixture) -> None:
+    """Tests that a 5xx APIStatusError is classified as retryable."""
+    from openai import APIStatusError  # noqa: PLC0415
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 503
+    mock_response.headers = {}
+    mock_response.json.return_value = {"error": {"message": "unavailable"}}
+    exc = APIStatusError(message="unavailable", response=mock_response, body=None)
+    assert chatgpt.is_retryable(exc) is True
+
+
+def test_chatgpt_is_retryable_4xx_not_retryable(mocker: MockerFixture) -> None:
+    """Tests that a non-429 4xx APIStatusError is classified as non-retryable."""
+    from openai import APIStatusError  # noqa: PLC0415
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 400
+    mock_response.headers = {}
+    mock_response.json.return_value = {"error": {"message": "bad request"}}
+    exc = APIStatusError(message="bad request", response=mock_response, body=None)
+    assert chatgpt.is_retryable(exc) is False
 
 
 def test_chatgpt_translate(mocker: MockerFixture) -> None:
@@ -519,45 +510,20 @@ def test_chatgpt_translate(mocker: MockerFixture) -> None:
 
 
 def test_claude_attempt_generate_success(mocker: MockerFixture) -> None:
-    """Tests that a successful Claude call returns (response, None)."""
+    """Tests that a successful Claude call returns the response."""
     mock_client = mocker.MagicMock()
     mock_response = mocker.MagicMock()
     mock_client.messages.create.return_value = mock_response
 
-    result, error = claude.attempt_generate(
+    result = claude.attempt_generate(
         mock_client, "prompt", "claude-sonnet-4-20250514", SYSTEM_PROMPT
     )
 
     assert result is mock_response
-    assert error is None
 
 
-def test_claude_attempt_generate_rate_limit_returns_error(
-    mocker: MockerFixture,
-) -> None:
-    """Tests that a RateLimitError is returned as a retryable error."""
-    from anthropic import RateLimitError as AnthropicRateLimitError  # noqa: PLC0415
-
-    mock_client = mocker.MagicMock()
-    mock_response = mocker.MagicMock()
-    mock_response.status_code = 429
-    mock_response.headers = {}
-    mock_response.json.return_value = {"error": {"message": "rate limited"}}
-    exc = AnthropicRateLimitError(
-        message="rate limited", response=mock_response, body=None
-    )
-    mock_client.messages.create.side_effect = exc
-
-    result, error = claude.attempt_generate(
-        mock_client, "prompt", "claude-sonnet-4-20250514", SYSTEM_PROMPT
-    )
-
-    assert result is None
-    assert error is exc
-
-
-def test_claude_attempt_generate_non_retryable_raises(mocker: MockerFixture) -> None:
-    """Tests that a 400 APIStatusError is raised immediately, not retried."""
+def test_claude_attempt_generate_raises_on_error(mocker: MockerFixture) -> None:
+    """Tests that errors from the Anthropic client propagate out."""
     from anthropic import APIStatusError  # noqa: PLC0415
 
     mock_client = mocker.MagicMock()
@@ -574,24 +540,52 @@ def test_claude_attempt_generate_non_retryable_raises(mocker: MockerFixture) -> 
         )
 
 
-def test_claude_attempt_generate_connection_error_returns_error(
-    mocker: MockerFixture,
-) -> None:
-    """Tests that a connection error is returned as a retryable error."""
+def test_claude_is_retryable_rate_limit(mocker: MockerFixture) -> None:
+    """Tests that a RateLimitError is classified as retryable."""
+    from anthropic import RateLimitError as AnthropicRateLimitError  # noqa: PLC0415
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 429
+    mock_response.headers = {}
+    mock_response.json.return_value = {"error": {"message": "rate limited"}}
+    exc = AnthropicRateLimitError(
+        message="rate limited", response=mock_response, body=None
+    )
+    assert claude.is_retryable(exc) is True
+
+
+def test_claude_is_retryable_connection_error(mocker: MockerFixture) -> None:
+    """Tests that a connection error is classified as retryable."""
     from anthropic import (  # noqa: PLC0415
         APIConnectionError as AnthropicConnectionError,
     )
 
-    mock_client = mocker.MagicMock()
     exc = AnthropicConnectionError(request=mocker.MagicMock())
-    mock_client.messages.create.side_effect = exc
+    assert claude.is_retryable(exc) is True
 
-    result, error = claude.attempt_generate(
-        mock_client, "prompt", "claude-sonnet-4-20250514", SYSTEM_PROMPT
-    )
 
-    assert result is None
-    assert error is exc
+def test_claude_is_retryable_5xx(mocker: MockerFixture) -> None:
+    """Tests that a 5xx APIStatusError is classified as retryable."""
+    from anthropic import APIStatusError  # noqa: PLC0415
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 503
+    mock_response.headers = {}
+    mock_response.json.return_value = {"error": {"message": "unavailable"}}
+    exc = APIStatusError(message="unavailable", response=mock_response, body=None)
+    assert claude.is_retryable(exc) is True
+
+
+def test_claude_is_retryable_4xx_not_retryable(mocker: MockerFixture) -> None:
+    """Tests that a non-429 4xx APIStatusError is classified as non-retryable."""
+    from anthropic import APIStatusError  # noqa: PLC0415
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 400
+    mock_response.headers = {}
+    mock_response.json.return_value = {"error": {"message": "bad request"}}
+    exc = APIStatusError(message="bad request", response=mock_response, body=None)
+    assert claude.is_retryable(exc) is False
 
 
 def test_load_backend_ollama() -> None:
@@ -645,45 +639,18 @@ def test_ollama_create_client_uses_local_endpoint(mocker: MockerFixture) -> None
 
 
 def test_ollama_attempt_generate_success(mocker: MockerFixture) -> None:
-    """Tests that a successful Ollama call returns (response, None)."""
+    """Tests that a successful Ollama call returns the response."""
     mock_client = mocker.MagicMock()
     mock_response = mocker.MagicMock()
     mock_client.chat.completions.create.return_value = mock_response
 
-    result, error = ollama.attempt_generate(
-        mock_client, "prompt", "qwen3:14b", SYSTEM_PROMPT
-    )
+    result = ollama.attempt_generate(mock_client, "prompt", "qwen3:14b", SYSTEM_PROMPT)
 
     assert result is mock_response
-    assert error is None
 
 
-def test_ollama_attempt_generate_rate_limit_returns_error(
-    mocker: MockerFixture,
-) -> None:
-    """Tests that a RateLimitError is returned as a retryable error."""
-    from openai import RateLimitError as OpenAIRateLimitError  # noqa: PLC0415
-
-    mock_client = mocker.MagicMock()
-    mock_response = mocker.MagicMock()
-    mock_response.status_code = 429
-    mock_response.headers = {}
-    mock_response.json.return_value = {"error": {"message": "rate limited"}}
-    exc = OpenAIRateLimitError(
-        message="rate limited", response=mock_response, body=None
-    )
-    mock_client.chat.completions.create.side_effect = exc
-
-    result, error = ollama.attempt_generate(
-        mock_client, "prompt", "qwen3:14b", SYSTEM_PROMPT
-    )
-
-    assert result is None
-    assert error is exc
-
-
-def test_ollama_attempt_generate_non_retryable_raises(mocker: MockerFixture) -> None:
-    """Tests that a 400 APIStatusError is raised immediately, not retried."""
+def test_ollama_attempt_generate_raises_on_error(mocker: MockerFixture) -> None:
+    """Tests that errors from the Ollama client propagate out."""
     from openai import APIStatusError  # noqa: PLC0415
 
     mock_client = mocker.MagicMock()
@@ -698,22 +665,50 @@ def test_ollama_attempt_generate_non_retryable_raises(mocker: MockerFixture) -> 
         ollama.attempt_generate(mock_client, "prompt", "qwen3:14b", SYSTEM_PROMPT)
 
 
-def test_ollama_attempt_generate_connection_error_returns_error(
-    mocker: MockerFixture,
-) -> None:
-    """Tests that a connection error is returned as a retryable error."""
+def test_ollama_is_retryable_rate_limit(mocker: MockerFixture) -> None:
+    """Tests that a RateLimitError is classified as retryable."""
+    from openai import RateLimitError as OpenAIRateLimitError  # noqa: PLC0415
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 429
+    mock_response.headers = {}
+    mock_response.json.return_value = {"error": {"message": "rate limited"}}
+    exc = OpenAIRateLimitError(
+        message="rate limited", response=mock_response, body=None
+    )
+    assert ollama.is_retryable(exc) is True
+
+
+def test_ollama_is_retryable_connection_error(mocker: MockerFixture) -> None:
+    """Tests that a connection error is classified as retryable."""
     from openai import APIConnectionError as OpenAIConnectionError  # noqa: PLC0415
 
-    mock_client = mocker.MagicMock()
     exc = OpenAIConnectionError(request=mocker.MagicMock())
-    mock_client.chat.completions.create.side_effect = exc
+    assert ollama.is_retryable(exc) is True
 
-    result, error = ollama.attempt_generate(
-        mock_client, "prompt", "qwen3:14b", SYSTEM_PROMPT
-    )
 
-    assert result is None
-    assert error is exc
+def test_ollama_is_retryable_5xx(mocker: MockerFixture) -> None:
+    """Tests that a 5xx APIStatusError is classified as retryable."""
+    from openai import APIStatusError  # noqa: PLC0415
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 503
+    mock_response.headers = {}
+    mock_response.json.return_value = {"error": {"message": "unavailable"}}
+    exc = APIStatusError(message="unavailable", response=mock_response, body=None)
+    assert ollama.is_retryable(exc) is True
+
+
+def test_ollama_is_retryable_4xx_not_retryable(mocker: MockerFixture) -> None:
+    """Tests that a non-429 4xx APIStatusError is classified as non-retryable."""
+    from openai import APIStatusError  # noqa: PLC0415
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 400
+    mock_response.headers = {}
+    mock_response.json.return_value = {"error": {"message": "bad request"}}
+    exc = APIStatusError(message="bad request", response=mock_response, body=None)
+    assert ollama.is_retryable(exc) is False
 
 
 def test_ollama_translate(mocker: MockerFixture) -> None:
