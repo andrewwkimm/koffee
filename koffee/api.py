@@ -1,6 +1,7 @@
 """The koffee API."""
 
 import logging
+import shutil
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -9,10 +10,19 @@ from typing import Any
 from koffee.asr import transcribe
 from koffee.data.config import KoffeeConfig
 from koffee.embed import embed_subtitles
-from koffee.exceptions import InvalidVideoFileError
+from koffee.exceptions import (
+    IncompatibleOptionsError,
+    InvalidVideoFileError,
+    MissingDependencyError,
+    UnsupportedFileError,
+)
 from koffee.subtitle import generate_subtitles
 from koffee.translator import translate
-from koffee.utils import extract_subtitle_track, parse_subtitle_file
+from koffee.utils import (
+    extract_subtitle_track,
+    get_subtitle_tracks,
+    parse_subtitle_file,
+)
 
 log = logging.getLogger(__name__)
 
@@ -32,9 +42,8 @@ def run(
     """Processes a video or audio file for translation and subtitle generation."""
     log.info("Translating file...")
 
-    _validate_file(video_file_path)
     config = _apply_config_overrides(config, kwargs)
-    _validate_api_key(config)
+    _validate_inputs(video_file_path, config)
 
     if Path(video_file_path).suffix.lower() in SUBTITLE_EXTENSIONS:
         return _translate_subtitle_file(video_file_path, config, on_translate_progress)
@@ -57,6 +66,53 @@ def _validate_file(video_file_path: Path | str) -> None:
         error_message = "Input file is not valid or does not exist."
         log.error(error_message)
         raise InvalidVideoFileError(error_message)
+
+
+def _validate_inputs(video_file_path: Path | str, config: KoffeeConfig) -> None:
+    """Runs pre-flight checks on the input file, dependencies, and config options."""
+    _validate_file(video_file_path)
+
+    suffix = Path(video_file_path).suffix.lower()
+    allowed = SUPPORTED_EXTENSIONS | SUBTITLE_EXTENSIONS
+    if suffix not in allowed:
+        error_message = (
+            f"Unsupported file type: {suffix!r}. "
+            f"Supported extensions: {', '.join(sorted(allowed))}"
+        )
+        raise UnsupportedFileError(error_message)
+
+    is_video = suffix in VIDEO_EXTENSIONS
+
+    if config.embed != "none" and not is_video:
+        error_message = "--embed is only supported for video file inputs."
+        raise IncompatibleOptionsError(error_message)
+
+    if config.use_embedded_subtitles and not is_video:
+        error_message = (
+            "--use-embedded-subtitles is only supported for video file inputs."
+        )
+        raise IncompatibleOptionsError(error_message)
+
+    needs_ffmpeg = config.embed != "none" or config.use_embedded_subtitles
+    if needs_ffmpeg and shutil.which("ffmpeg") is None:
+        error_message = (
+            "ffmpeg was not found on PATH. Install ffmpeg to use --embed or "
+            "--use-embedded-subtitles."
+        )
+        raise MissingDependencyError(error_message)
+
+    if config.use_embedded_subtitles:
+        if shutil.which("ffprobe") is None:
+            error_message = (
+                "ffprobe was not found on PATH. Install ffmpeg to use "
+                "--use-embedded-subtitles."
+            )
+            raise MissingDependencyError(error_message)
+        if not get_subtitle_tracks(video_file_path):
+            error_message = f"No embedded subtitle tracks found in {video_file_path}."
+            raise IncompatibleOptionsError(error_message)
+
+    _validate_api_key(config)
 
 
 def _validate_api_key(config: KoffeeConfig) -> None:
