@@ -193,8 +193,8 @@ def cli(
 
     resolved_paths = _resolve_paths(file_path)
 
-    for video in resolved_paths:
-        config = _handle_embedded_subtitles(video, config)
+    for video_path in resolved_paths:
+        config = _handle_embedded_subtitles(video_path, config)
 
     if config.dry_run:
         _print_dry_run(resolved_paths, config)
@@ -203,11 +203,11 @@ def cli(
     total = len(resolved_paths)
     failed = []
     with _create_progress_bar() as progress:
-        for i, video in enumerate(resolved_paths, 1):
+        for i, video_path in enumerate(resolved_paths, 1):
             if total > 1:
-                log.info(f"[{i}/{total}] Processing {video.name}")
+                log.info(f"[{i}/{total}] Processing {video_path.name}")
             try:
-                _translate_with_progress(video, config, progress)
+                _translate_with_progress(video_path, config, progress)
             except (
                 FileExistsError,
                 FileNotFoundError,
@@ -217,8 +217,8 @@ def cli(
                 subprocess.CalledProcessError,
                 subprocess.TimeoutExpired,
             ) as exc:
-                log.error(f"Failed to process {video.name}: {exc}")
-                failed.append(video)
+                log.error(f"Failed to process {video_path.name}: {exc}")
+                failed.append(video_path)
 
     if total > 1:
         succeeded = total - len(failed)
@@ -247,17 +247,17 @@ def _print_dry_run(resolved_paths: list[Path], config: KoffeeConfig) -> None:
         log.info(f"[dry-run] Subtitles will be embedded into video ({config.embed})")
 
 
-def _handle_embedded_subtitles(video: Path, config: KoffeeConfig) -> KoffeeConfig:
+def _handle_embedded_subtitles(video_path: Path, config: KoffeeConfig) -> KoffeeConfig:
     """Checks for embedded subtitles and prompts user to use them."""
-    if video.suffix.lower() in SUBTITLE_EXTENSIONS:
+    if video_path.suffix.lower() in SUBTITLE_EXTENSIONS:
         return config
 
-    tracks = get_subtitle_tracks(video)
+    tracks = get_subtitle_tracks(video_path)
     if not tracks:
         return config
 
     track_count = len(tracks)
-    log.info(f"Found {track_count} embedded subtitle track(s) in {video.name}.")
+    log.info(f"Found {track_count} embedded subtitle track(s) in {video_path.name}.")
 
     user_input = input("Translate embedded subtitles instead of running ASR? [Y/n] ")
     if user_input.strip().lower() not in ("", "y", "yes"):
@@ -321,19 +321,20 @@ def _resolve_paths(file_path: tuple) -> list[Path]:
 
 
 def _translate_with_progress(
-    video: Path,
+    video_path: Path,
     config: KoffeeConfig,
     progress: Progress,
 ) -> None:
     """Runs translation for a single file with ASR and translation progress bars."""
     skip_asr = (
-        config.use_embedded_subtitles or video.suffix.lower() in SUBTITLE_EXTENSIONS
+        config.use_embedded_subtitles
+        or video_path.suffix.lower() in SUBTITLE_EXTENSIONS
     )
 
     if skip_asr:
         translate_task = progress.add_task("Translating", total=100)
         run(
-            video_file_path=video,
+            video_file_path=video_path,
             config=config,
             on_translate_progress=_make_progress_callback(progress, translate_task),
         )
@@ -358,7 +359,7 @@ def _translate_with_progress(
                     progress.start_task(translate_task)
 
         run(
-            video_file_path=video,
+            video_file_path=video_path,
             config=config,
             on_asr_progress=on_asr_progress,
             on_translate_progress=translate_callback,
@@ -457,9 +458,9 @@ def tracks(
 
 @app.command()
 def overlay(
-    video: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
-    subtitle: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
-    output: Annotated[Path, Parameter(name=("--output", "-o"))] | None = None,
+    video_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
+    subtitle_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
+    output_path: Annotated[Path, Parameter(name=("--output", "-o"))] | None = None,
     mode: Annotated[str, Parameter(name=("--mode", "-m"))] = "soft",
     overwrite: Annotated[
         bool, Parameter(name=("--overwrite",), group=options_group)
@@ -469,27 +470,27 @@ def overlay(
 
     Parameters
     ----------
-    video: Path
+    video_path: Path
         Path to the video file
-    subtitle: Path
+    subtitle_path: Path
         Path to the subtitle file
-    output: Path
+    output_path: Path
         Path for the output video file
     mode: str
         Overlay mode: soft (muxed track) or hard (burned into video frames)
     overwrite: bool
         Overwrite existing output files instead of raising an error
     """
-    if output is None:
-        output = video.with_stem(f"{video.stem}_overlay")
+    if output_path is None:
+        output_path = video_path.with_stem(f"{video_path.stem}_overlay")
 
-    if output.exists() and not overwrite:
+    if output_path.exists() and not overwrite:
         error_message = (
-            f"Output file already exists: {output}. Use --overwrite to replace it."
+            f"Output file already exists: {output_path}. Use --overwrite to replace it."
         )
         raise FileExistsError(error_message)
 
-    result = embed_subtitles(subtitle, video, output, mode=mode)
+    result = embed_subtitles(subtitle_path, video_path, output_path, mode=mode)
     log.info(f"Output saved to {result}")
 
 
@@ -553,22 +554,22 @@ def transcribe(
 
     segments = transcript["segments"]
     out_dir = output_dir if output_dir is not None else file_path.parent
-    subtitle_file = generate_subtitles(subtitle_format, segments, out_dir)
+    subtitle_file_path = generate_subtitles(subtitle_format, segments, out_dir)
 
     if output_name is not None:
-        target = out_dir / f"{output_name}.{subtitle_format}"
+        target_path = out_dir / f"{output_name}.{subtitle_format}"
     else:
-        target = out_dir / f"{file_path.stem}.{subtitle_format}"
+        target_path = out_dir / f"{file_path.stem}.{subtitle_format}"
 
-    if target.exists() and not overwrite:
-        subtitle_file.unlink(missing_ok=True)
+    if target_path.exists() and not overwrite:
+        subtitle_file_path.unlink(missing_ok=True)
         error_message = (
-            f"Output file already exists: {target}. Use --overwrite to replace it."
+            f"Output file already exists: {target_path}. Use --overwrite to replace it."
         )
         raise FileExistsError(error_message)
 
-    subtitle_file.replace(target)
-    log.info(f"Output saved to {target}")
+    subtitle_file_path.replace(target_path)
+    log.info(f"Output saved to {target_path}")
 
 
 @app.command()
@@ -598,22 +599,22 @@ def convert(
     """
     segments = parse_subtitle_file(file_path)
     out_dir = output_dir if output_dir is not None else file_path.parent
-    subtitle_file = generate_subtitles(subtitle_format, segments, out_dir)
+    subtitle_file_path = generate_subtitles(subtitle_format, segments, out_dir)
 
     if output_name is not None:
-        target = out_dir / f"{output_name}.{subtitle_format}"
+        target_path = out_dir / f"{output_name}.{subtitle_format}"
     else:
-        target = out_dir / f"{file_path.stem}.{subtitle_format}"
+        target_path = out_dir / f"{file_path.stem}.{subtitle_format}"
 
-    if target.exists() and not overwrite:
-        subtitle_file.unlink(missing_ok=True)
+    if target_path.exists() and not overwrite:
+        subtitle_file_path.unlink(missing_ok=True)
         error_message = (
-            f"Output file already exists: {target}. Use --overwrite to replace it."
+            f"Output file already exists: {target_path}. Use --overwrite to replace it."
         )
         raise FileExistsError(error_message)
 
-    subtitle_file.replace(target)
-    log.info(f"Converted {file_path.name} to {target}")
+    subtitle_file_path.replace(target_path)
+    log.info(f"Converted {file_path.name} to {target_path}")
 
 
 app["info"].sort_key = 0

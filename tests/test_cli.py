@@ -450,7 +450,7 @@ def test_overlay_command(mocker: MockerFixture, tmp_path) -> None:
 
     mock_overlay = mocker.patch("koffee.cli.embed_subtitles", return_value=output)
 
-    overlay(video, sub, output=output)
+    overlay(video, sub, output_path=output)
 
     mock_overlay.assert_called_once_with(sub, video, output, mode="soft")
 
@@ -465,7 +465,7 @@ def test_overlay_command_hard_mode(mocker: MockerFixture, tmp_path) -> None:
 
     mock_overlay = mocker.patch("koffee.cli.embed_subtitles", return_value=output)
 
-    overlay(video, sub, output=output, mode="hard")
+    overlay(video, sub, output_path=output, mode="hard")
 
     mock_overlay.assert_called_once_with(sub, video, output, mode="hard")
 
@@ -497,7 +497,7 @@ def test_overlay_command_collision(tmp_path) -> None:
     output.touch()
 
     with pytest.raises(FileExistsError, match="already exists"):
-        overlay(video, sub, output=output)
+        overlay(video, sub, output_path=output)
 
 
 def test_transcribe_command(mocker: MockerFixture, tmp_path) -> None:
