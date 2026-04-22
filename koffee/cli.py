@@ -3,10 +3,12 @@
 import logging
 import shutil
 import subprocess
+import tomllib
 from pathlib import Path
 from typing import Annotated
 
 from cyclopts import App, Group, Parameter, validators
+from pydantic import ValidationError
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.progress import (
@@ -52,7 +54,17 @@ options_group = Group("Options", sort_key=3)
 app["--help"].group = options_group
 app["--version"].group = options_group
 
-defaults = KoffeeConfig(**load_config_file())
+
+def _load_cli_defaults() -> KoffeeConfig:
+    """Loads CLI defaults from the config file, falling back on invalid input."""
+    try:
+        return KoffeeConfig(**load_config_file())
+    except (ValidationError, tomllib.TOMLDecodeError) as exc:
+        log.warning(f"Ignoring invalid config file for CLI defaults: {exc}")
+        return KoffeeConfig()
+
+
+defaults = _load_cli_defaults()
 
 
 def _create_progress_bar() -> Progress:
