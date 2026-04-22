@@ -105,9 +105,9 @@ def cli(
     api_key: Annotated[str, Parameter(name=("--api-key",))] | None = None,
     config: Annotated[Path, Parameter(name=("--config",), group=options_group)]
     | None = None,
-    no_vad_filter: Annotated[
-        bool, Parameter(name=("--no-vad-filter",), group=options_group)
-    ] = False,
+    vad_filter: Annotated[
+        bool, Parameter(negative="--no-vad-filter", group=options_group)
+    ] = True,
     dry_run: Annotated[
         bool, Parameter(name=("--dry-run",), group=options_group)
     ] = False,
@@ -153,8 +153,9 @@ def cli(
         Path to a koffee.toml configuration file
     api_key: str
         API key for an LLM service
-    no_vad_filter: bool
-        Disable voice activity detection filtering during transcription
+    vad_filter: bool
+        Voice activity detection filtering during transcription (enabled by default;
+        pass `--no-vad-filter` to disable)
     dry_run: bool
         Preview what would be done without running transcription or translation
     overwrite: bool
@@ -183,7 +184,7 @@ def cli(
         "target_language": target_language,
         "provider": provider,
         "prompt": prompt,
-        "vad_filter": not no_vad_filter,
+        "vad_filter": vad_filter,
     }
     default_config = KoffeeConfig().model_dump()
     cli_overrides = {k: v for k, v in cli_args.items() if v != default_config.get(k)}
@@ -522,9 +523,9 @@ def transcribe(
     subtitle_format: Annotated[
         str, Parameter(name=("--subtitle-format", "-f"))
     ] = defaults.subtitle_format,
-    no_vad_filter: Annotated[
-        bool, Parameter(name=("--no-vad-filter",), group=options_group)
-    ] = False,
+    vad_filter: Annotated[
+        bool, Parameter(negative="--no-vad-filter", group=options_group)
+    ] = True,
     overwrite: Annotated[
         bool, Parameter(name=("--overwrite",), group=options_group)
     ] = False,
@@ -547,8 +548,9 @@ def transcribe(
         Name of the output file
     subtitle_format: str
         Format to use for the subtitles
-    no_vad_filter: bool
-        Disable voice activity detection filtering during transcription
+    vad_filter: bool
+        Voice activity detection filtering during transcription (enabled by default;
+        pass `--no-vad-filter` to disable)
     overwrite: bool
         Overwrite existing output files instead of raising an error
     """
@@ -562,7 +564,7 @@ def transcribe(
             whisper_model,
             "whisper",
             on_progress=_make_progress_callback(progress, asr_task),
-            vad_filter=not no_vad_filter,
+            vad_filter=vad_filter,
         )
 
     segments = transcript["segments"]
