@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from pytest_mock import MockerFixture
 
-from koffee.exceptions import SubtitleOverlayError
+from koffee.exceptions import SubtitleEmbedError
 from koffee.overlay import _get_subtitle_codec, embed_subtitles
 
 
@@ -67,7 +67,7 @@ def test_exception_handling(
         ),
     )
 
-    with pytest.raises(SubtitleOverlayError) as exc_info:
+    with pytest.raises(SubtitleEmbedError) as exc_info:
         embed_subtitles(subtitle_file_path, video_file_path, output_file_path)
 
     assert isinstance(exc_info.value.__cause__, subprocess.CalledProcessError)

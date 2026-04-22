@@ -9,5 +9,5 @@ class InvalidVideoFileError(Exception):
     """Invalid video file error."""
 
 
-class SubtitleOverlayError(Exception):
-    """Subtitle overlay error."""
+class SubtitleEmbedError(Exception):
+    """Subtitle embed error."""

@@ -4,7 +4,7 @@ import logging
 import subprocess
 from pathlib import Path
 
-from koffee.exceptions import SubtitleOverlayError
+from koffee.exceptions import SubtitleEmbedError
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ def _mux_subtitles(
         log.error("ffmpeg timed out while muxing subtitles.")
         raise
     except subprocess.CalledProcessError as error:
-        raise SubtitleOverlayError(error.stderr) from error
+        raise SubtitleEmbedError(error.stderr) from error
 
     return output_file_path
 
@@ -114,6 +114,6 @@ def _burn_in_subtitles(
         log.error("ffmpeg timed out while burning in subtitles.")
         raise
     except subprocess.CalledProcessError as error:
-        raise SubtitleOverlayError(error.stderr) from error
+        raise SubtitleEmbedError(error.stderr) from error
 
     return output_file_path
