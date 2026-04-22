@@ -1,4 +1,4 @@
-"""Subtitle overlayer."""
+"""Subtitle embedder."""
 
 import logging
 import subprocess
@@ -49,7 +49,7 @@ def _mux_subtitles(
     language: str = "eng",
 ) -> Path | str:
     """Muxes subtitles as a soft track (original behavior)."""
-    log.info("Overlaying subtitles (soft).")
+    log.info("Embedding subtitles (soft).")
 
     subtitle_codec = _get_subtitle_codec(output_file_path)
 

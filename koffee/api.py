@@ -8,8 +8,8 @@ from typing import Any
 
 from koffee.asr import transcribe
 from koffee.data.config import KoffeeConfig
+from koffee.embed import embed_subtitles
 from koffee.exceptions import InvalidVideoFileError
-from koffee.overlay import embed_subtitles
 from koffee.subtitle import generate_subtitles
 from koffee.translator import translate
 from koffee.utils import extract_subtitle_track, parse_subtitle_file
