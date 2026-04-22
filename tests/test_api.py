@@ -15,10 +15,16 @@ from koffee.api import (
     _get_segments,
     _handle_subtitle_output,
     _route_output,
+    _validate_inputs,
     run,
 )
 from koffee.data.config import KoffeeConfig
-from koffee.exceptions import InvalidVideoFileError
+from koffee.exceptions import (
+    IncompatibleOptionsError,
+    InvalidVideoFileError,
+    MissingDependencyError,
+    UnsupportedFileError,
+)
 
 
 @pytest.fixture
@@ -250,6 +256,65 @@ def test_run_subtitle_file_input(mocker, api_module, tmp_path) -> None:
     mock_parse.assert_called_once()
     mock_translate.assert_called_once()
     mock_generate.assert_called_once()
+
+
+def test_validate_inputs_rejects_unsupported_suffix(tmp_path) -> None:
+    """Tests that an unsupported file extension raises UnsupportedFileError."""
+    bad_file = tmp_path / "notes.txt"
+    bad_file.touch()
+
+    with pytest.raises(UnsupportedFileError, match="Unsupported file type"):
+        _validate_inputs(bad_file, KoffeeConfig())
+
+
+def test_validate_inputs_rejects_embed_on_audio(tmp_path) -> None:
+    """Tests that --embed on audio input raises IncompatibleOptionsError."""
+    audio = tmp_path / "track.mp3"
+    audio.touch()
+
+    with pytest.raises(IncompatibleOptionsError, match="--embed is only supported"):
+        _validate_inputs(audio, KoffeeConfig(embed="soft"))
+
+
+def test_validate_inputs_rejects_embedded_subs_on_audio(tmp_path) -> None:
+    """Tests that --use-embedded-subtitles on audio raises IncompatibleOptionsError."""
+    audio = tmp_path / "track.mp3"
+    audio.touch()
+
+    with pytest.raises(
+        IncompatibleOptionsError, match="--use-embedded-subtitles is only supported"
+    ):
+        _validate_inputs(audio, KoffeeConfig(use_embedded_subtitles=True))
+
+
+def test_validate_inputs_rejects_missing_ffmpeg(mocker, tmp_path) -> None:
+    """Tests that missing ffmpeg raises MissingDependencyError when embedding."""
+    video = tmp_path / "clip.mp4"
+    video.touch()
+    mocker.patch("koffee.api.shutil.which", return_value=None)
+
+    with pytest.raises(MissingDependencyError, match="ffmpeg was not found"):
+        _validate_inputs(video, KoffeeConfig(embed="soft"))
+
+
+def test_validate_inputs_rejects_no_embedded_tracks(mocker, tmp_path) -> None:
+    """Tests that a video with no subtitle tracks raises IncompatibleOptionsError."""
+    video = tmp_path / "clip.mp4"
+    video.touch()
+    mocker.patch("koffee.api.shutil.which", return_value="/usr/bin/ffmpeg")
+    mocker.patch("koffee.api.get_subtitle_tracks", return_value=[])
+
+    with pytest.raises(IncompatibleOptionsError, match="No embedded subtitle tracks"):
+        _validate_inputs(video, KoffeeConfig(use_embedded_subtitles=True))
+
+
+def test_validate_inputs_passes_on_valid_video(mocker, tmp_path) -> None:
+    """Tests that a valid video file with a valid config passes validation."""
+    video = tmp_path / "clip.mp4"
+    video.touch()
+    mocker.patch("koffee.api.shutil.which", return_value="/usr/bin/ffmpeg")
+
+    _validate_inputs(video, KoffeeConfig(embed="soft"))
 
 
 def test_handle_subtitle_output_audio_renames_subtitle(tmp_path) -> None:
