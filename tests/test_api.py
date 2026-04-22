@@ -19,13 +19,13 @@ from koffee.api import (
     _write_output,
     run,
 )
-from koffee.data.config import KoffeeConfig
 from koffee.exceptions import (
     IncompatibleOptionsError,
     InvalidVideoFileError,
     MissingDependencyError,
     UnsupportedFileError,
 )
+from koffee.schemas.config import KoffeeConfig
 
 
 @pytest.fixture

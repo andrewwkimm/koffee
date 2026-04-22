@@ -21,7 +21,7 @@ from koffee.cli import (
     tracks,
     transcribe,
 )
-from koffee.data.config import LANGUAGE_CODES, KoffeeConfig
+from koffee.schemas.config import LANGUAGE_CODES, KoffeeConfig
 
 korean_video_file_path = Path("examples/videos/sample_korean_video.mp4")
 

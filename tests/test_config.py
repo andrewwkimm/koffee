@@ -2,7 +2,7 @@
 
 import pytest
 
-from koffee.data.config import KoffeeConfig, load_config_file
+from koffee.schemas.config import KoffeeConfig, load_config_file
 
 
 def test_load_config_file_returns_empty_when_not_found(tmp_path) -> None:
@@ -26,7 +26,7 @@ def test_load_config_file_searches_default_paths(tmp_path, monkeypatch) -> None:
     """Tests that load_config_file searches cwd for koffee.toml."""
     config_path = tmp_path / "koffee.toml"
     config_path.write_text('target_language = "fr"\n')
-    monkeypatch.setattr("koffee.data.config.CONFIG_SEARCH_PATHS", [config_path])
+    monkeypatch.setattr("koffee.schemas.config.CONFIG_SEARCH_PATHS", [config_path])
 
     result = load_config_file()
 

@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 from koffee.asr import transcribe
-from koffee.data.config import KoffeeConfig
 from koffee.embed import embed_subtitles
 from koffee.exceptions import (
     IncompatibleOptionsError,
@@ -16,6 +15,7 @@ from koffee.exceptions import (
     MissingDependencyError,
     UnsupportedFileError,
 )
+from koffee.schemas.config import KoffeeConfig
 from koffee.subtitle import generate_subtitles
 from koffee.translator import translate
 from koffee.utils import (

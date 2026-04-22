@@ -22,15 +22,15 @@ from rich.table import Table
 
 from koffee import asr
 from koffee.api import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, _write_output, run
-from koffee.data.config import (
+from koffee.embed import embed_subtitles
+from koffee.exceptions import InvalidVideoFileError, SubtitleEmbedError
+from koffee.schemas.config import (
     CONFIG_SEARCH_PATHS,
     LANGUAGE_CODES,
     LANGUAGE_NAMES,
     KoffeeConfig,
     load_config_file,
 )
-from koffee.embed import embed_subtitles
-from koffee.exceptions import InvalidVideoFileError, SubtitleEmbedError
 from koffee.subtitle import generate_subtitles
 from koffee.utils import get_subtitle_tracks, parse_subtitle_file
 
