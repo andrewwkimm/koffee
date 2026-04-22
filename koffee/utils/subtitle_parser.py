@@ -98,5 +98,7 @@ def _timestamp_to_seconds(timestamp: str) -> float:
     """Converts an SRT/VTT timestamp to seconds."""
     timestamp = timestamp.replace(",", ".")
     hours, minutes, rest = timestamp.split(":")
-    seconds, ms = rest.split(".")
-    return int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(ms) / 1000
+    seconds, milliseconds = rest.split(".")
+    return (
+        int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(milliseconds) / 1000
+    )

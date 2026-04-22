@@ -10,19 +10,19 @@ def convert_to_timestamp(seconds: float | int, subtitle_format: str) -> str:
     """Converts seconds to SRT timestamp format."""
     seconds_decimal = Decimal(str(seconds))
     seconds_int = int(seconds_decimal)
-    ms = int((seconds_decimal % 1) * 1000)
+    milliseconds = int((seconds_decimal % 1) * 1000)
     ts = timedelta(seconds=seconds_int)
     total_seconds = int(ts.total_seconds())
     hours, remainder = divmod(total_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
 
     if subtitle_format == "srt":
-        timestamp = f"{hours:02}:{minutes:02}:{seconds:02},{ms:03}"
+        timestamp = f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
     elif subtitle_format == "vtt":
-        timestamp = f"{hours:02}:{minutes:02}:{seconds:02}.{ms:03}"
+        timestamp = f"{hours:02}:{minutes:02}:{seconds:02}.{milliseconds:03}"
     elif subtitle_format == "ass":
-        cs = ms // 10
-        timestamp = f"{hours}:{minutes:02}:{seconds:02}.{cs:02}"
+        centiseconds = milliseconds // 10
+        timestamp = f"{hours}:{minutes:02}:{seconds:02}.{centiseconds:02}"
     else:
         error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
         raise InvalidSubtitleFormatError(error_message)
