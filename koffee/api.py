@@ -199,10 +199,13 @@ def _route_output(
             config.target_language,
         )
     else:
-        target_path = output_path.with_suffix(f".{config.subtitle_format}")
-        _check_output_collision(target_path, config.overwrite)
-        output_file_path = _handle_subtitle_output(
-            subtitle_file_path, output_path, config.subtitle_format
+        output_file_path = _write_output(
+            subtitle_file_path,
+            video_file_path,
+            config.subtitle_format,
+            config.output_dir,
+            config.output_name,
+            config.overwrite,
         )
 
     return output_file_path
@@ -246,10 +249,14 @@ def _translate_subtitle_file(
         provider=config.provider,
     )
     translated_path = generate_subtitles(config.subtitle_format, translated_segments)
-    output_path = _get_output_path(file_path, config.output_dir, config.output_name)
-    output_subtitle_path = output_path.with_suffix(f".{config.subtitle_format}")
-    _check_output_collision(output_subtitle_path, config.overwrite)
-    translated_path.replace(output_subtitle_path)
+    output_subtitle_path = _write_output(
+        translated_path,
+        file_path,
+        config.subtitle_format,
+        config.output_dir,
+        config.output_name,
+        config.overwrite,
+    )
 
     return output_subtitle_path
 
@@ -325,12 +332,25 @@ def _finalize_video_output(
     return output_video
 
 
-def _handle_subtitle_output(
-    subtitle_file_path: Path, output_path: Path, subtitle_format: str
+def _write_output(
+    source_path: Path,
+    input_path: Path | str,
+    subtitle_format: str,
+    output_dir: Path | None,
+    output_name: str | None,
+    overwrite: bool,
 ) -> Path:
-    """Moves the subtitle file to the output path."""
-    output_subtitle_path = output_path.with_suffix(f".{subtitle_format}")
-    subtitle_file_path.replace(output_subtitle_path)
+    """Moves a generated subtitle file to its resolved output location."""
+    base_path = _get_output_path(input_path, output_dir, output_name)
+    target_path = base_path.with_suffix(f".{subtitle_format}")
+
+    try:
+        _check_output_collision(target_path, overwrite)
+    except FileExistsError:
+        source_path.unlink(missing_ok=True)
+        raise
+
+    source_path.replace(target_path)
     log.info("Finished processing file!")
 
-    return output_subtitle_path
+    return target_path
