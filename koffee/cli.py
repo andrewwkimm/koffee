@@ -27,7 +27,7 @@ from koffee.data.config import (
     KoffeeConfig,
     load_config_file,
 )
-from koffee.exceptions import InvalidVideoFileError, SubtitleOverlayError
+from koffee.exceptions import InvalidVideoFileError, SubtitleEmbedError
 from koffee.overlay import embed_subtitles
 from koffee.subtitle import generate_subtitles
 from koffee.utils import get_subtitle_tracks, parse_subtitle_file
@@ -212,7 +212,7 @@ def cli(
                 FileExistsError,
                 FileNotFoundError,
                 InvalidVideoFileError,
-                SubtitleOverlayError,
+                SubtitleEmbedError,
                 ValueError,
                 subprocess.CalledProcessError,
                 subprocess.TimeoutExpired,
