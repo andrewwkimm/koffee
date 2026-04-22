@@ -248,27 +248,40 @@ def _print_dry_run(resolved_paths: list[Path], config: KoffeeConfig) -> None:
 
 
 def _handle_embedded_subtitles(video_path: Path, config: KoffeeConfig) -> KoffeeConfig:
-    """Checks for embedded subtitles and prompts user to use them."""
-    if video_path.suffix.lower() in SUBTITLE_EXTENSIONS:
-        return config
-
-    tracks = get_subtitle_tracks(video_path)
+    """If the video has embedded subtitles, prompts the user and updates config."""
+    tracks = _detect_embedded_subtitles(video_path)
     if not tracks:
         return config
 
-    track_count = len(tracks)
-    log.info(f"Found {track_count} embedded subtitle track(s) in {video_path.name}.")
-
-    user_input = input("Translate embedded subtitles instead of running ASR? [Y/n] ")
-    if user_input.strip().lower() not in ("", "y", "yes"):
+    log.info(f"Found {len(tracks)} embedded subtitle track(s) in {video_path.name}.")
+    if not _prompt_use_embedded_subtitles():
         return config
 
+    return _apply_subtitle_track(config, tracks)
+
+
+def _apply_subtitle_track(config: KoffeeConfig, tracks: list[dict]) -> KoffeeConfig:
+    """Selects a subtitle track and returns an updated config."""
     track_index, source_language = _select_subtitle_track(tracks)
     updates = {"use_embedded_subtitles": True, "subtitle_track_index": track_index}
     if source_language:
         updates["source_language"] = source_language
 
     return config.model_copy(update=updates)
+
+
+def _detect_embedded_subtitles(video_path: Path) -> list[dict]:
+    """Returns embedded subtitle tracks in the video, or an empty list."""
+    if video_path.suffix.lower() in SUBTITLE_EXTENSIONS:
+        return []
+
+    return get_subtitle_tracks(video_path)
+
+
+def _prompt_use_embedded_subtitles() -> bool:
+    """Prompts the user to use embedded subtitles instead of running ASR."""
+    user_input = input("Translate embedded subtitles instead of running ASR? [Y/n] ")
+    return user_input.strip().lower() in ("", "y", "yes")
 
 
 def _select_subtitle_track(tracks: list[dict]) -> tuple[int, str | None]:
