@@ -1,4 +1,4 @@
-"""Tests for subtitle overlay."""
+"""Tests for subtitle embedding."""
 
 import subprocess
 from pathlib import Path
@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 from pytest_mock import MockerFixture
 
+from koffee.embed import _get_subtitle_codec, embed_subtitles
 from koffee.exceptions import SubtitleEmbedError
-from koffee.overlay import _get_subtitle_codec, embed_subtitles
 
 
 @pytest.fixture

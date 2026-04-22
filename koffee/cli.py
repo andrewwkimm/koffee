@@ -27,8 +27,8 @@ from koffee.data.config import (
     KoffeeConfig,
     load_config_file,
 )
+from koffee.embed import embed_subtitles
 from koffee.exceptions import InvalidVideoFileError, SubtitleEmbedError
-from koffee.overlay import embed_subtitles
 from koffee.subtitle import generate_subtitles
 from koffee.utils import get_subtitle_tracks, parse_subtitle_file
 
