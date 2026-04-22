@@ -14,7 +14,6 @@ from koffee.translator import (
     _build_prompt,
     _call_with_retries,
     _chunk_segments,
-    _extract_text,
     _load_backend,
     _parse_srt_response,
     _sanitize_response,
@@ -374,33 +373,33 @@ def test_load_backend_gemini() -> None:
     assert hasattr(backend, "attempt_generate")
 
 
-def test_extract_text_gemini() -> None:
+def test_gemini_extract_text() -> None:
     """Tests that text is extracted from a Gemini response."""
     from unittest.mock import MagicMock  # noqa: PLC0415
 
     response = MagicMock()
     response.text = "Hello."
-    assert _extract_text(response, "gemini") == "Hello."
+    assert gemini.extract_text(response) == "Hello."
 
 
-def test_extract_text_chatgpt() -> None:
+def test_chatgpt_extract_text() -> None:
     """Tests that text is extracted from a ChatGPT response."""
     from unittest.mock import MagicMock  # noqa: PLC0415
 
     response = MagicMock()
     response.choices = [MagicMock()]
     response.choices[0].message.content = "Hello."
-    assert _extract_text(response, "chatgpt") == "Hello."
+    assert chatgpt.extract_text(response) == "Hello."
 
 
-def test_extract_text_claude() -> None:
+def test_claude_extract_text() -> None:
     """Tests that text is extracted from a Claude response."""
     from unittest.mock import MagicMock  # noqa: PLC0415
 
     response = MagicMock()
     response.content = [MagicMock()]
     response.content[0].text = "Hello."
-    assert _extract_text(response, "claude") == "Hello."
+    assert claude.extract_text(response) == "Hello."
 
 
 def test_translate_uses_default_model(mocker: MockerFixture) -> None:
@@ -602,14 +601,14 @@ def test_load_backend_ollama() -> None:
     assert hasattr(backend, "attempt_generate")
 
 
-def test_extract_text_ollama() -> None:
+def test_ollama_extract_text() -> None:
     """Tests that text is extracted from an Ollama response."""
     from unittest.mock import MagicMock  # noqa: PLC0415
 
     response = MagicMock()
     response.choices = [MagicMock()]
     response.choices[0].message.content = "Hello."
-    assert _extract_text(response, "ollama") == "Hello."
+    assert ollama.extract_text(response) == "Hello."
 
 
 def test_claude_translate(mocker: MockerFixture) -> None:

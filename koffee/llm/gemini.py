@@ -7,10 +7,18 @@ from google.genai.errors import APIError, ClientError
 
 log = logging.getLogger(__name__)
 
+NAME = "gemini"
+DEFAULT_MODEL = "gemini-2.5-flash"
+
 
 def create_client(api_key: str | None):
     """Creates a Gemini client."""
     return genai.Client(api_key=api_key)
+
+
+def extract_text(response) -> str:
+    """Extracts the generated text from a Gemini response."""
+    return response.text
 
 
 def attempt_generate(client, prompt: str, model: str, system_prompt: str):

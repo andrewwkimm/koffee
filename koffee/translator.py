@@ -5,6 +5,7 @@ import time
 from collections.abc import Callable
 from types import ModuleType
 
+from koffee.llm._protocol import TranslationProvider
 from koffee.utils import convert_to_timestamp
 
 log = logging.getLogger(__name__)
@@ -55,13 +56,6 @@ LLM = {
     "ollama": "koffee.llm.ollama",
 }
 
-DEFAULT_MODEL = {
-    "gemini": "gemini-2.5-flash",
-    "chatgpt": "gpt-4o",
-    "claude": "claude-sonnet-4-6",
-    "ollama": "qwen3:14b",
-}
-
 
 def translate(
     transcript: dict,
@@ -78,19 +72,18 @@ def translate(
     log.info(f"Translating transcript with {provider}.")
 
     system_prompt = prompt if prompt else SYSTEM_PROMPT
-    model = llm_model or DEFAULT_MODEL.get(provider, "")
+    backend = _load_backend(provider)
+    model = llm_model or backend.DEFAULT_MODEL
     resolved_chunk_size = chunk_size or CHUNK_SIZE_BY_MODEL.get(model, CHUNK_SIZE)
     resolved_context_size = (
         context_size
         if context_size is not None
         else CONTEXT_SIZE_BY_MODEL.get(model, CONTEXT_SIZE)
     )
-    backend = _load_backend(provider)
     client = backend.create_client(api_key)
     chunks = _chunk_segments(transcript, target_language, resolved_chunk_size)
     translated_segments = _translate_chunks(
         backend,
-        backend_name=provider,
         client=client,
         chunks=chunks,
         on_progress=on_progress,
@@ -101,7 +94,7 @@ def translate(
     return translated_segments
 
 
-def _load_backend(backend_name: str) -> ModuleType:
+def _load_backend(backend_name: str) -> TranslationProvider:
     """Loads a translation backend module by name."""
     import importlib  # noqa: PLC0415
 
@@ -114,17 +107,6 @@ def _load_backend(backend_name: str) -> ModuleType:
         raise ValueError(error_message)
 
     return importlib.import_module(module_path)
-
-
-def _extract_text(response, backend_name: str) -> str:
-    """Extracts text content from a backend-specific response object."""
-    if backend_name == "gemini":
-        return response.text
-    if backend_name in ("chatgpt", "ollama"):
-        return response.choices[0].message.content
-    if backend_name == "claude":
-        return response.content[0].text
-    return str(response)
 
 
 def _chunk_segments(
@@ -149,7 +131,6 @@ def _chunk_segments(
 
 def _translate_chunks(
     backend: ModuleType,
-    backend_name: str,
     client,
     chunks: list[dict],
     on_progress: Callable[[float], None] | None,
@@ -168,7 +149,6 @@ def _translate_chunks(
         )
         translated_chunk = _translate_chunk(
             backend,
-            backend_name,
             client,
             prompt,
             chunk_data["chunk"],
@@ -188,7 +168,6 @@ def _translate_chunks(
 
 def _translate_chunk(
     backend: ModuleType,
-    backend_name: str,
     client,
     prompt: str,
     chunk: list[dict],
@@ -197,7 +176,7 @@ def _translate_chunk(
 ) -> list[dict]:
     """Calls the LLM with a prompt and parses the response."""
     response = _call_with_retries(backend, client, prompt, llm_model, system_prompt)
-    response_text = _extract_text(response, backend_name)
+    response_text = backend.extract_text(response)
     translated_chunk = _parse_srt_response(response_text, chunk)
 
     return translated_chunk
