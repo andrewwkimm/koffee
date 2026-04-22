@@ -8,8 +8,8 @@ from koffee.llm import chatgpt, claude, gemini, ollama
 from koffee.translator import (
     CHUNK_SIZE,
     CHUNK_SIZE_BY_MODEL,
-    CONTEXT_ENTRIES,
-    CONTEXT_ENTRIES_BY_MODEL,
+    CONTEXT_SIZE,
+    CONTEXT_SIZE_BY_MODEL,
     SYSTEM_PROMPT,
     _build_prompt,
     _call_with_retries,
@@ -43,7 +43,7 @@ def test_build_prompt_with_context() -> None:
 
     result = _build_prompt(
         chunk=SAMPLE_SEGMENTS,
-        context_entries=context,
+        context_segments=context,
         source_language="ko",
         target_language="en",
         start_entry=4,
@@ -60,7 +60,7 @@ def test_build_prompt_auto_source_language() -> None:
     """Tests that 'auto' source language omits the source from the prompt."""
     result = _build_prompt(
         chunk=SAMPLE_SEGMENTS,
-        context_entries=[],
+        context_segments=[],
         source_language="auto",
         target_language="en",
         start_entry=1,
@@ -74,7 +74,7 @@ def test_build_prompt_without_context() -> None:
     """Tests that the prompt omits context section when no context entries are given."""
     result = _build_prompt(
         chunk=SAMPLE_SEGMENTS,
-        context_entries=[],
+        context_segments=[],
         source_language="ko",
         target_language="en",
         start_entry=1,
@@ -853,17 +853,17 @@ def test_translate_explicit_chunk_size_overrides_model_default(
     assert mock_client.chat.completions.create.call_count == 3
 
 
-# --- Context entries tests ---
+# --- Context size tests ---
 
 
-def test_translate_uses_model_context_entries(mocker: MockerFixture) -> None:
+def test_translate_uses_model_context_size(mocker: MockerFixture) -> None:
     """Tests that a model uses its configured context window."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(ollama, "create_client", return_value=mock_client)
     mock_sleep = mocker.patch("koffee.translator.time.sleep")
 
     model = "qwen3:14b"
-    expected_context = CONTEXT_ENTRIES_BY_MODEL[model]
+    expected_context = CONTEXT_SIZE_BY_MODEL[model]
 
     segments = [{"start": float(i), "end": float(i + 1), "text": "x"} for i in range(3)]
     mock_response = mocker.MagicMock()
@@ -885,14 +885,14 @@ def test_translate_uses_model_context_entries(mocker: MockerFixture) -> None:
     )
 
     _, kwargs = mock_build.call_args
-    assert len(kwargs["context_entries"]) <= expected_context
+    assert len(kwargs["context_segments"]) <= expected_context
     mock_sleep.assert_not_called()
 
 
-def test_translate_explicit_context_entries_overrides_model_default(
+def test_translate_explicit_context_size_overrides_model_default(
     mocker: MockerFixture,
 ) -> None:
-    """Tests that an explicit context_entries overrides the per-model default."""
+    """Tests that an explicit context_size overrides the per-model default."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(gemini, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
@@ -912,18 +912,18 @@ def test_translate_explicit_context_entries_overrides_model_default(
         "en",
         api_key=None,
         translator="gemini",
-        context_entries=2,
+        context_size=2,
     )
 
     for call in mock_build.call_args_list:
         _, kwargs = call
-        assert len(kwargs["context_entries"]) <= 2
+        assert len(kwargs["context_segments"]) <= 2
 
 
-def test_translate_uses_default_context_entries_for_unknown_model(
+def test_translate_uses_default_context_size_for_unknown_model(
     mocker: MockerFixture,
 ) -> None:
-    """Tests that CONTEXT_ENTRIES is used for models not in CONTEXT_ENTRIES_BY_MODEL."""
+    """Tests that CONTEXT_SIZE is used for models not in CONTEXT_SIZE_BY_MODEL."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(gemini, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
@@ -938,4 +938,4 @@ def test_translate_uses_default_context_entries_for_unknown_model(
     translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="gemini")
 
     _, kwargs = mock_build.call_args
-    assert len(kwargs["context_entries"]) <= CONTEXT_ENTRIES
+    assert len(kwargs["context_segments"]) <= CONTEXT_SIZE

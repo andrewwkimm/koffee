@@ -100,8 +100,7 @@ def cli(
     translator: Annotated[str, Parameter(name=("--translator",))] = defaults.translator,
     llm_model: Annotated[str, Parameter(name=("--llm-model",))] | None = None,
     chunk_size: Annotated[int, Parameter(name=("--chunk-size",))] | None = None,
-    context_entries: Annotated[int, Parameter(name=("--context-entries",))]
-    | None = None,
+    context_size: Annotated[int, Parameter(name=("--context-size",))] | None = None,
     prompt: Annotated[str, Parameter(name=("--prompt",))] | None = None,
     api_key: Annotated[str, Parameter(name=("--api-key",))] | None = None,
     config: Annotated[Path, Parameter(name=("--config",), group=options_group)]
@@ -174,7 +173,7 @@ def cli(
         "whisper_model": whisper_model,
         "llm_model": llm_model,
         "chunk_size": chunk_size,
-        "context_entries": context_entries,
+        "context_size": context_size,
         "overwrite": overwrite,
         "output_dir": output_dir,
         "output_name": output_name,
