@@ -13,9 +13,9 @@ from koffee.api import (
     _finalize_video_output,
     _get_output_path,
     _get_segments,
-    _handle_subtitle_output,
     _route_output,
     _validate_inputs,
+    _write_output,
     run,
 )
 from koffee.data.config import KoffeeConfig
@@ -146,17 +146,48 @@ def test_finalize_video_output_deletes_subtitle(mocker, tmp_path, api_module) ->
     assert not subtitle.exists()
 
 
-def test_handle_subtitle_output_renames_subtitle(tmp_path) -> None:
-    """Tests that the subtitle file is moved to the correct output path."""
+def test_write_output_moves_subtitle_to_target(tmp_path) -> None:
+    """Tests that `_write_output` moves the source to the resolved target path."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
-    output_path = tmp_path / "track.mp4"
 
-    result = _handle_subtitle_output(subtitle, output_path, "srt")
+    result = _write_output(
+        subtitle, tmp_path / "track.mp4", "srt", None, None, overwrite=False
+    )
 
     assert result == tmp_path / "track.srt"
     assert result.exists()
     assert not subtitle.exists()
+
+
+def test_write_output_unlinks_source_on_collision(tmp_path) -> None:
+    """Tests that a collision unlinks the source file before raising."""
+    subtitle = tmp_path / "sub.srt"
+    subtitle.touch()
+    existing = tmp_path / "track.srt"
+    existing.touch()
+
+    with pytest.raises(FileExistsError, match="already exists"):
+        _write_output(
+            subtitle, tmp_path / "track.mp4", "srt", None, None, overwrite=False
+        )
+
+    assert not subtitle.exists()
+    assert existing.exists()
+
+
+def test_write_output_overwrites_when_allowed(tmp_path) -> None:
+    """Tests that overwrite=True replaces an existing target."""
+    subtitle = tmp_path / "sub.srt"
+    subtitle.write_text("new")
+    existing = tmp_path / "track.srt"
+    existing.write_text("old")
+
+    result = _write_output(
+        subtitle, tmp_path / "track.mp4", "srt", None, None, overwrite=True
+    )
+
+    assert result.read_text() == "new"
 
 
 def test_validate_api_key_raises_without_key() -> None:
@@ -317,13 +348,14 @@ def test_validate_inputs_passes_on_valid_video(mocker, tmp_path) -> None:
     _validate_inputs(video, KoffeeConfig(embed="soft"))
 
 
-def test_handle_subtitle_output_audio_renames_subtitle(tmp_path) -> None:
-    """Tests that the subtitle file is moved correctly for audio inputs."""
+def test_write_output_audio_input_uses_audio_stem(tmp_path) -> None:
+    """Tests that `_write_output` derives the stem from an audio input."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
-    output_path = tmp_path / "track.mp3"
 
-    result = _handle_subtitle_output(subtitle, output_path, "srt")
+    result = _write_output(
+        subtitle, tmp_path / "track.mp3", "srt", None, None, overwrite=False
+    )
 
     assert result == tmp_path / "track.srt"
     assert result.exists()

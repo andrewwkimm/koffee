@@ -21,7 +21,7 @@ from rich.progress import (
 from rich.table import Table
 
 from koffee import asr
-from koffee.api import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, run
+from koffee.api import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, _write_output, run
 from koffee.data.config import (
     CONFIG_SEARCH_PATHS,
     LANGUAGE_CODES,
@@ -583,19 +583,14 @@ def transcribe(
     out_dir = output_dir if output_dir is not None else file_path.parent
     subtitle_file_path = generate_subtitles(subtitle_format, segments, out_dir)
 
-    if output_name is not None:
-        target_path = out_dir / f"{output_name}.{subtitle_format}"
-    else:
-        target_path = out_dir / f"{file_path.stem}.{subtitle_format}"
-
-    if target_path.exists() and not overwrite:
-        subtitle_file_path.unlink(missing_ok=True)
-        error_message = (
-            f"Output file already exists: {target_path}. Use --overwrite to replace it."
-        )
-        raise FileExistsError(error_message)
-
-    subtitle_file_path.replace(target_path)
+    target_path = _write_output(
+        subtitle_file_path,
+        file_path,
+        subtitle_format,
+        output_dir,
+        output_name,
+        overwrite,
+    )
     log.info(f"Output saved to {target_path}")
 
 
@@ -628,19 +623,14 @@ def convert(
     out_dir = output_dir if output_dir is not None else file_path.parent
     subtitle_file_path = generate_subtitles(subtitle_format, segments, out_dir)
 
-    if output_name is not None:
-        target_path = out_dir / f"{output_name}.{subtitle_format}"
-    else:
-        target_path = out_dir / f"{file_path.stem}.{subtitle_format}"
-
-    if target_path.exists() and not overwrite:
-        subtitle_file_path.unlink(missing_ok=True)
-        error_message = (
-            f"Output file already exists: {target_path}. Use --overwrite to replace it."
-        )
-        raise FileExistsError(error_message)
-
-    subtitle_file_path.replace(target_path)
+    target_path = _write_output(
+        subtitle_file_path,
+        file_path,
+        subtitle_format,
+        output_dir,
+        output_name,
+        overwrite,
+    )
     log.info(f"Converted {file_path.name} to {target_path}")
 
 
