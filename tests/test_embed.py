@@ -6,7 +6,11 @@ from pathlib import Path
 import pytest
 from pytest_mock import MockerFixture
 
-from koffee.embed import _get_subtitle_codec, embed_subtitles
+from koffee.embed import (
+    _escape_subtitle_filter_path,
+    _get_subtitle_codec,
+    embed_subtitles,
+)
 from koffee.exceptions import SubtitleEmbedError
 
 
@@ -88,6 +92,37 @@ def test_missing_ffmpeg_raises(
 
     with pytest.raises(FileNotFoundError):
         embed_subtitles(subtitle_file_path, video_file_path, output_file_path)
+
+
+def test_escape_subtitle_filter_path_windows_drive() -> None:
+    """Tests that a Windows drive path is normalized and the colon escaped."""
+    assert (
+        _escape_subtitle_filter_path("C:\\Users\\me\\sub.srt")
+        == "C\\:/Users/me/sub.srt"
+    )
+
+
+def test_escape_subtitle_filter_path_metacharacters() -> None:
+    """Tests that filter-graph metacharacters are backslash-escaped."""
+    result = _escape_subtitle_filter_path("/tmp/a,b[c]d;e'f.srt")
+    assert result == "/tmp/a\\,b\\[c\\]d\\;e\\'f.srt"
+
+
+def test_burn_in_subtitles_uses_escaped_path(
+    video_file_path: Path,
+    output_file_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    """Tests that `_burn_in_subtitles` passes an escaped path to ffmpeg."""
+    mock_run = mocker.patch("subprocess.run")
+
+    embed_subtitles(
+        "C:\\subs\\track.srt", video_file_path, output_file_path, mode="hard"
+    )
+
+    cmd = mock_run.call_args[0][0]
+    vf_index = cmd.index("-vf")
+    assert cmd[vf_index + 1] == "subtitles=C\\:/subs/track.srt"
 
 
 def test_timeout_raises(
