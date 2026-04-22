@@ -1,6 +1,7 @@
 """Tests for the koffee API."""
 
 import importlib
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -346,6 +347,50 @@ def test_validate_inputs_passes_on_valid_video(mocker, tmp_path) -> None:
     mocker.patch("koffee.api.shutil.which", return_value="/usr/bin/ffmpeg")
 
     _validate_inputs(video, KoffeeConfig(embed="soft"))
+
+
+def test_validate_inputs_rejects_existing_output(tmp_path) -> None:
+    """Tests that an existing output file raises FileExistsError upfront."""
+    audio = tmp_path / "track.mp3"
+    audio.touch()
+    existing_output = tmp_path / "track.vtt"
+    existing_output.touch()
+
+    with pytest.raises(FileExistsError, match="Output file already exists"):
+        _validate_inputs(audio, KoffeeConfig())
+
+
+def test_validate_inputs_allows_existing_output_with_overwrite(tmp_path) -> None:
+    """Tests that an existing output is tolerated when overwrite is enabled."""
+    audio = tmp_path / "track.mp3"
+    audio.touch()
+    existing_output = tmp_path / "track.vtt"
+    existing_output.touch()
+
+    _validate_inputs(audio, KoffeeConfig(overwrite=True))
+
+
+def test_validate_inputs_creates_missing_output_dir(tmp_path) -> None:
+    """Tests that a missing output_dir is created during validation."""
+    audio = tmp_path / "track.mp3"
+    audio.touch()
+    new_dir = tmp_path / "nested" / "out"
+
+    _validate_inputs(audio, KoffeeConfig(output_dir=new_dir))
+
+    assert new_dir.is_dir()
+
+
+def test_validate_inputs_embed_checks_video_suffix_collision(mocker, tmp_path) -> None:
+    """Tests that embed mode checks for collision against the video-suffix output."""
+    video = tmp_path / "clip.mp4"
+    video.touch()
+    mocker.patch("koffee.api.shutil.which", return_value="/usr/bin/ffmpeg")
+    colliding = tmp_path / f"clip_{datetime.now().strftime('%m-%d-%Y')}.mp4"
+    colliding.touch()
+
+    with pytest.raises(FileExistsError, match="Output file already exists"):
+        _validate_inputs(video, KoffeeConfig(embed="soft"))
 
 
 def test_write_output_audio_input_uses_audio_stem(tmp_path) -> None:

@@ -113,6 +113,7 @@ def _validate_inputs(video_file_path: Path | str, config: KoffeeConfig) -> None:
             raise IncompatibleOptionsError(error_message)
 
     _validate_api_key(config)
+    _validate_output_path(video_file_path, config)
 
 
 def _validate_api_key(config: KoffeeConfig) -> None:
@@ -124,6 +125,24 @@ def _validate_api_key(config: KoffeeConfig) -> None:
             "environment variable."
         )
         raise ValueError(error_message)
+
+
+def _validate_output_path(video_file_path: Path | str, config: KoffeeConfig) -> None:
+    """Ensures the resolved output path is writable and not already occupied."""
+    input_suffix = Path(video_file_path).suffix.lower()
+    is_video = input_suffix in VIDEO_EXTENSIONS
+    has_embed = (
+        is_video and not config.use_embedded_subtitles and config.embed != "none"
+    )
+
+    base_path = _get_output_path(
+        video_file_path, config.output_dir, config.output_name, date_suffix=has_embed
+    )
+    output_path = (
+        base_path if has_embed else base_path.with_suffix(f".{config.subtitle_format}")
+    )
+
+    _check_output_collision(output_path, config.overwrite)
 
 
 def _apply_config_overrides(config: KoffeeConfig | None, kwargs: dict) -> KoffeeConfig:
