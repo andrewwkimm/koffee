@@ -22,6 +22,7 @@ from koffee.api import (
 from koffee.exceptions import (
     IncompatibleOptionsError,
     InvalidVideoFileError,
+    MissingApiKeyError,
     MissingDependencyError,
     UnsupportedFileError,
 )
@@ -198,8 +199,8 @@ def test_write_output_overwrites_when_allowed(tmp_path) -> None:
 
 
 def test_validate_api_key_raises_without_key() -> None:
-    """Tests that an LLM backend without API key raises ValueError."""
-    with pytest.raises(ValueError, match="API key is required"):
+    """Tests that an LLM backend without API key raises MissingApiKeyError."""
+    with pytest.raises(MissingApiKeyError, match="API key is required"):
         koffee.run(
             "examples/videos/sample_korean_video.mp4",
             provider="gemini",

@@ -23,7 +23,7 @@ from rich.table import Table
 from koffee import asr
 from koffee.api import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, _write_output, run
 from koffee.embed import embed_subtitles
-from koffee.exceptions import InvalidVideoFileError, SubtitleEmbedError
+from koffee.exceptions import KoffeeError
 from koffee.schemas.config import (
     CONFIG_SEARCH_PATHS,
     LANGUAGE_CODES,
@@ -226,9 +226,7 @@ def cli(
             except (
                 FileExistsError,
                 FileNotFoundError,
-                InvalidVideoFileError,
-                SubtitleEmbedError,
-                ValueError,
+                KoffeeError,
                 subprocess.CalledProcessError,
                 subprocess.TimeoutExpired,
             ) as exc:

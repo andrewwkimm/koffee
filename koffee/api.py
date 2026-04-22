@@ -12,6 +12,7 @@ from koffee.embed import embed_subtitles
 from koffee.exceptions import (
     IncompatibleOptionsError,
     InvalidVideoFileError,
+    MissingApiKeyError,
     MissingDependencyError,
     UnsupportedFileError,
 )
@@ -118,14 +119,14 @@ def _validate_inputs(video_file_path: Path | str, config: KoffeeConfig) -> None:
 
 
 def _validate_api_key(config: KoffeeConfig) -> None:
-    """Raises ValueError if an LLM backend is selected without an API key."""
+    """Raises MissingApiKeyError if an LLM backend is selected without an API key."""
     if config.provider not in ("whisper", "ollama") and not config.api_key:
         error_message = (
             f"An API key is required when using the {config.provider} "
             "translation backend. Provide one with --api_key or set the appropriate "
             "environment variable."
         )
-        raise ValueError(error_message)
+        raise MissingApiKeyError(error_message)
 
 
 def _validate_output_path(video_file_path: Path | str, config: KoffeeConfig) -> None:

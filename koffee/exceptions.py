@@ -1,25 +1,33 @@
 """Exceptions for koffee."""
 
 
-class IncompatibleOptionsError(Exception):
+class KoffeeError(Exception):
+    """Base class for all koffee-specific errors."""
+
+
+class IncompatibleOptionsError(KoffeeError):
     """Config options incompatible with the input file."""
 
 
-class InvalidSubtitleFormatError(Exception):
+class InvalidSubtitleFormatError(KoffeeError):
     """Subtitle format is invalid or not supported."""
 
 
-class InvalidVideoFileError(Exception):
+class InvalidVideoFileError(KoffeeError):
     """Video file is invalid or does not exist."""
 
 
-class MissingDependencyError(Exception):
+class MissingApiKeyError(KoffeeError):
+    """LLM backend selected without a required API key."""
+
+
+class MissingDependencyError(KoffeeError):
     """Required external executable not found on PATH."""
 
 
-class SubtitleEmbedError(Exception):
+class SubtitleEmbedError(KoffeeError):
     """Subtitle embedding not possible for the given file."""
 
 
-class UnsupportedFileError(Exception):
+class UnsupportedFileError(KoffeeError):
     """Input file has an unsupported extension."""
