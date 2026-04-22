@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from koffee.exceptions import InvalidSubtitleFormatError
+from koffee.schemas.types import Segment
 from koffee.utils import (
     convert_segments_to_ass,
     convert_segments_to_srt,
@@ -12,7 +13,7 @@ from koffee.utils import (
 
 def generate_subtitles(
     subtitle_format: str,
-    segments: list,
+    segments: list[Segment],
     output_dir: Path | None = None,
 ) -> Path:
     """Generates subtitles from a list of segments."""

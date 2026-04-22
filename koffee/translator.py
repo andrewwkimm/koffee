@@ -6,6 +6,7 @@ from collections.abc import Callable
 from types import ModuleType
 
 from koffee.llm._protocol import TranslationProvider
+from koffee.schemas.types import Chunk, Segment, Transcript
 from koffee.utils import convert_to_timestamp, with_retries
 
 log = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ LLM = {
 
 
 def translate(
-    transcript: dict,
+    transcript: Transcript,
     target_language: str,
     api_key: str | None,
     on_progress: Callable[[float], None] | None = None,
@@ -72,7 +73,7 @@ def translate(
     chunk_size: int | None = None,
     context_size: int | None = None,
     sleep_requests: int | None = None,
-) -> list:
+) -> list[Segment]:
     """Translates a transcript using an LLM backend, preserving timing information."""
     log.info(f"Translating transcript with {provider}.")
 
@@ -121,8 +122,8 @@ def _load_backend(backend_name: str) -> TranslationProvider:
 
 
 def _chunk_segments(
-    transcript: dict, target_language: str, chunk_size: int = CHUNK_SIZE
-) -> list[dict]:
+    transcript: Transcript, target_language: str, chunk_size: int = CHUNK_SIZE
+) -> list[Chunk]:
     """Splits transcript segments into prompt-ready chunks."""
     segments = transcript["segments"]
     source_language = transcript["language"]
@@ -143,13 +144,13 @@ def _chunk_segments(
 def _translate_chunks(
     backend: ModuleType,
     client,
-    chunks: list[dict],
+    chunks: list[Chunk],
     on_progress: Callable[[float], None] | None,
     llm_model: str,
     system_prompt: str,
     context_size: int = CONTEXT_SIZE,
     sleep_requests: int = SLEEP_REQUESTS,
-) -> list[dict]:
+) -> list[Segment]:
     """Iterates chunks, translating each and reporting progress."""
     log.info(f"Translating in {len(chunks)} chunks.")
 
@@ -182,10 +183,10 @@ def _translate_chunk(
     backend: ModuleType,
     client,
     prompt: str,
-    chunk: list[dict],
+    chunk: list[Segment],
     llm_model: str,
     system_prompt: str,
-) -> list[dict]:
+) -> list[Segment]:
     """Calls the LLM with a prompt and parses the response."""
     response = _call_with_retries(backend, client, prompt, llm_model, system_prompt)
     response_text = backend.extract_text(response)
@@ -210,7 +211,7 @@ def _call_with_retries(
     )
 
 
-def _segments_to_srt(segments: list[dict]) -> str:
+def _segments_to_srt(segments: list[Segment]) -> str:
     """Converts a list of segments to SRT format string."""
     lines = []
     for i, seg in enumerate(segments, 1):
@@ -248,8 +249,8 @@ def _sanitize_response(response_text: str | None) -> str:
 
 
 def _parse_srt_response(
-    response_text: str | None, original_segments: list[dict]
-) -> list[dict]:
+    response_text: str | None, original_segments: list[Segment]
+) -> list[Segment]:
     """Parses SRT formatted response back into segments.
 
     Matches blocks to original segments by entry number rather than position,
@@ -289,8 +290,8 @@ def _blocks_to_translation_map(blocks: list[str]) -> dict[int, str]:
 
 
 def _merge_translated_segments(
-    translation_map: dict[int, str], original_segments: list[dict]
-) -> list[dict]:
+    translation_map: dict[int, str], original_segments: list[Segment]
+) -> list[Segment]:
     """Merges translated text onto original segments."""
     merged_segments = []
     for i, original in enumerate(original_segments, start=1):
@@ -310,8 +311,8 @@ def _merge_translated_segments(
 
 
 def _build_prompt(
-    chunk: list[dict],
-    context_segments: list[dict],
+    chunk: list[Segment],
+    context_segments: list[Segment],
     source_language: str,
     target_language: str,
     start_entry: int,

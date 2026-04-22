@@ -4,6 +4,8 @@ import logging
 import re
 from pathlib import Path
 
+from koffee.schemas.types import Segment
+
 log = logging.getLogger(__name__)
 
 TIMESTAMP_PATTERN = re.compile(
@@ -19,7 +21,7 @@ ASS_DIALOGUE_PATTERN = re.compile(
 )
 
 
-def parse_subtitle_file(file_path: Path | str) -> list[dict]:
+def parse_subtitle_file(file_path: Path | str) -> list[Segment]:
     """Parses an SRT, VTT, or ASS/SSA file into a list of segment dicts."""
     file_path = Path(file_path)
     text = file_path.read_text(encoding="utf-8")
@@ -53,7 +55,7 @@ def parse_subtitle_file(file_path: Path | str) -> list[dict]:
     return segments
 
 
-def _parse_ass(text: str, file_path: Path) -> list[dict]:
+def _parse_ass(text: str, file_path: Path) -> list[Segment]:
     """Parses ASS/SSA formatted text into segment dicts."""
     segments = []
     for line in text.splitlines():

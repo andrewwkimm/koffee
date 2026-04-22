@@ -3,10 +3,10 @@
 import logging
 from collections.abc import Callable
 from dataclasses import asdict
-from typing import Any
 
 from faster_whisper import WhisperModel
 
+from koffee.schemas.types import Segment, Transcript
 from koffee.utils import get_video_duration
 
 log = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ def transcribe(
     provider: str,
     on_progress: Callable[[float], None] | None = None,
     vad_filter: bool = True,
-) -> dict:
+) -> Transcript:
     """Transcribes a video or audio file."""
     log.info("Transcribing file.")
 
@@ -61,7 +61,7 @@ def _run_transcription(
 
 def _consume_segments(
     segments, video_file: str, on_progress: Callable[[float], None] | None
-) -> list[dict[str, Any]]:
+) -> list[Segment]:
     """Consumes the segment generator, reporting progress as each segment is yielded."""
     duration = get_video_duration(video_file) if on_progress else None
     result = []
