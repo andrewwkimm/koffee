@@ -76,7 +76,7 @@ Refer below for a list of all arguments, commands, parameters, and options.
     tracks      List embedded subtitle tracks in a video file
     transcribe  Transcribe audio to subtitles without translation
     convert     Convert a subtitle file between formats (SRT, VTT, ASS)
-    overlay     Overlay subtitles onto a video without transcr     translation
+    embed       Embed subtitles into a video without transcription or translation
 
 ### Parameters
 

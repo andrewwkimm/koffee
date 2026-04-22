@@ -470,7 +470,7 @@ def tracks(
 
 
 @app.command()
-def overlay(
+def embed(
     video_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
     subtitle_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
     output_path: Annotated[Path, Parameter(name=("--output", "-o"))] | None = None,
@@ -479,7 +479,7 @@ def overlay(
         bool, Parameter(name=("--overwrite",), group=options_group)
     ] = False,
 ) -> None:
-    """Overlay subtitles onto a video without transcription or translation.
+    """Embed subtitles into a video without transcription or translation.
 
     Parameters
     ----------
@@ -490,12 +490,12 @@ def overlay(
     output_path: Path
         Path for the output video file
     mode: str
-        Overlay mode: soft (muxed track) or hard (burned into video frames)
+        Embed mode: soft (muxed track) or hard (burned into video frames)
     overwrite: bool
         Overwrite existing output files instead of raising an error
     """
     if output_path is None:
-        output_path = video_path.with_stem(f"{video_path.stem}_overlay")
+        output_path = video_path.with_stem(f"{video_path.stem}_embed")
 
     if output_path.exists() and not overwrite:
         error_message = (
@@ -635,7 +635,7 @@ app["languages"].sort_key = 1
 app["tracks"].sort_key = 2
 app["transcribe"].sort_key = 3
 app["convert"].sort_key = 4
-app["overlay"].sort_key = 5
+app["embed"].sort_key = 5
 
 
 def main() -> None:

@@ -15,9 +15,9 @@ from koffee.cli import (
     _select_subtitle_track,
     cli,
     convert,
+    embed,
     info,
     languages,
-    overlay,
     tracks,
     transcribe,
 )
@@ -440,55 +440,55 @@ def test_find_config_path_returns_none(monkeypatch) -> None:
     assert _find_config_path() is None
 
 
-def test_overlay_command(mocker: MockerFixture, tmp_path) -> None:
-    """Tests that overlay command calls embed_subtitles."""
+def test_embed_command(mocker: MockerFixture, tmp_path) -> None:
+    """Tests that embed command calls embed_subtitles."""
     video = tmp_path / "video.mp4"
     video.touch()
     sub = tmp_path / "sub.srt"
     sub.touch()
     output = tmp_path / "out.mp4"
 
-    mock_overlay = mocker.patch("koffee.cli.embed_subtitles", return_value=output)
+    mock_embed = mocker.patch("koffee.cli.embed_subtitles", return_value=output)
 
-    overlay(video, sub, output_path=output)
+    embed(video, sub, output_path=output)
 
-    mock_overlay.assert_called_once_with(sub, video, output, mode="soft")
+    mock_embed.assert_called_once_with(sub, video, output, mode="soft")
 
 
-def test_overlay_command_hard_mode(mocker: MockerFixture, tmp_path) -> None:
-    """Tests that overlay command passes hard mode."""
+def test_embed_command_hard_mode(mocker: MockerFixture, tmp_path) -> None:
+    """Tests that embed command passes hard mode."""
     video = tmp_path / "video.mp4"
     video.touch()
     sub = tmp_path / "sub.srt"
     sub.touch()
     output = tmp_path / "out.mp4"
 
-    mock_overlay = mocker.patch("koffee.cli.embed_subtitles", return_value=output)
+    mock_embed = mocker.patch("koffee.cli.embed_subtitles", return_value=output)
 
-    overlay(video, sub, output_path=output, mode="hard")
+    embed(video, sub, output_path=output, mode="hard")
 
-    mock_overlay.assert_called_once_with(sub, video, output, mode="hard")
+    mock_embed.assert_called_once_with(sub, video, output, mode="hard")
 
 
-def test_overlay_command_default_output(mocker: MockerFixture, tmp_path) -> None:
-    """Tests that overlay generates a default output name."""
+def test_embed_command_default_output(mocker: MockerFixture, tmp_path) -> None:
+    """Tests that embed generates a default output name."""
     video = tmp_path / "video.mp4"
     video.touch()
     sub = tmp_path / "sub.srt"
     sub.touch()
-    expected_output = tmp_path / "video_overlay.mp4"
+    expected_output = tmp_path / "video_embed.mp4"
 
-    mock_overlay = mocker.patch(
+    mock_embed = mocker.patch(
         "koffee.cli.embed_subtitles", return_value=expected_output
     )
 
-    overlay(video, sub)
+    embed(video, sub)
 
-    mock_overlay.assert_called_once_with(sub, video, expected_output, mode="soft")
+    mock_embed.assert_called_once_with(sub, video, expected_output, mode="soft")
 
 
-def test_overlay_command_collision(tmp_path) -> None:
-    """Tests that overlay raises FileExistsError without --overwrite."""
+def test_embed_command_collision(tmp_path) -> None:
+    """Tests that embed raises FileExistsError without --overwrite."""
     video = tmp_path / "video.mp4"
     video.touch()
     sub = tmp_path / "sub.srt"
@@ -497,7 +497,7 @@ def test_overlay_command_collision(tmp_path) -> None:
     output.touch()
 
     with pytest.raises(FileExistsError, match="already exists"):
-        overlay(video, sub, output_path=output)
+        embed(video, sub, output_path=output)
 
 
 def test_transcribe_command(mocker: MockerFixture, tmp_path) -> None:
