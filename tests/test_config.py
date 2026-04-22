@@ -81,6 +81,22 @@ def test_valid_whisper_model_is_accepted() -> None:
     assert config.whisper_model == "tiny"
 
 
+def test_non_positive_chunk_size_raises() -> None:
+    """Tests that a zero or negative chunk_size raises a validation error."""
+    with pytest.raises(ValueError, match="Size must be a positive integer"):
+        KoffeeConfig(chunk_size=0)
+    with pytest.raises(ValueError, match="Size must be a positive integer"):
+        KoffeeConfig(chunk_size=-5)
+
+
+def test_non_positive_context_size_raises() -> None:
+    """Tests that a zero or negative context_size raises a validation error."""
+    with pytest.raises(ValueError, match="Size must be a positive integer"):
+        KoffeeConfig(context_size=0)
+    with pytest.raises(ValueError, match="Size must be a positive integer"):
+        KoffeeConfig(context_size=-3)
+
+
 def test_api_key_falls_back_to_google_env_var(monkeypatch) -> None:
     """Tests that api_key falls back to GOOGLE_API_KEY for gemini backend."""
     monkeypatch.setenv("GOOGLE_API_KEY", "env-key-123")

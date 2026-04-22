@@ -193,6 +193,15 @@ class KoffeeConfig(BaseModel):
             raise ValueError(error_message)
         return value
 
+    @field_validator("chunk_size", "context_size")
+    @classmethod
+    def _validate_positive_size(cls, value: int | None) -> int | None:
+        """Rejects non-positive chunk/context sizes that would stall translation."""
+        if value is not None and value <= 0:
+            error_message = f"Size must be a positive integer, got {value}."
+            raise ValueError(error_message)
+        return value
+
 
 def load_config_file(path: Path | None = None) -> dict:
     """Loads config from a TOML file, searching default paths if none given.
