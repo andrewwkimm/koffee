@@ -3,7 +3,11 @@
 from pathlib import Path
 
 from koffee.exceptions import InvalidSubtitleFormatError
-from koffee.utils import convert_text_to_ass, convert_text_to_srt, convert_text_to_vtt
+from koffee.utils import (
+    convert_segments_to_ass,
+    convert_segments_to_srt,
+    convert_segments_to_vtt,
+)
 
 
 def generate_subtitles(
@@ -16,11 +20,11 @@ def generate_subtitles(
         output_dir = Path.cwd()
 
     if subtitle_format == "srt":
-        subtitle_file_path = convert_text_to_srt(segments, output_dir)
+        subtitle_file_path = convert_segments_to_srt(segments, output_dir)
     elif subtitle_format == "vtt":
-        subtitle_file_path = convert_text_to_vtt(segments, output_dir)
+        subtitle_file_path = convert_segments_to_vtt(segments, output_dir)
     elif subtitle_format == "ass":
-        subtitle_file_path = convert_text_to_ass(segments, output_dir)
+        subtitle_file_path = convert_segments_to_ass(segments, output_dir)
     else:
         error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
         raise InvalidSubtitleFormatError(error_message)

@@ -1,4 +1,4 @@
-"""Text to ASS converter."""
+"""Segments to ASS converter."""
 
 import logging
 import uuid
@@ -40,9 +40,9 @@ ASS_HEADER = (
 )
 
 
-def convert_text_to_ass(segments: list, output_dir: Path) -> Path:
-    """Converts text to ASS format."""
-    log.debug("Converting text to ASS format.")
+def convert_segments_to_ass(segments: list, output_dir: Path) -> Path:
+    """Converts segments to ASS format."""
+    log.debug("Converting segments to ASS format.")
 
     output_file_path = output_dir / f"subtitles_{uuid.uuid4().hex[:8]}.ass"
     log.debug(f"output_file_path: {output_file_path!r}")
