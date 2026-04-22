@@ -1,4 +1,4 @@
-"""Text to SRT converter."""
+"""Segments to SRT converter."""
 
 import logging
 import uuid
@@ -9,9 +9,9 @@ from koffee.utils.timestamp_converter import convert_to_timestamp
 log = logging.getLogger(__name__)
 
 
-def convert_text_to_srt(segments: list, output_dir: Path) -> Path:
-    """Converts text to SRT format."""
-    log.debug("Converting text to SRT format.")
+def convert_segments_to_srt(segments: list, output_dir: Path) -> Path:
+    """Converts segments to SRT format."""
+    log.debug("Converting segments to SRT format.")
 
     output_file_path = output_dir / f"subtitles_{uuid.uuid4().hex[:8]}.srt"
     log.debug(f"output_file_path: {output_file_path!r}")

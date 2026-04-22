@@ -1,4 +1,4 @@
-"""Text to VTT converter."""
+"""Segments to VTT converter."""
 
 import logging
 import uuid
@@ -9,9 +9,9 @@ from koffee.utils.timestamp_converter import convert_to_timestamp
 log = logging.getLogger(__name__)
 
 
-def convert_text_to_vtt(segments: list, output_dir: Path) -> Path:
-    """Converts text to VTT format."""
-    log.debug("Converting text to VTT format.")
+def convert_segments_to_vtt(segments: list, output_dir: Path) -> Path:
+    """Converts segments to VTT format."""
+    log.debug("Converting segments to VTT format.")
 
     output_file_path = output_dir / f"subtitles_{uuid.uuid4().hex[:8]}.vtt"
     log.debug(f"output_file_path: {output_file_path!r}")
