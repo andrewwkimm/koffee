@@ -97,6 +97,18 @@ def test_non_positive_context_size_raises() -> None:
         KoffeeConfig(context_size=-3)
 
 
+def test_zero_sleep_requests_is_accepted() -> None:
+    """Tests that sleep_requests=0 is a valid no-delay setting."""
+    config = KoffeeConfig(sleep_requests=0)
+    assert config.sleep_requests == 0
+
+
+def test_negative_sleep_requests_raises() -> None:
+    """Tests that a negative sleep_requests raises a validation error."""
+    with pytest.raises(ValueError, match="sleep_requests must be non-negative"):
+        KoffeeConfig(sleep_requests=-1)
+
+
 def test_api_key_falls_back_to_google_env_var(monkeypatch) -> None:
     """Tests that api_key falls back to GOOGLE_API_KEY for gemini backend."""
     monkeypatch.setenv("GOOGLE_API_KEY", "env-key-123")

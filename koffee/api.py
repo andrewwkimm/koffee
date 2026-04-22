@@ -266,6 +266,7 @@ def _translate_subtitle_file(
         llm_model=config.llm_model,
         prompt=config.prompt,
         provider=config.provider,
+        sleep_requests=config.sleep_requests,
     )
     translated_path = generate_subtitles(config.subtitle_format, translated_segments)
     output_subtitle_path = _write_output(
@@ -325,6 +326,7 @@ def _get_segments(
             provider=config.provider,
             chunk_size=config.chunk_size,
             context_size=config.context_size,
+            sleep_requests=config.sleep_requests,
         )
 
     return segments

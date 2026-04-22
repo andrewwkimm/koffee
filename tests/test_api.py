@@ -115,6 +115,7 @@ def test_get_segments_non_whisper_calls_translate(mocker, api_module) -> None:
     config.llm_model = "gemini-2.5-flash"
     config.chunk_size = None
     config.context_size = None
+    config.sleep_requests = None
     config.prompt = None
     transcript = {"segments": [], "language": "ko"}
 
@@ -131,6 +132,7 @@ def test_get_segments_non_whisper_calls_translate(mocker, api_module) -> None:
         provider=config.provider,
         chunk_size=config.chunk_size,
         context_size=config.context_size,
+        sleep_requests=config.sleep_requests,
     )
 
 

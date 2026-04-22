@@ -143,6 +143,7 @@ class KoffeeConfig(BaseModel):
     llm_model: str | None = None
     chunk_size: int | None = None
     context_size: int | None = None
+    sleep_requests: int | None = None
     prompt: str | None = None
     dry_run: bool = False
     overwrite: bool = False
@@ -199,6 +200,15 @@ class KoffeeConfig(BaseModel):
         """Rejects non-positive chunk/context sizes that would stall translation."""
         if value is not None and value <= 0:
             error_message = f"Size must be a positive integer, got {value}."
+            raise ValueError(error_message)
+        return value
+
+    @field_validator("sleep_requests")
+    @classmethod
+    def _validate_sleep_requests(cls, value: int | None) -> int | None:
+        """Rejects negative sleep durations; zero is valid for no delay."""
+        if value is not None and value < 0:
+            error_message = f"sleep_requests must be non-negative, got {value}."
             raise ValueError(error_message)
         return value
 

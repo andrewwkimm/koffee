@@ -12,7 +12,11 @@ log = logging.getLogger(__name__)
 
 CHUNK_SIZE = 200
 CONTEXT_SIZE = 20
-SLEEP_BETWEEN_REQUESTS = 4
+SLEEP_REQUESTS = 4
+
+SLEEP_REQUESTS_BY_PROVIDER: dict[str, int] = {
+    "ollama": 0,
+}
 
 CHUNK_SIZE_BY_MODEL: dict[str, int] = {
     "qwen3:8b": 40,
@@ -67,6 +71,7 @@ def translate(
     provider: str = "gemini",
     chunk_size: int | None = None,
     context_size: int | None = None,
+    sleep_requests: int | None = None,
 ) -> list:
     """Translates a transcript using an LLM backend, preserving timing information."""
     log.info(f"Translating transcript with {provider}.")
@@ -80,6 +85,11 @@ def translate(
         if context_size is not None
         else CONTEXT_SIZE_BY_MODEL.get(model, CONTEXT_SIZE)
     )
+    resolved_sleep_requests = (
+        sleep_requests
+        if sleep_requests is not None
+        else SLEEP_REQUESTS_BY_PROVIDER.get(provider, SLEEP_REQUESTS)
+    )
     client = backend.create_client(api_key)
     chunks = _chunk_segments(transcript, target_language, resolved_chunk_size)
     translated_segments = _translate_chunks(
@@ -90,6 +100,7 @@ def translate(
         llm_model=model,
         system_prompt=system_prompt,
         context_size=resolved_context_size,
+        sleep_requests=resolved_sleep_requests,
     )
     return translated_segments
 
@@ -137,6 +148,7 @@ def _translate_chunks(
     llm_model: str,
     system_prompt: str,
     context_size: int = CONTEXT_SIZE,
+    sleep_requests: int = SLEEP_REQUESTS,
 ) -> list[dict]:
     """Iterates chunks, translating each and reporting progress."""
     log.info(f"Translating in {len(chunks)} chunks.")
@@ -160,8 +172,8 @@ def _translate_chunks(
         if on_progress:
             on_progress((i + 1) / len(chunks))
 
-        if i < len(chunks) - 1:
-            time.sleep(SLEEP_BETWEEN_REQUESTS)
+        if i < len(chunks) - 1 and sleep_requests > 0:
+            time.sleep(sleep_requests)
 
     return translated_segments
 

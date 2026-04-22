@@ -113,6 +113,7 @@ def cli(
     llm_model: Annotated[str, Parameter(name=("--llm-model",))] | None = None,
     chunk_size: Annotated[int, Parameter(name=("--chunk-size",))] | None = None,
     context_size: Annotated[int, Parameter(name=("--context-size",))] | None = None,
+    sleep_requests: Annotated[int, Parameter(name=("--sleep-requests",))] | None = None,
     prompt: Annotated[str, Parameter(name=("--prompt",))] | None = None,
     api_key: Annotated[str, Parameter(name=("--api-key",))] | None = None,
     config: Annotated[Path, Parameter(name=("--config",), group=options_group)]
@@ -187,6 +188,7 @@ def cli(
         "llm_model": llm_model,
         "chunk_size": chunk_size,
         "context_size": context_size,
+        "sleep_requests": sleep_requests,
         "overwrite": overwrite,
         "output_dir": output_dir,
         "output_name": output_name,
