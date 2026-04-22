@@ -7,8 +7,8 @@ from pathlib import Path
 from behave import given, then, when
 from behave.runner import Context
 
+from koffee.api import run
 from koffee.exceptions import InvalidVideoFileError
-from koffee.translate import run
 
 SUBTITLE_EXTENSIONS = {".srt", ".vtt", ".ass"}
 

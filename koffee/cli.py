@@ -19,6 +19,7 @@ from rich.progress import (
 from rich.table import Table
 
 from koffee import asr
+from koffee.api import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, run
 from koffee.data.config import (
     CONFIG_SEARCH_PATHS,
     LANGUAGE_CODES,
@@ -29,7 +30,6 @@ from koffee.data.config import (
 from koffee.exceptions import InvalidVideoFileError, SubtitleOverlayError
 from koffee.overlay import embed_subtitles
 from koffee.subtitle import generate_subtitles
-from koffee.translate import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, run
 from koffee.utils import get_subtitle_tracks, parse_subtitle_file
 
 logging.basicConfig(
