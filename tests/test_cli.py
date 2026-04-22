@@ -21,6 +21,7 @@ from koffee.cli import (
     tracks,
     transcribe,
 )
+from koffee.exceptions import KoffeeError
 from koffee.schemas.config import LANGUAGE_CODES, KoffeeConfig
 
 korean_video_file_path = Path("examples/videos/sample_korean_video.mp4")
@@ -290,7 +291,7 @@ def test_batch_summary_on_success(mocker: MockerFixture) -> None:
 
 def test_batch_summary_on_partial_failure(mocker: MockerFixture) -> None:
     """Tests that batch processing logs failed files in the summary."""
-    mocker.patch("koffee.cli.run", side_effect=[None, ValueError("boom")])
+    mocker.patch("koffee.cli.run", side_effect=[None, KoffeeError("boom")])
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
     mock_log = mocker.patch("koffee.cli.log")
 
