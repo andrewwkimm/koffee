@@ -83,6 +83,14 @@ def _mux_subtitles(
     return output_file_path
 
 
+def _escape_subtitle_filter_path(subtitle_file_path: Path | str) -> str:
+    """Escapes a path for use in the ffmpeg `subtitles=` filter argument."""
+    path = str(subtitle_file_path).replace("\\", "/")
+    for char in (":", "'", "[", "]", ",", ";"):
+        path = path.replace(char, f"\\{char}")
+    return path
+
+
 def _burn_in_subtitles(
     subtitle_file_path: Path | str,
     video_file_path: Path | str,
@@ -91,7 +99,7 @@ def _burn_in_subtitles(
     """Burns subtitles into the video frames (hard subtitles)."""
     log.info("Burning in subtitles (hard).")
 
-    escaped_path = str(subtitle_file_path).replace("\\", "/").replace(":", "\\:")
+    escaped_path = _escape_subtitle_filter_path(subtitle_file_path)
 
     cmd = [
         "ffmpeg",
