@@ -19,25 +19,20 @@ def extract_text(response) -> str:
 
 
 def attempt_generate(client, prompt: str, model: str, system_prompt: str):
-    """Makes a single Ollama API call, returning (response, None) or (None, error).
+    """Makes a single Ollama API call, returning the response."""
+    return client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ],
+    )
 
-    Raises APIStatusError for non-retryable client errors (4xx except 429).
-    """
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt},
-            ],
-        )
-    except RateLimitError as exc:
-        return None, exc
-    except APIConnectionError as exc:
-        return None, exc
-    except APIStatusError as exc:
-        if 400 <= exc.status_code < 500:
-            raise
-        return None, exc
-    else:
-        return response, None
+
+def is_retryable(exc: Exception) -> bool:
+    """Returns True for transient Ollama errors worth retrying."""
+    if isinstance(exc, (RateLimitError, APIConnectionError)):
+        return True
+    if isinstance(exc, APIStatusError):
+        return exc.status_code >= 500
+    return False

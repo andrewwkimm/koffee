@@ -6,7 +6,7 @@ from collections.abc import Callable
 from types import ModuleType
 
 from koffee.llm._protocol import TranslationProvider
-from koffee.utils import convert_to_timestamp
+from koffee.utils import convert_to_timestamp, with_retries
 
 log = logging.getLogger(__name__)
 
@@ -191,20 +191,11 @@ def _call_with_retries(
     max_retries: int = 3,
 ):
     """Calls an LLM backend with exponential backoff on transient failures."""
-    last_error = None
-    for attempt in range(max_retries):
-        result, error = backend.attempt_generate(
-            client, prompt, llm_model, system_prompt
-        )
-        if result is not None:
-            return result
-        last_error = error
-        if attempt < max_retries - 1:
-            wait = 2 ** (attempt + 1)
-            log.warning(f"LLM request failed, retrying in {wait}s...")
-            time.sleep(wait)
-
-    raise last_error
+    return with_retries(
+        lambda: backend.attempt_generate(client, prompt, llm_model, system_prompt),
+        backend.is_retryable,
+        max_retries=max_retries,
+    )
 
 
 def _segments_to_srt(segments: list[dict]) -> str:
