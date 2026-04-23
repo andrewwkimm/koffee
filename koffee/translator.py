@@ -106,21 +106,6 @@ def translate(
     return translated_segments
 
 
-def _load_backend(backend_name: str) -> TranslationProvider:
-    """Loads a translation backend module by name."""
-    import importlib  # noqa: PLC0415
-
-    module_path = LLM.get(backend_name)
-    if module_path is None:
-        available = ", ".join(sorted(LLM.keys()))
-        error_message = (
-            f"Unknown translation backend: {backend_name!r}. Available LLM: {available}"
-        )
-        raise ValueError(error_message)
-
-    return importlib.import_module(module_path)
-
-
 def _chunk_segments(
     transcript: Transcript, target_language: str, chunk_size: int = CHUNK_SIZE
 ) -> list[Chunk]:
@@ -139,6 +124,21 @@ def _chunk_segments(
     ]
 
     return chunks
+
+
+def _load_backend(backend_name: str) -> TranslationProvider:
+    """Loads a translation backend module by name."""
+    import importlib  # noqa: PLC0415
+
+    module_path = LLM.get(backend_name)
+    if module_path is None:
+        available = ", ".join(sorted(LLM.keys()))
+        error_message = (
+            f"Unknown translation backend: {backend_name!r}. Available LLM: {available}"
+        )
+        raise ValueError(error_message)
+
+    return importlib.import_module(module_path)
 
 
 def _translate_chunks(
@@ -179,6 +179,55 @@ def _translate_chunks(
     return translated_segments
 
 
+def _build_prompt(
+    chunk: list[Segment],
+    context_segments: list[Segment],
+    source_language: str,
+    target_language: str,
+    start_entry: int,
+) -> str:
+    """Builds the translation prompt for a chunk of subtitle entries."""
+    if source_language == "auto":
+        instruction = f"Translate the following subtitle entries to {target_language}."
+    else:
+        instruction = (
+            f"Translate the following subtitle entries from "
+            f"{source_language} to {target_language}."
+        )
+
+    prompt_parts = [instruction]
+
+    if context_segments:
+        prompt_parts.extend(
+            [
+                f"The following {len(context_segments)} entries are provided as "
+                "context only to maintain narrative continuity. Do not include them "
+                "in your translation."
+                f" output. Begin your translation from entry {start_entry} only.\n",
+                "[CONTEXT - DO NOT TRANSLATE]\n",
+                _segments_to_srt(context_segments),
+                "\n[TRANSLATE FROM HERE]\n",
+            ]
+        )
+
+    prompt_parts.append(_segments_to_srt(chunk))
+    translation_prompt = "\n".join(prompt_parts)
+
+    return translation_prompt
+
+
+def _segments_to_srt(segments: list[Segment]) -> str:
+    """Converts a list of segments to SRT format string."""
+    lines = []
+    for i, seg in enumerate(segments, 1):
+        start = convert_to_timestamp(seg["start"], "srt")
+        end = convert_to_timestamp(seg["end"], "srt")
+        lines.append(f"{i}\n{start} --> {end}\n{seg['text'].strip()}\n")
+
+    srt_text = "\n".join(lines)
+    return srt_text
+
+
 def _translate_chunk(
     backend: ModuleType,
     client,
@@ -209,43 +258,6 @@ def _call_with_retries(
         backend.is_retryable,
         max_retries=max_retries,
     )
-
-
-def _segments_to_srt(segments: list[Segment]) -> str:
-    """Converts a list of segments to SRT format string."""
-    lines = []
-    for i, seg in enumerate(segments, 1):
-        start = convert_to_timestamp(seg["start"], "srt")
-        end = convert_to_timestamp(seg["end"], "srt")
-        lines.append(f"{i}\n{start} --> {end}\n{seg['text'].strip()}\n")
-
-    srt_text = "\n".join(lines)
-    return srt_text
-
-
-def _sanitize_response(response_text: str | None) -> str:
-    """Strips thinking blocks, markdown fences, and normalizes line endings."""
-    if not response_text:
-        return ""
-
-    text = response_text.replace("\r\n", "\n").strip()
-
-    if "<think>" in text:
-        end = text.find("</think>")
-        if end != -1:
-            text = text[end + len("</think>") :].strip()
-        else:
-            text = text[text.find("<think>") + len("<think>") :].strip()
-
-    if text.startswith("```"):
-        first_newline = text.find("\n")
-        if first_newline != -1:
-            text = text[first_newline + 1 :]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
-
-    return text
 
 
 def _parse_srt_response(
@@ -310,38 +322,26 @@ def _merge_translated_segments(
     return merged_segments
 
 
-def _build_prompt(
-    chunk: list[Segment],
-    context_segments: list[Segment],
-    source_language: str,
-    target_language: str,
-    start_entry: int,
-) -> str:
-    """Builds the translation prompt for a chunk of subtitle entries."""
-    if source_language == "auto":
-        instruction = f"Translate the following subtitle entries to {target_language}."
-    else:
-        instruction = (
-            f"Translate the following subtitle entries from "
-            f"{source_language} to {target_language}."
-        )
+def _sanitize_response(response_text: str | None) -> str:
+    """Strips thinking blocks, markdown fences, and normalizes line endings."""
+    if not response_text:
+        return ""
 
-    prompt_parts = [instruction]
+    text = response_text.replace("\r\n", "\n").strip()
 
-    if context_segments:
-        prompt_parts.extend(
-            [
-                f"The following {len(context_segments)} entries are provided as "
-                "context only to maintain narrative continuity. Do not include them "
-                "in your translation."
-                f" output. Begin your translation from entry {start_entry} only.\n",
-                "[CONTEXT - DO NOT TRANSLATE]\n",
-                _segments_to_srt(context_segments),
-                "\n[TRANSLATE FROM HERE]\n",
-            ]
-        )
+    if "<think>" in text:
+        end = text.find("</think>")
+        if end != -1:
+            text = text[end + len("</think>") :].strip()
+        else:
+            text = text[text.find("<think>") + len("<think>") :].strip()
 
-    prompt_parts.append(_segments_to_srt(chunk))
-    translation_prompt = "\n".join(prompt_parts)
+    if text.startswith("```"):
+        first_newline = text.find("\n")
+        if first_newline != -1:
+            text = text[first_newline + 1 :]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
 
-    return translation_prompt
+    return text

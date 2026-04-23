@@ -11,11 +11,6 @@ def create_client(api_key: str | None):
     return OpenAI(api_key=api_key)
 
 
-def extract_text(response) -> str:
-    """Extracts the generated text from a ChatGPT response."""
-    return response.choices[0].message.content
-
-
 def attempt_generate(client, prompt: str, model: str, system_prompt: str):
     """Makes a single OpenAI API call, returning the response."""
     return client.chat.completions.create(
@@ -25,6 +20,11 @@ def attempt_generate(client, prompt: str, model: str, system_prompt: str):
             {"role": "user", "content": prompt},
         ],
     )
+
+
+def extract_text(response) -> str:
+    """Extracts the generated text from a ChatGPT response."""
+    return response.choices[0].message.content
 
 
 def is_retryable(exc: Exception) -> bool:

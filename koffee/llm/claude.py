@@ -11,11 +11,6 @@ def create_client(api_key: str | None):
     return Anthropic(api_key=api_key)
 
 
-def extract_text(response) -> str:
-    """Extracts the generated text from a Claude response."""
-    return response.content[0].text
-
-
 def attempt_generate(client, prompt: str, model: str, system_prompt: str):
     """Makes a single Claude API call, returning the response."""
     return client.messages.create(
@@ -24,6 +19,11 @@ def attempt_generate(client, prompt: str, model: str, system_prompt: str):
         system=system_prompt,
         messages=[{"role": "user", "content": prompt}],
     )
+
+
+def extract_text(response) -> str:
+    """Extracts the generated text from a Claude response."""
+    return response.content[0].text
 
 
 def is_retryable(exc: Exception) -> bool:

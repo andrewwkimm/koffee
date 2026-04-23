@@ -16,11 +16,6 @@ def create_client(api_key: str | None):
     return genai.Client(api_key=api_key)
 
 
-def extract_text(response) -> str:
-    """Extracts the generated text from a Gemini response."""
-    return response.text
-
-
 def attempt_generate(client, prompt: str, model: str, system_prompt: str):
     """Makes a single Gemini API call, returning the response."""
     response = client.models.generate_content(
@@ -39,6 +34,11 @@ def attempt_generate(client, prompt: str, model: str, system_prompt: str):
     )
     log.debug(f"Gemini response tail:\n{response.text[-500:]}")
     return response
+
+
+def extract_text(response) -> str:
+    """Extracts the generated text from a Gemini response."""
+    return response.text
 
 
 def is_retryable(exc: Exception) -> bool:

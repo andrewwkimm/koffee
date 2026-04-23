@@ -13,11 +13,6 @@ def create_client(api_key: str | None):
     return OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
 
 
-def extract_text(response) -> str:
-    """Extracts the generated text from an Ollama response."""
-    return response.choices[0].message.content
-
-
 def attempt_generate(client, prompt: str, model: str, system_prompt: str):
     """Makes a single Ollama API call, returning the response."""
     return client.chat.completions.create(
@@ -27,6 +22,11 @@ def attempt_generate(client, prompt: str, model: str, system_prompt: str):
             {"role": "user", "content": prompt},
         ],
     )
+
+
+def extract_text(response) -> str:
+    """Extracts the generated text from an Ollama response."""
+    return response.choices[0].message.content
 
 
 def is_retryable(exc: Exception) -> bool:

@@ -12,13 +12,6 @@ log = logging.getLogger(__name__)
 MKV_EXTENSIONS = {".mkv", ".webm"}
 
 
-def _get_subtitle_codec(output_path: Path | str) -> str:
-    """Returns the appropriate subtitle codec for the output container."""
-    if Path(output_path).suffix.lower() in MKV_EXTENSIONS:
-        return "srt"
-    return "mov_text"
-
-
 def embed_subtitles(
     subtitle_path: Path | str,
     video_path: Path | str,
@@ -38,6 +31,50 @@ def embed_subtitles(
     if mode == "hard":
         return _burn_in_subtitles(subtitle_path, video_path, output_path)
     return _mux_subtitles(subtitle_path, video_path, output_path, language)
+
+
+def _burn_in_subtitles(
+    subtitle_path: Path | str,
+    video_path: Path | str,
+    output_path: Path | str,
+) -> Path | str:
+    """Burns subtitles into the video frames (hard subtitles)."""
+    log.info("Burning in subtitles (hard).")
+
+    escaped_path = _escape_subtitle_filter_path(subtitle_path)
+
+    cmd = [
+        "ffmpeg",
+        "-i",
+        str(video_path),
+        "-vf",
+        f"subtitles={escaped_path}",
+        "-c:a",
+        "copy",
+        "-y",
+        str(output_path),
+    ]
+
+    try:
+        subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=600)
+    except FileNotFoundError:
+        log.error("ffmpeg not found. Please install ffmpeg to use this feature.")
+        raise
+    except subprocess.TimeoutExpired:
+        log.error("ffmpeg timed out while burning in subtitles.")
+        raise
+    except subprocess.CalledProcessError as error:
+        raise SubtitleEmbedError(error.stderr) from error
+
+    return output_path
+
+
+def _escape_subtitle_filter_path(subtitle_path: Path | str) -> str:
+    """Escapes a path for use in the ffmpeg `subtitles=` filter argument."""
+    path = str(subtitle_path).replace("\\", "/")
+    for char in (":", "'", "[", "]", ",", ";"):
+        path = path.replace(char, f"\\{char}")
+    return path
 
 
 def _mux_subtitles(
@@ -81,45 +118,8 @@ def _mux_subtitles(
     return output_path
 
 
-def _escape_subtitle_filter_path(subtitle_path: Path | str) -> str:
-    """Escapes a path for use in the ffmpeg `subtitles=` filter argument."""
-    path = str(subtitle_path).replace("\\", "/")
-    for char in (":", "'", "[", "]", ",", ";"):
-        path = path.replace(char, f"\\{char}")
-    return path
-
-
-def _burn_in_subtitles(
-    subtitle_path: Path | str,
-    video_path: Path | str,
-    output_path: Path | str,
-) -> Path | str:
-    """Burns subtitles into the video frames (hard subtitles)."""
-    log.info("Burning in subtitles (hard).")
-
-    escaped_path = _escape_subtitle_filter_path(subtitle_path)
-
-    cmd = [
-        "ffmpeg",
-        "-i",
-        str(video_path),
-        "-vf",
-        f"subtitles={escaped_path}",
-        "-c:a",
-        "copy",
-        "-y",
-        str(output_path),
-    ]
-
-    try:
-        subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=600)
-    except FileNotFoundError:
-        log.error("ffmpeg not found. Please install ffmpeg to use this feature.")
-        raise
-    except subprocess.TimeoutExpired:
-        log.error("ffmpeg timed out while burning in subtitles.")
-        raise
-    except subprocess.CalledProcessError as error:
-        raise SubtitleEmbedError(error.stderr) from error
-
-    return output_path
+def _get_subtitle_codec(output_path: Path | str) -> str:
+    """Returns the appropriate subtitle codec for the output container."""
+    if Path(output_path).suffix.lower() in MKV_EXTENSIONS:
+        return "srt"
+    return "mov_text"
