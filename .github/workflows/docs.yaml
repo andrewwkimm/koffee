@@ -2,8 +2,9 @@ name: docs
 
 on:
   push:
-    branches:
-      - main
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
 
 permissions:
   contents: write
