@@ -1,13 +1,14 @@
 """Text extractor from audio."""
 
 import logging
+import subprocess
 from collections.abc import Callable
 from dataclasses import asdict
+from pathlib import Path
 
 from faster_whisper import WhisperModel
 
 from koffee.schemas.types import Segment, Transcript
-from koffee.utils import get_video_duration
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ def _consume_segments(
     segments, video_file: str, on_progress: Callable[[float], None] | None
 ) -> list[Segment]:
     """Consumes the segment generator, reporting progress as each segment is yielded."""
-    duration = get_video_duration(video_file) if on_progress else None
+    duration = _get_video_duration(video_file) if on_progress else None
     result = []
     for segment in segments:
         result.append(asdict(segment))
@@ -74,3 +75,37 @@ def _run_transcription(
     )
 
     return segments, info
+
+
+def _get_video_duration(video_path: Path | str) -> float:
+    """Gets the duration in seconds using ffprobe."""
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(video_path),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+    except FileNotFoundError:
+        log.error("ffprobe not found. Please install ffmpeg to use this feature.")
+        raise
+    except subprocess.TimeoutExpired:
+        log.error("ffprobe timed out while getting video duration.")
+        raise
+
+    stdout = result.stdout.strip()
+    if not stdout:
+        return 0.0
+
+    video_duration = float(stdout)
+    return video_duration

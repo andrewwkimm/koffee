@@ -3,7 +3,7 @@
 import pytest
 
 from koffee.exceptions import InvalidSubtitleFormatError
-from koffee.utils import convert_to_timestamp
+from koffee.subtitle import convert_to_timestamp
 
 
 @pytest.mark.parametrize(

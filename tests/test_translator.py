@@ -318,7 +318,7 @@ def test_translate_reports_progress(mocker: MockerFixture) -> None:
 
 def test_call_with_retries_exhaustion(mocker: MockerFixture) -> None:
     """Tests that retry exhaustion raises the last error."""
-    mocker.patch("koffee.utils.retry.time.sleep")
+    mocker.patch("koffee._retry.time.sleep")
     error = APIError(code=500, response_json={"error": "server error"})
     mock_backend = mocker.MagicMock()
     mock_backend.attempt_generate.side_effect = error

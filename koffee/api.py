@@ -18,13 +18,13 @@ from koffee.exceptions import (
 )
 from koffee.schemas.config import KoffeeConfig
 from koffee.schemas.types import Segment, Transcript
-from koffee.subtitle import generate_subtitles
-from koffee.translator import translate
-from koffee.utils import (
+from koffee.subtitle import (
     extract_subtitle_track,
+    generate_subtitles,
     get_subtitle_tracks,
     parse_subtitle_file,
 )
+from koffee.translator import translate
 
 log = logging.getLogger(__name__)
 
