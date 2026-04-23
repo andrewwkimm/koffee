@@ -49,7 +49,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
-      - name: Tests
+      - name: Build
         uses: nick-fields/retry@v4
         with:
           timeout_minutes: 30
@@ -57,12 +57,7 @@ jobs:
           retry_wait_seconds: 10
           shell: bash
           command: |
-            uv sync &&
-            uv sync --group docs &&
-            uv run ruff format . &&
-            uv run ruff check --fix . &&
-            uv run ty check tests &&
-            uv run pytest -x --cov
+            make build
 
       - name: Generate coverage report
         shell: bash
