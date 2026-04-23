@@ -55,6 +55,15 @@ def parse_subtitle_file(file_path: Path | str) -> list[Segment]:
     return segments
 
 
+def _find_timestamp_line(lines: list[str]) -> tuple[int, str, str] | None:
+    """Finds the timestamp line in a block and returns (index, start, end)."""
+    for i, line in enumerate(lines):
+        match = TIMESTAMP_PATTERN.search(line)
+        if match:
+            return i, match.group(1), match.group(2)
+    return None
+
+
 def _parse_ass(text: str, file_path: Path) -> list[Segment]:
     """Parses ASS/SSA formatted text into segment dicts."""
     segments = []
@@ -85,15 +94,6 @@ def _ass_timestamp_to_seconds(timestamp: str) -> float:
     return (
         int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(centiseconds) / 100
     )
-
-
-def _find_timestamp_line(lines: list[str]) -> tuple[int, str, str] | None:
-    """Finds the timestamp line in a block and returns (index, start, end)."""
-    for i, line in enumerate(lines):
-        match = TIMESTAMP_PATTERN.search(line)
-        if match:
-            return i, match.group(1), match.group(2)
-    return None
 
 
 def _timestamp_to_seconds(timestamp: str) -> float:

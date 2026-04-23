@@ -31,20 +31,6 @@ def _apply_subtitle_track(config: KoffeeConfig, tracks: list[dict]) -> KoffeeCon
     return config.model_copy(update=updates)
 
 
-def _detect_embedded_subtitles(video_path: Path) -> list[dict]:
-    """Returns embedded subtitle tracks in the video, or an empty list."""
-    if video_path.suffix.lower() in SUBTITLE_EXTENSIONS:
-        return []
-
-    return get_subtitle_tracks(video_path)
-
-
-def _prompt_use_embedded_subtitles() -> bool:
-    """Prompts the user to use embedded subtitles instead of running ASR."""
-    user_input = input("Translate embedded subtitles instead of running ASR? [Y/n] ")
-    return user_input.strip().lower() in ("", "y", "yes")
-
-
 def _select_subtitle_track(tracks: list[dict]) -> tuple[int, str | None]:
     """Prompts user to select a subtitle track if multiple are available."""
     if len(tracks) == 1:
@@ -67,3 +53,17 @@ def _select_subtitle_track(tracks: list[dict]) -> tuple[int, str | None]:
 
     language = tracks[index].get("tags", {}).get("language")
     return index, language
+
+
+def _detect_embedded_subtitles(video_path: Path) -> list[dict]:
+    """Returns embedded subtitle tracks in the video, or an empty list."""
+    if video_path.suffix.lower() in SUBTITLE_EXTENSIONS:
+        return []
+
+    return get_subtitle_tracks(video_path)
+
+
+def _prompt_use_embedded_subtitles() -> bool:
+    """Prompts the user to use embedded subtitles instead of running ASR."""
+    user_input = input("Translate embedded subtitles instead of running ASR? [Y/n] ")
+    return user_input.strip().lower() in ("", "y", "yes")

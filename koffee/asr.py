@@ -35,6 +35,23 @@ def transcribe(
     return transcript
 
 
+def _consume_segments(
+    segments, video_file: str, on_progress: Callable[[float], None] | None
+) -> list[Segment]:
+    """Consumes the segment generator, reporting progress as each segment is yielded."""
+    duration = get_video_duration(video_file) if on_progress else None
+    result = []
+    for segment in segments:
+        result.append(asdict(segment))
+        if on_progress and duration:
+            on_progress(min(segment.end / duration, 1.0))
+
+    if on_progress:
+        on_progress(1.0)
+
+    return result
+
+
 def _load_model(compute_type: str, device: str, model: str) -> WhisperModel:
     """Loads and returns a Whisper model with the given configuration."""
     loaded_model = WhisperModel(
@@ -57,20 +74,3 @@ def _run_transcription(
     )
 
     return segments, info
-
-
-def _consume_segments(
-    segments, video_file: str, on_progress: Callable[[float], None] | None
-) -> list[Segment]:
-    """Consumes the segment generator, reporting progress as each segment is yielded."""
-    duration = get_video_duration(video_file) if on_progress else None
-    result = []
-    for segment in segments:
-        result.append(asdict(segment))
-        if on_progress and duration:
-            on_progress(min(segment.end / duration, 1.0))
-
-    if on_progress:
-        on_progress(1.0)
-
-    return result
