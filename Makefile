@@ -3,7 +3,7 @@ help:
 
 ################################################################################
 
-build:
+ci:
 	uv sync
 	make reformat
 	make lint
@@ -47,6 +47,11 @@ serve:
 
 dist:
 	uv build --wheel
+
+build:
+	make ci
+	make dist
+	koffee --help
 
 ship:
 	make build
