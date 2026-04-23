@@ -35,7 +35,7 @@ SUPPORTED_EXTENSIONS = AUDIO_EXTENSIONS | VIDEO_EXTENSIONS
 
 
 def run(
-    video_file_path: Path | str,
+    input_path: Path | str,
     config: KoffeeConfig | None = None,
     on_asr_progress: Callable[[float], None] | None = None,
     on_translate_progress: Callable[[float], None] | None = None,
@@ -45,36 +45,34 @@ def run(
     log.info("Translating file...")
 
     config = _apply_config_overrides(config, kwargs)
-    _validate_inputs(video_file_path, config)
+    _validate_inputs(input_path, config)
 
-    if Path(video_file_path).suffix.lower() in SUBTITLE_EXTENSIONS:
-        return _translate_subtitle_file(video_file_path, config, on_translate_progress)
+    if Path(input_path).suffix.lower() in SUBTITLE_EXTENSIONS:
+        return _translate_subtitle_file(input_path, config, on_translate_progress)
 
     if config.use_embedded_subtitles:
-        return _translate_embedded_subtitles(
-            video_file_path, config, on_translate_progress
-        )
+        return _translate_embedded_subtitles(input_path, config, on_translate_progress)
 
-    transcript = _transcribe(video_file_path, config, on_asr_progress)
-    subtitle_file_path = _translate(transcript, config, on_translate_progress)
-    output_path = _route_output(video_file_path, subtitle_file_path, config)
+    transcript = _transcribe(input_path, config, on_asr_progress)
+    subtitle_path = _translate(transcript, config, on_translate_progress)
+    output_path = _route_output(input_path, subtitle_path, config)
 
     return output_path
 
 
-def _validate_file(video_file_path: Path | str) -> None:
+def _validate_file(input_path: Path | str) -> None:
     """Raises InvalidVideoFileError if the file does not exist or is not a file."""
-    if not Path(video_file_path).exists() or not Path(video_file_path).is_file():
+    if not Path(input_path).exists() or not Path(input_path).is_file():
         error_message = "Input file is not valid or does not exist."
         log.error(error_message)
         raise InvalidVideoFileError(error_message)
 
 
-def _validate_inputs(video_file_path: Path | str, config: KoffeeConfig) -> None:
+def _validate_inputs(input_path: Path | str, config: KoffeeConfig) -> None:
     """Runs pre-flight checks on the input file, dependencies, and config options."""
-    _validate_file(video_file_path)
+    _validate_file(input_path)
 
-    suffix = Path(video_file_path).suffix.lower()
+    suffix = Path(input_path).suffix.lower()
     allowed = SUPPORTED_EXTENSIONS | SUBTITLE_EXTENSIONS
     if suffix not in allowed:
         error_message = (
@@ -110,12 +108,12 @@ def _validate_inputs(video_file_path: Path | str, config: KoffeeConfig) -> None:
                 "--use-embedded-subtitles."
             )
             raise MissingDependencyError(error_message)
-        if not get_subtitle_tracks(video_file_path):
-            error_message = f"No embedded subtitle tracks found in {video_file_path}."
+        if not get_subtitle_tracks(input_path):
+            error_message = f"No embedded subtitle tracks found in {input_path}."
             raise IncompatibleOptionsError(error_message)
 
     _validate_api_key(config)
-    _validate_output_path(video_file_path, config)
+    _validate_output_path(input_path, config)
 
 
 def _validate_api_key(config: KoffeeConfig) -> None:
@@ -129,16 +127,16 @@ def _validate_api_key(config: KoffeeConfig) -> None:
         raise MissingApiKeyError(error_message)
 
 
-def _validate_output_path(video_file_path: Path | str, config: KoffeeConfig) -> None:
+def _validate_output_path(input_path: Path | str, config: KoffeeConfig) -> None:
     """Ensures the resolved output path is writable and not already occupied."""
-    input_suffix = Path(video_file_path).suffix.lower()
+    input_suffix = Path(input_path).suffix.lower()
     is_video = input_suffix in VIDEO_EXTENSIONS
     has_embed = (
         is_video and not config.use_embedded_subtitles and config.embed != "none"
     )
 
     base_path = _get_output_path(
-        video_file_path, config.output_dir, config.output_name, date_suffix=has_embed
+        input_path, config.output_dir, config.output_name, date_suffix=has_embed
     )
     output_path = (
         base_path if has_embed else base_path.with_suffix(f".{config.subtitle_format}")
@@ -158,13 +156,13 @@ def _apply_config_overrides(config: KoffeeConfig | None, kwargs: dict) -> Koffee
 
 
 def _transcribe(
-    video_file_path: Path | str,
+    input_path: Path | str,
     config: KoffeeConfig,
     on_progress: Callable[[float], None] | None,
 ) -> Transcript:
     """Transcribes audio from the file, returning the raw transcript."""
     transcript = transcribe(
-        str(video_file_path),
+        str(input_path),
         config.compute_type,
         config.device,
         config.whisper_model,
@@ -183,9 +181,9 @@ def _translate(
 ) -> Path:
     """Translates transcript segments and writes the subtitle file."""
     segments = _get_segments(transcript, config, on_progress=on_progress)
-    subtitle_file_path = generate_subtitles(config.subtitle_format, segments)
+    subtitle_path = generate_subtitles(config.subtitle_format, segments)
 
-    return subtitle_file_path
+    return subtitle_path
 
 
 def _check_output_collision(output_path: Path, overwrite: bool) -> None:
@@ -198,51 +196,49 @@ def _check_output_collision(output_path: Path, overwrite: bool) -> None:
 
 
 def _route_output(
-    video_file_path: Path | str,
-    subtitle_file_path: Path,
+    input_path: Path | str,
+    subtitle_path: Path,
     config: KoffeeConfig,
 ) -> Path:
     """Routes to subtitle output or video embed based on file type and config."""
-    is_audio = Path(video_file_path).suffix.lower() in AUDIO_EXTENSIONS
+    is_audio = Path(input_path).suffix.lower() in AUDIO_EXTENSIONS
     has_embed = not is_audio and config.embed != "none"
 
     output_path = _get_output_path(
-        video_file_path, config.output_dir, config.output_name, date_suffix=has_embed
+        input_path, config.output_dir, config.output_name, date_suffix=has_embed
     )
 
     if has_embed:
         _check_output_collision(output_path, config.overwrite)
-        output_file_path = _finalize_video_output(
-            subtitle_file_path,
-            video_file_path,
+        result_path = _finalize_video_output(
+            subtitle_path,
+            input_path,
             output_path,
             config.embed,
             config.target_language,
         )
     else:
-        output_file_path = _write_output(
-            subtitle_file_path,
-            video_file_path,
+        result_path = _write_output(
+            subtitle_path,
+            input_path,
             config.subtitle_format,
             config.output_dir,
             config.output_name,
             config.overwrite,
         )
 
-    return output_file_path
+    return result_path
 
 
 def _translate_embedded_subtitles(
-    video_file_path: Path | str,
+    input_path: Path | str,
     config: KoffeeConfig,
     on_progress: Callable[[float], None] | None,
 ) -> Path:
     """Extracts embedded subtitles from a video and translates them."""
     log.info("Extracting embedded subtitles from video.")
 
-    extracted_path = extract_subtitle_track(
-        video_file_path, config.subtitle_track_index
-    )
+    extracted_path = extract_subtitle_track(input_path, config.subtitle_track_index)
     try:
         result = _translate_subtitle_file(extracted_path, config, on_progress)
     finally:
@@ -284,7 +280,7 @@ def _translate_subtitle_file(
 
 
 def _get_output_path(
-    video_file_path: Path | str,
+    input_path: Path | str,
     output_dir: Path | None,
     output_name: str | None,
     date_suffix: bool = False,
@@ -292,7 +288,7 @@ def _get_output_path(
     """Gets the output path for the translated output file."""
     log.debug(f"output_name: {output_name!r}")
 
-    file_path = Path(video_file_path)
+    file_path = Path(input_path)
     file_dir = output_dir if output_dir is not None else file_path.parent
     file_dir.mkdir(parents=True, exist_ok=True)
 
@@ -335,21 +331,21 @@ def _get_segments(
 
 
 def _finalize_video_output(
-    subtitle_file_path: Path,
-    video_file_path: Path,
+    subtitle_path: Path,
+    input_path: Path,
     output_path: Path,
     embed_mode: str = "soft",
     language: str = "en",
 ) -> Path:
     """Embeds subtitles into the video and deletes the subtitle file after."""
     output_video = embed_subtitles(
-        subtitle_file_path,
-        video_file_path,
+        subtitle_path,
+        input_path,
         output_path,
         mode=embed_mode,
         language=language,
     )
-    subtitle_file_path.unlink()
+    subtitle_path.unlink()
     log.info("Finished processing video!")
 
     return output_video

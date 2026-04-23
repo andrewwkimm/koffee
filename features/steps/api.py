@@ -17,10 +17,10 @@ SUBTITLE_EXTENSIONS = {".srt", ".vtt", ".ass"}
 def step_given(context: Context, language: str) -> None:
     """Adds a path to a good video file to the context."""
     if language == "Korean":
-        context.video_file_path = Path("examples/videos/sample_korean_video.mp4")
+        context.video_path = Path("examples/videos/sample_korean_video.mp4")
         context.output_name = "sample_korean_video_test"
     elif language == "Japanese":
-        context.video_file_path = Path("examples/videos/sample_japanese_video.mp4")
+        context.video_path = Path("examples/videos/sample_japanese_video.mp4")
         context.output_name = "sample_japanese_video_test"
 
 
@@ -37,8 +37,8 @@ def step_impl(context: Context):
     output_name = getattr(context, "output_name", None)
 
     try:
-        context.output_file_path = run(
-            context.video_file_path,
+        context.output_path = run(
+            context.video_path,
             output_dir=output_dir,
             output_name=output_name,
             overwrite=True,
@@ -50,14 +50,14 @@ def step_impl(context: Context):
 @then("the user receives a subtitle file")
 def step_impl(context: Context):
     """Assert that the output subtitle file exists with a valid subtitle extension."""
-    assert context.output_file_path.exists()
-    assert context.output_file_path.suffix in SUBTITLE_EXTENSIONS
+    assert context.output_path.exists()
+    assert context.output_path.suffix in SUBTITLE_EXTENSIONS
 
 
 @given("the user corrupts the file somehow")
 def step_impl(context: Context):
     """Corrupts a video file."""
-    context.video_file_path = Path("invalid_video_file.mp4")
+    context.video_path = Path("invalid_video_file.mp4")
 
 
 @then("the user receives the error message {error_message}")

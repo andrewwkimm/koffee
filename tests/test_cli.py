@@ -24,7 +24,7 @@ from koffee.cli import (
 from koffee.exceptions import KoffeeError
 from koffee.schemas.config import LANGUAGE_CODES, KoffeeConfig
 
-korean_video_file_path = Path("examples/videos/sample_korean_video.mp4")
+korean_video_path = Path("examples/videos/sample_korean_video.mp4")
 
 output_directory_path = Path("scratch")
 output_file_name = "cli_output_video_file"
@@ -35,7 +35,7 @@ def test_cli(mocker: MockerFixture) -> None:
     mock_translate = mocker.patch("koffee.cli.run")
 
     cli(
-        korean_video_file_path,
+        korean_video_path,
         compute_type="int8",
         output_dir=output_directory_path,
         output_name=output_file_name,
@@ -64,7 +64,7 @@ def test_embed_soft(mocker: MockerFixture) -> None:
     mock_translate = mocker.patch("koffee.cli.run")
 
     cli(
-        korean_video_file_path,
+        korean_video_path,
         compute_type="int8",
         output_dir=output_directory_path,
         output_name=output_file_name,
@@ -82,7 +82,7 @@ def test_embed_defaults_to_none(mocker: MockerFixture) -> None:
     mock_translate = mocker.patch("koffee.cli.run")
 
     cli(
-        korean_video_file_path,
+        korean_video_path,
         compute_type="int8",
         output_dir=output_directory_path,
         output_name=output_file_name,
@@ -101,7 +101,7 @@ def test_verbose(mocker: MockerFixture) -> None:
     logger_instance = mock_logger.return_value
 
     cli(
-        korean_video_file_path,
+        korean_video_path,
         compute_type="int8",
         output_dir=output_directory_path,
         output_name=output_file_name,
@@ -151,7 +151,7 @@ def test_dry_run(mocker: MockerFixture) -> None:
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
 
     cli(
-        korean_video_file_path,
+        korean_video_path,
         output_dir=output_directory_path,
         dry_run=True,
     )
@@ -177,7 +177,7 @@ def test_dry_run_with_embed(mocker: MockerFixture) -> None:
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
 
     cli(
-        korean_video_file_path,
+        korean_video_path,
         output_dir=output_directory_path,
         dry_run=True,
         embed="soft",
@@ -204,7 +204,7 @@ def test_handle_embedded_subtitles_no_tracks(
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
     config = KoffeeConfig()
 
-    result = _handle_embedded_subtitles(korean_video_file_path, config)
+    result = _handle_embedded_subtitles(korean_video_path, config)
 
     assert result.use_embedded_subtitles is False
 
@@ -218,7 +218,7 @@ def test_handle_embedded_subtitles_user_accepts(
     mocker.patch("builtins.input", return_value="y")
     config = KoffeeConfig()
 
-    result = _handle_embedded_subtitles(korean_video_file_path, config)
+    result = _handle_embedded_subtitles(korean_video_path, config)
 
     assert result.use_embedded_subtitles is True
     assert result.source_language == "ko"
@@ -235,7 +235,7 @@ def test_handle_embedded_subtitles_user_declines(
     mocker.patch("builtins.input", return_value="n")
     config = KoffeeConfig()
 
-    result = _handle_embedded_subtitles(korean_video_file_path, config)
+    result = _handle_embedded_subtitles(korean_video_path, config)
 
     assert result.use_embedded_subtitles is False
 
@@ -262,8 +262,8 @@ def test_batch_progress_logging(mocker: MockerFixture) -> None:
     mock_log = mocker.patch("koffee.cli.log")
 
     cli(
-        korean_video_file_path,
-        korean_video_file_path,
+        korean_video_path,
+        korean_video_path,
         output_dir=output_directory_path,
     )
 
@@ -280,8 +280,8 @@ def test_batch_summary_on_success(mocker: MockerFixture) -> None:
     mock_log = mocker.patch("koffee.cli.log")
 
     cli(
-        korean_video_file_path,
-        korean_video_file_path,
+        korean_video_path,
+        korean_video_path,
         output_dir=output_directory_path,
     )
 
@@ -296,8 +296,8 @@ def test_batch_summary_on_partial_failure(mocker: MockerFixture) -> None:
     mock_log = mocker.patch("koffee.cli.log")
 
     cli(
-        korean_video_file_path,
-        korean_video_file_path,
+        korean_video_path,
+        korean_video_path,
         output_dir=output_directory_path,
     )
 
@@ -314,7 +314,7 @@ def test_prompt_flag(mocker: MockerFixture) -> None:
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
 
     cli(
-        korean_video_file_path,
+        korean_video_path,
         output_dir=output_directory_path,
         prompt="You are a medical translator.",
     )
@@ -333,7 +333,7 @@ def test_config_flag_loads_file(mocker: MockerFixture, tmp_path) -> None:
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
 
     cli(
-        korean_video_file_path,
+        korean_video_path,
         config=config_file,
         output_dir=output_directory_path,
     )
@@ -421,14 +421,14 @@ def test_tracks_command(mocker: MockerFixture) -> None:
         ],
     )
 
-    tracks(korean_video_file_path)
+    tracks(korean_video_path)
 
 
 def test_tracks_command_no_tracks(mocker: MockerFixture) -> None:
     """Tests that tracks command handles no subtitle tracks."""
     mocker.patch("koffee.cli.get_subtitle_tracks", return_value=[])
 
-    tracks(korean_video_file_path)
+    tracks(korean_video_path)
 
 
 def test_find_config_path_returns_none(monkeypatch) -> None:

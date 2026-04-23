@@ -53,11 +53,11 @@ def test_subtitle_generator(
         },
     ]
 
-    subtitle_file_path = generate_subtitles(subtitle_format, text, output_dir)
+    subtitle_path = generate_subtitles(subtitle_format, text, output_dir)
 
-    assert subtitle_file_path.exists()
+    assert subtitle_path.exists()
 
-    with Path.open(subtitle_file_path) as f:
+    with Path.open(subtitle_path) as f:
         actual = f.read()
 
     if subtitle_format == "srt":
@@ -99,7 +99,7 @@ On the other side, a virgin approached and opened a window in front of the Shimm
         assert "Dialogue: 0," in actual
         assert "When we got out of the long tunnel of the border" in actual
         assert "The bottom of the night has been changed." in actual
-        subtitle_file_path.unlink()
+        subtitle_path.unlink()
         return
     else:
         error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
@@ -107,7 +107,7 @@ On the other side, a virgin approached and opened a window in front of the Shimm
 
     assert actual == expected
 
-    subtitle_file_path.unlink()
+    subtitle_path.unlink()
 
 
 @pytest.mark.parametrize("subtitle_format", ["csv", "pdf", "txt"])

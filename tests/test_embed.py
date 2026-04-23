@@ -15,39 +15,35 @@ from koffee.exceptions import SubtitleEmbedError
 
 
 @pytest.fixture
-def video_file_path() -> Path:
+def video_path() -> Path:
     """Pytest fixture for the video file path."""
     return Path("examples/videos/sample_korean_video.mp4")
 
 
 @pytest.fixture
-def subtitle_file_path() -> Path:
+def subtitle_path() -> Path:
     """Pytest fixture for the subtitles."""
     return Path("examples/subtitles/sample_srt_file.srt")
 
 
 @pytest.fixture
-def output_file_path() -> Path:
+def output_path() -> Path:
     """Pytest fixture for the output file path."""
     return Path("scratch/output_with_subtitles.mp4")
 
 
-def test_overlay(
-    video_file_path: Path, subtitle_file_path: Path, output_file_path: Path
-) -> None:
+def test_overlay(video_path: Path, subtitle_path: Path, output_path: Path) -> None:
     """Tests that the subtitle has been overlayed onto the video."""
-    embed_subtitles(subtitle_file_path, video_file_path, output_file_path)
+    embed_subtitles(subtitle_path, video_path, output_path)
 
-    assert output_file_path.exists()
+    assert output_path.exists()
 
 
-def test_hard_overlay(
-    video_file_path: Path, subtitle_file_path: Path, output_file_path: Path
-) -> None:
+def test_hard_overlay(video_path: Path, subtitle_path: Path, output_path: Path) -> None:
     """Tests that hard burn-in produces an output file."""
-    embed_subtitles(subtitle_file_path, video_file_path, output_file_path, mode="hard")
+    embed_subtitles(subtitle_path, video_path, output_path, mode="hard")
 
-    assert output_file_path.exists()
+    assert output_path.exists()
 
 
 def test_mkv_codec() -> None:
@@ -58,9 +54,9 @@ def test_mkv_codec() -> None:
 
 
 def test_exception_handling(
-    subtitle_file_path: Path,
-    video_file_path: Path,
-    output_file_path: Path,
+    subtitle_path: Path,
+    video_path: Path,
+    output_path: Path,
     mocker: MockerFixture,
 ) -> None:
     """Tests that exception is caught and an error is raised."""
@@ -72,16 +68,16 @@ def test_exception_handling(
     )
 
     with pytest.raises(SubtitleEmbedError) as exc_info:
-        embed_subtitles(subtitle_file_path, video_file_path, output_file_path)
+        embed_subtitles(subtitle_path, video_path, output_path)
 
     assert isinstance(exc_info.value.__cause__, subprocess.CalledProcessError)
     assert "FFmpegError" in str(exc_info.value)
 
 
 def test_missing_ffmpeg_raises(
-    subtitle_file_path: Path,
-    video_file_path: Path,
-    output_file_path: Path,
+    subtitle_path: Path,
+    video_path: Path,
+    output_path: Path,
     mocker: MockerFixture,
 ) -> None:
     """Tests that missing ffmpeg raises FileNotFoundError."""
@@ -91,7 +87,7 @@ def test_missing_ffmpeg_raises(
     )
 
     with pytest.raises(FileNotFoundError):
-        embed_subtitles(subtitle_file_path, video_file_path, output_file_path)
+        embed_subtitles(subtitle_path, video_path, output_path)
 
 
 def test_escape_subtitle_filter_path_windows_drive() -> None:
@@ -109,16 +105,14 @@ def test_escape_subtitle_filter_path_metacharacters() -> None:
 
 
 def test_burn_in_subtitles_uses_escaped_path(
-    video_file_path: Path,
-    output_file_path: Path,
+    video_path: Path,
+    output_path: Path,
     mocker: MockerFixture,
 ) -> None:
     """Tests that `_burn_in_subtitles` passes an escaped path to ffmpeg."""
     mock_run = mocker.patch("subprocess.run")
 
-    embed_subtitles(
-        "C:\\subs\\track.srt", video_file_path, output_file_path, mode="hard"
-    )
+    embed_subtitles("C:\\subs\\track.srt", video_path, output_path, mode="hard")
 
     cmd = mock_run.call_args[0][0]
     vf_index = cmd.index("-vf")
@@ -126,9 +120,9 @@ def test_burn_in_subtitles_uses_escaped_path(
 
 
 def test_timeout_raises(
-    subtitle_file_path: Path,
-    video_file_path: Path,
-    output_file_path: Path,
+    subtitle_path: Path,
+    video_path: Path,
+    output_path: Path,
     mocker: MockerFixture,
 ) -> None:
     """Tests that a timed-out ffmpeg raises TimeoutExpired."""
@@ -138,4 +132,4 @@ def test_timeout_raises(
     )
 
     with pytest.raises(subprocess.TimeoutExpired):
-        embed_subtitles(subtitle_file_path, video_file_path, output_file_path)
+        embed_subtitles(subtitle_path, video_path, output_path)

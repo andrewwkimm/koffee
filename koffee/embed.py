@@ -12,53 +12,51 @@ log = logging.getLogger(__name__)
 MKV_EXTENSIONS = {".mkv", ".webm"}
 
 
-def _get_subtitle_codec(output_file_path: Path | str) -> str:
+def _get_subtitle_codec(output_path: Path | str) -> str:
     """Returns the appropriate subtitle codec for the output container."""
-    if Path(output_file_path).suffix.lower() in MKV_EXTENSIONS:
+    if Path(output_path).suffix.lower() in MKV_EXTENSIONS:
         return "srt"
     return "mov_text"
 
 
 def embed_subtitles(
-    subtitle_file_path: Path | str,
-    video_file_path: Path | str,
-    output_file_path: Path | str,
+    subtitle_path: Path | str,
+    video_path: Path | str,
+    output_path: Path | str,
     mode: str = "soft",
     language: str = "eng",
 ) -> Path | str:
     """Embeds subtitles into a video file.
 
     Args:
-        subtitle_file_path: Path to the subtitle file.
-        video_file_path: Path to the source video file.
-        output_file_path: Path for the output video file.
+        subtitle_path: Path to the subtitle file.
+        video_path: Path to the source video file.
+        output_path: Path for the output video file.
         mode: "soft" for muxed subtitle track, "hard" for burned-in subtitles.
         language: ISO 639-2 language code for the subtitle metadata.
     """
     if mode == "hard":
-        return _burn_in_subtitles(subtitle_file_path, video_file_path, output_file_path)
-    return _mux_subtitles(
-        subtitle_file_path, video_file_path, output_file_path, language
-    )
+        return _burn_in_subtitles(subtitle_path, video_path, output_path)
+    return _mux_subtitles(subtitle_path, video_path, output_path, language)
 
 
 def _mux_subtitles(
-    subtitle_file_path: Path | str,
-    video_file_path: Path | str,
-    output_file_path: Path | str,
+    subtitle_path: Path | str,
+    video_path: Path | str,
+    output_path: Path | str,
     language: str = "eng",
 ) -> Path | str:
     """Muxes subtitles as a soft track (original behavior)."""
     log.info("Embedding subtitles (soft).")
 
-    subtitle_codec = _get_subtitle_codec(output_file_path)
+    subtitle_codec = _get_subtitle_codec(output_path)
 
     cmd = [
         "ffmpeg",
         "-i",
-        str(video_file_path),
+        str(video_path),
         "-i",
-        str(subtitle_file_path),
+        str(subtitle_path),
         "-c",
         "copy",
         "-c:s",
@@ -66,7 +64,7 @@ def _mux_subtitles(
         "-metadata:s:s:0",
         f"language={language}",
         "-y",
-        str(output_file_path),
+        str(output_path),
     ]
 
     try:
@@ -80,37 +78,37 @@ def _mux_subtitles(
     except subprocess.CalledProcessError as error:
         raise SubtitleEmbedError(error.stderr) from error
 
-    return output_file_path
+    return output_path
 
 
-def _escape_subtitle_filter_path(subtitle_file_path: Path | str) -> str:
+def _escape_subtitle_filter_path(subtitle_path: Path | str) -> str:
     """Escapes a path for use in the ffmpeg `subtitles=` filter argument."""
-    path = str(subtitle_file_path).replace("\\", "/")
+    path = str(subtitle_path).replace("\\", "/")
     for char in (":", "'", "[", "]", ",", ";"):
         path = path.replace(char, f"\\{char}")
     return path
 
 
 def _burn_in_subtitles(
-    subtitle_file_path: Path | str,
-    video_file_path: Path | str,
-    output_file_path: Path | str,
+    subtitle_path: Path | str,
+    video_path: Path | str,
+    output_path: Path | str,
 ) -> Path | str:
     """Burns subtitles into the video frames (hard subtitles)."""
     log.info("Burning in subtitles (hard).")
 
-    escaped_path = _escape_subtitle_filter_path(subtitle_file_path)
+    escaped_path = _escape_subtitle_filter_path(subtitle_path)
 
     cmd = [
         "ffmpeg",
         "-i",
-        str(video_file_path),
+        str(video_path),
         "-vf",
         f"subtitles={escaped_path}",
         "-c:a",
         "copy",
         "-y",
-        str(output_file_path),
+        str(output_path),
     ]
 
     try:
@@ -124,4 +122,4 @@ def _burn_in_subtitles(
     except subprocess.CalledProcessError as error:
         raise SubtitleEmbedError(error.stderr) from error
 
-    return output_file_path
+    return output_path

@@ -8,7 +8,7 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 
-def get_subtitle_tracks(video_file_path: Path | str) -> list[dict]:
+def get_subtitle_tracks(video_path: Path | str) -> list[dict]:
     """Returns a list of subtitle track metadata from a video file."""
     try:
         result = subprocess.run(
@@ -22,7 +22,7 @@ def get_subtitle_tracks(video_file_path: Path | str) -> list[dict]:
                 "stream=index:stream_tags=language,title",
                 "-of",
                 "json",
-                str(video_file_path),
+                str(video_path),
             ],
             capture_output=True,
             text=True,
@@ -40,16 +40,16 @@ def get_subtitle_tracks(video_file_path: Path | str) -> list[dict]:
     return data.get("streams", [])
 
 
-def extract_subtitle_track(video_file_path: Path | str, track_index: int = 0) -> Path:
+def extract_subtitle_track(video_path: Path | str, track_index: int = 0) -> Path:
     """Extracts a subtitle track from a video file to a temporary SRT file."""
-    output_path = Path(video_file_path).parent / f".koffee_extracted_{track_index}.srt"
+    output_path = Path(video_path).parent / f".koffee_extracted_{track_index}.srt"
 
     try:
         subprocess.run(
             [
                 "ffmpeg",
                 "-i",
-                str(video_file_path),
+                str(video_path),
                 "-map",
                 f"0:s:{track_index}",
                 "-f",
