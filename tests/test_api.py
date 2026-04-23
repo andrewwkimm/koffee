@@ -39,12 +39,12 @@ def api_module():
 @pytest.mark.integration
 def test_api() -> None:
     """Tests if the API call successfully outputs a subtitle file."""
-    video_file_path = Path("examples/videos/sample_korean_video.mp4")
+    video_path = Path("examples/videos/sample_korean_video.mp4")
     output_directory_path = Path("scratch")
     output_file_name = "python_output_video_file"
 
     output_file = koffee.run(
-        video_file_path=video_file_path,
+        input_path=video_path,
         output_dir=output_directory_path,
         output_name=output_file_name,
         compute_type="int8",

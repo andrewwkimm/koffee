@@ -7,7 +7,7 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 
-def get_video_duration(video_file_path: Path | str) -> float:
+def get_video_duration(video_path: Path | str) -> float:
     """Gets the duration in seconds using ffprobe."""
     try:
         result = subprocess.run(
@@ -19,7 +19,7 @@ def get_video_duration(video_file_path: Path | str) -> float:
                 "format=duration",
                 "-of",
                 "default=noprint_wrappers=1:nokey=1",
-                str(video_file_path),
+                str(video_path),
             ],
             capture_output=True,
             text=True,

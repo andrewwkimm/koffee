@@ -360,7 +360,7 @@ def _translate_with_progress(
     if skip_asr:
         translate_task = progress.add_task("Translating", total=100)
         run(
-            video_file_path=video_path,
+            input_path=video_path,
             config=config,
             on_translate_progress=_make_progress_callback(progress, translate_task),
         )
@@ -385,7 +385,7 @@ def _translate_with_progress(
                     progress.start_task(translate_task)
 
         run(
-            video_file_path=video_path,
+            input_path=video_path,
             config=config,
             on_asr_progress=on_asr_progress,
             on_translate_progress=translate_callback,
@@ -581,10 +581,10 @@ def transcribe(
 
     segments = transcript["segments"]
     out_dir = output_dir if output_dir is not None else file_path.parent
-    subtitle_file_path = generate_subtitles(subtitle_format, segments, out_dir)
+    subtitle_path = generate_subtitles(subtitle_format, segments, out_dir)
 
     target_path = _write_output(
-        subtitle_file_path,
+        subtitle_path,
         file_path,
         subtitle_format,
         output_dir,
@@ -621,10 +621,10 @@ def convert(
     """
     segments = parse_subtitle_file(file_path)
     out_dir = output_dir if output_dir is not None else file_path.parent
-    subtitle_file_path = generate_subtitles(subtitle_format, segments, out_dir)
+    subtitle_path = generate_subtitles(subtitle_format, segments, out_dir)
 
     target_path = _write_output(
-        subtitle_file_path,
+        subtitle_path,
         file_path,
         subtitle_format,
         output_dir,

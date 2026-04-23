@@ -14,8 +14,8 @@ def convert_segments_to_srt(segments: list[Segment], output_dir: Path) -> Path:
     """Converts segments to SRT format."""
     log.debug("Converting segments to SRT format.")
 
-    output_file_path = output_dir / f"subtitles_{uuid.uuid4().hex[:8]}.srt"
-    log.debug(f"output_file_path: {output_file_path!r}")
+    output_path = output_dir / f"subtitles_{uuid.uuid4().hex[:8]}.srt"
+    log.debug(f"output_path: {output_path!r}")
 
     blocks = []
     for idx, subtitle in enumerate(segments, 1):
@@ -24,7 +24,7 @@ def convert_segments_to_srt(segments: list[Segment], output_dir: Path) -> Path:
         text = subtitle["text"].strip()
         blocks.append(f"{idx}\n{start} --> {end}\n{text}")
 
-    with Path.open(output_file_path, "w", encoding="utf-8") as file:
+    with Path.open(output_path, "w", encoding="utf-8") as file:
         file.write("\n\n".join(blocks) + "\n")
 
-    return output_file_path
+    return output_path
