@@ -5,9 +5,10 @@ import time
 from collections.abc import Callable
 from types import ModuleType
 
+from koffee._retry import with_retries
 from koffee.llm._protocol import TranslationProvider
 from koffee.schemas.types import Chunk, Segment, Transcript
-from koffee.utils import convert_to_timestamp, with_retries
+from koffee.subtitle import convert_to_timestamp
 
 log = logging.getLogger(__name__)
 

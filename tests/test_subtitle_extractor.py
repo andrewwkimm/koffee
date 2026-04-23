@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from koffee.utils.subtitle_extractor import extract_subtitle_track, get_subtitle_tracks
+from koffee.subtitle import extract_subtitle_track, get_subtitle_tracks
 
 
 def test_get_subtitle_tracks_returns_streams(mocker) -> None:
@@ -18,7 +18,7 @@ def test_get_subtitle_tracks_returns_streams(mocker) -> None:
         }
     )
     mocker.patch(
-        "koffee.utils.subtitle_extractor.subprocess.run",
+        "koffee.subtitle.subprocess.run",
         return_value=subprocess.CompletedProcess(
             args=[], returncode=0, stdout=ffprobe_output
         ),
@@ -33,7 +33,7 @@ def test_get_subtitle_tracks_returns_streams(mocker) -> None:
 def test_get_subtitle_tracks_no_streams(mocker) -> None:
     """Tests that an empty list is returned when no subtitle tracks exist."""
     mocker.patch(
-        "koffee.utils.subtitle_extractor.subprocess.run",
+        "koffee.subtitle.subprocess.run",
         return_value=subprocess.CompletedProcess(
             args=[], returncode=0, stdout=json.dumps({"streams": []})
         ),
@@ -47,7 +47,7 @@ def test_get_subtitle_tracks_no_streams(mocker) -> None:
 def test_get_subtitle_tracks_missing_ffprobe(mocker) -> None:
     """Tests that missing ffprobe raises FileNotFoundError."""
     mocker.patch(
-        "koffee.utils.subtitle_extractor.subprocess.run",
+        "koffee.subtitle.subprocess.run",
         side_effect=FileNotFoundError,
     )
 
@@ -62,7 +62,7 @@ def test_extract_subtitle_track(mocker, tmp_path) -> None:
     expected_output = tmp_path / ".koffee_extracted_0.srt"
 
     mocker.patch(
-        "koffee.utils.subtitle_extractor.subprocess.run",
+        "koffee.subtitle.subprocess.run",
         return_value=subprocess.CompletedProcess(args=[], returncode=0),
     )
 
@@ -77,7 +77,7 @@ def test_extract_subtitle_track_failure(mocker, tmp_path) -> None:
     video.touch()
 
     mocker.patch(
-        "koffee.utils.subtitle_extractor.subprocess.run",
+        "koffee.subtitle.subprocess.run",
         side_effect=subprocess.CalledProcessError(1, "ffmpeg", stderr="error"),
     )
 
@@ -91,7 +91,7 @@ def test_extract_subtitle_track_missing_ffmpeg(mocker, tmp_path) -> None:
     video.touch()
 
     mocker.patch(
-        "koffee.utils.subtitle_extractor.subprocess.run",
+        "koffee.subtitle.subprocess.run",
         side_effect=FileNotFoundError,
     )
 
@@ -102,7 +102,7 @@ def test_extract_subtitle_track_missing_ffmpeg(mocker, tmp_path) -> None:
 def test_get_subtitle_tracks_timeout(mocker) -> None:
     """Tests that a timed-out ffprobe raises TimeoutExpired."""
     mocker.patch(
-        "koffee.utils.subtitle_extractor.subprocess.run",
+        "koffee.subtitle.subprocess.run",
         side_effect=subprocess.TimeoutExpired(cmd="ffprobe", timeout=30),
     )
 
@@ -116,7 +116,7 @@ def test_extract_subtitle_track_timeout(mocker, tmp_path) -> None:
     video.touch()
 
     mocker.patch(
-        "koffee.utils.subtitle_extractor.subprocess.run",
+        "koffee.subtitle.subprocess.run",
         side_effect=subprocess.TimeoutExpired(cmd="ffmpeg", timeout=600),
     )
 

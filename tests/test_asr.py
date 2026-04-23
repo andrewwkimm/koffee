@@ -53,7 +53,7 @@ def test_transcribe_reports_progress(mocker: MockerFixture) -> None:
     )
 
     mocker.patch("koffee.asr.WhisperModel", return_value=mock_model)
-    mocker.patch("koffee.asr.get_video_duration", return_value=10.0)
+    mocker.patch("koffee.asr._get_video_duration", return_value=10.0)
 
     progress_calls = []
     transcribe(

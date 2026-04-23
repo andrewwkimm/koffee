@@ -25,8 +25,7 @@ from koffee.schemas.config import (
     KoffeeConfig,
     load_config_file,
 )
-from koffee.subtitle import generate_subtitles
-from koffee.utils import get_subtitle_tracks, parse_subtitle_file
+from koffee.subtitle import generate_subtitles, get_subtitle_tracks, parse_subtitle_file
 
 
 @app.default()

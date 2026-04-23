@@ -4,7 +4,7 @@ import subprocess
 
 import pytest
 
-from koffee.utils.get_video_duration import get_video_duration
+from koffee.asr import _get_video_duration as get_video_duration
 
 
 def test_returns_duration(mocker) -> None:

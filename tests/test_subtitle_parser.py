@@ -1,6 +1,6 @@
 """Tests for subtitle file parser."""
 
-from koffee.utils.subtitle_parser import parse_subtitle_file
+from koffee.subtitle import parse_subtitle_file
 
 _ASS_EVENT_FMT = (
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
