@@ -51,6 +51,7 @@ dist:
 build:
 	make ci
 	make dist
+	pip install --force-reinstall dist/*.whl
 	koffee --help
 
 ship:
