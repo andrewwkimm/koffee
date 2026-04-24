@@ -353,7 +353,14 @@ def embed(
 @app.command()
 def info() -> None:
     """Display system information for debugging."""
+    import sys  # noqa: PLC0415
+
     log.info("[koffee info]")
+
+    import koffee  # noqa: PLC0415
+
+    log.info(f"  koffee: {koffee.__version__}")
+    log.info(f"  python: {sys.version.split()[0]}")
 
     ffmpeg_path = shutil.which("ffmpeg")
     if ffmpeg_path:
@@ -377,11 +384,21 @@ def info() -> None:
 
         cuda_available = torch.cuda.is_available()
         device_name = torch.cuda.get_device_name(0) if cuda_available else "N/A"
+        log.info(f"  torch: {torch.__version__}")
         log.info(f"  CUDA: {'available' if cuda_available else 'not available'}")
         if cuda_available:
             log.info(f"  GPU: {device_name}")
+            vram_bytes = torch.cuda.get_device_properties(0).total_memory
+            log.info(f"  VRAM: {vram_bytes / 1024**3:.1f} GB")
     except ImportError:
         log.info("  torch: not installed")
+
+    try:
+        import faster_whisper  # noqa: PLC0415
+
+        log.info(f"  faster-whisper: {faster_whisper.__version__}")
+    except ImportError:
+        log.info("  faster-whisper: not installed")
 
     config = KoffeeConfig(**load_config_file())
     log.info(f"  default whisper model: {config.whisper_model}")
