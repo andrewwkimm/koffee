@@ -29,5 +29,14 @@ class SubtitleEmbedError(KoffeeError):
     """Subtitle embedding not possible for the given file."""
 
 
+class TranslationError(KoffeeError):
+    """Translation step failed after successful transcription."""
+
+    def __init__(self, message: str, segments: list) -> None:
+        """Stores the raw transcript segments alongside the error."""
+        super().__init__(message)
+        self.segments = segments
+
+
 class UnsupportedFileError(KoffeeError):
     """Input file has an unsupported extension."""

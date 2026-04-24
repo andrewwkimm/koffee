@@ -14,6 +14,7 @@ from koffee.exceptions import (
     InvalidVideoFileError,
     MissingApiKeyError,
     MissingDependencyError,
+    TranslationError,
     UnsupportedFileError,
 )
 from koffee.schemas.config import KoffeeConfig
@@ -54,7 +55,10 @@ def run(
         return _translate_embedded_subtitles(input_path, config, on_translate_progress)
 
     transcript = _transcribe(input_path, config, on_asr_progress)
-    subtitle_path = _translate(transcript, config, on_translate_progress)
+    try:
+        subtitle_path = _translate(transcript, config, on_translate_progress)
+    except Exception as exc:
+        raise TranslationError(str(exc), transcript["segments"]) from exc
     output_path = _route_output(input_path, subtitle_path, config)
 
     return output_path

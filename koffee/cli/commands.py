@@ -17,7 +17,7 @@ from koffee.cli.app import app, defaults, log, options_group
 from koffee.cli.embedded import _handle_embedded_subtitles
 from koffee.cli.progress import _create_progress_bar, _make_progress_callback
 from koffee.embed import embed_subtitles
-from koffee.exceptions import KoffeeError
+from koffee.exceptions import KoffeeError, TranslationError
 from koffee.schemas.config import (
     CONFIG_SEARCH_PATHS,
     LANGUAGE_CODES,
@@ -264,12 +264,32 @@ def _translate_with_progress(
                     progress.update(translate_task, visible=True)
                     progress.start_task(translate_task)
 
-        run(
-            input_path=video_path,
-            config=config,
-            on_asr_progress=on_asr_progress,
-            on_translate_progress=translate_callback,
-        )
+        try:
+            run(
+                input_path=video_path,
+                config=config,
+                on_asr_progress=on_asr_progress,
+                on_translate_progress=translate_callback,
+            )
+        except TranslationError as exc:
+            log.error(f"Translation failed: {exc}")
+            answer = input("Save transcription as subtitles for manual retry? [y/N] ")
+            if answer.strip().lower() == "y":
+                raw_path = generate_subtitles(config.subtitle_format, exc.segments)
+                output_path = _write_output(
+                    raw_path,
+                    video_path,
+                    config.subtitle_format,
+                    config.output_dir,
+                    config.output_name,
+                    config.overwrite,
+                )
+                log.info(
+                    f"Transcription saved to {output_path}. "
+                    f"Retry: koffee {output_path} --provider=<provider>"
+                )
+            else:
+                raise
 
 
 @app.command()
