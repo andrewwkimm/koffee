@@ -133,7 +133,7 @@ context-size = 20
 
 The simplest way to start developing is by using either a [DevContainer](https://code.visualstudio.com/docs/devcontainers/containers) or directly only use [uv](https://docs.astral.sh/uv/) in your local machine.
 
-If you are planning to develop inside DevContainer, choose the CUDA setup if you have a NVIDIA graphics card and would like to run koffee with CUDA support; otherwise, the default build is much leaner and recommended.
+For the Dev Container, choose the CUDA setup if you have a NVIDIA graphics card and would like to run koffee with CUDA support. The default build is much leaner and recommended otherwise.
 
 For uv, run the following commands to set up your environment:
 
