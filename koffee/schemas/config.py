@@ -150,6 +150,7 @@ class KoffeeConfig(BaseModel):
     vad_filter: bool = True
     subtitle_track_index: int = 0
     use_embedded_subtitles: bool = False
+    on_translation_failure: Literal["prompt", "save", "abort"] = "prompt"
 
     @model_validator(mode="before")
     @classmethod

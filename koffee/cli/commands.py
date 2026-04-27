@@ -57,6 +57,9 @@ def cli(
     sleep_requests: Annotated[int, Parameter(name=("--sleep-requests",))] | None = None,
     prompt: Annotated[str, Parameter(name=("--prompt",))] | None = None,
     api_key: Annotated[str, Parameter(name=("--api-key",))] | None = None,
+    on_translation_failure: Annotated[
+        str, Parameter(name=("--on-translation-failure",))
+    ] = defaults.on_translation_failure,
     config: Annotated[Path, Parameter(name=("--config",), group=options_group)]
     | None = None,
     vad_filter: Annotated[
@@ -107,6 +110,10 @@ def cli(
         Path to a koffee.toml configuration file
     api_key: str
         API key for an LLM service
+    on_translation_failure: str
+        What to do when LLM translation fails: prompt (default; ask y/n to save
+        the raw transcription), save (save without asking), or abort (skip the
+        save). When stdin is not a TTY, prompt falls back to save.
     vad_filter: bool
         Voice activity detection filtering during transcription (enabled by default;
         pass `--no-vad-filter` to disable)
@@ -139,6 +146,7 @@ def cli(
         "target_language": target_language,
         "provider": provider,
         "prompt": prompt,
+        "on_translation_failure": on_translation_failure,
         "vad_filter": vad_filter,
     }
     default_config = KoffeeConfig().model_dump()
