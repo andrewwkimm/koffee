@@ -21,7 +21,7 @@ from koffee.cli import (
     tracks,
     transcribe,
 )
-from koffee.exceptions import KoffeeError
+from koffee.exceptions import KoffeeError, TranslationError
 from koffee.schemas.config import LANGUAGE_CODES, KoffeeConfig
 
 korean_video_path = Path("examples/videos/sample_korean_video.mp4")
@@ -308,6 +308,115 @@ def test_batch_summary_on_partial_failure(mocker: MockerFixture) -> None:
     assert any("1/2 succeeded" in msg for msg in info_messages)
     assert any("failed" in msg for msg in info_messages)
     assert any("boom" in msg for msg in error_messages)
+
+
+def test_translation_failure_prompt_yes_saves(mocker: MockerFixture) -> None:
+    """Tests that answering yes at the prompt triggers a transcription save."""
+    mocker.patch(
+        "koffee.cli.commands.run", side_effect=TranslationError("boom", segments=[])
+    )
+    mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
+    mock_save = mocker.patch("koffee.cli.commands._save_raw_transcription")
+    mocker.patch("koffee.cli.commands.Confirm.ask", return_value=True)
+    mocker.patch("koffee.cli.commands.sys.stdin.isatty", return_value=True)
+
+    cli(korean_video_path, output_dir=output_directory_path)
+
+    mock_save.assert_called_once()
+
+
+def test_translation_failure_prompt_no_does_not_save(mocker: MockerFixture) -> None:
+    """Tests that answering no at the prompt skips the save."""
+    mocker.patch(
+        "koffee.cli.commands.run", side_effect=TranslationError("boom", segments=[])
+    )
+    mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
+    mock_save = mocker.patch("koffee.cli.commands._save_raw_transcription")
+    mocker.patch("koffee.cli.commands.Confirm.ask", return_value=False)
+    mocker.patch("koffee.cli.commands.sys.stdin.isatty", return_value=True)
+
+    cli(
+        korean_video_path,
+        korean_video_path,
+        output_dir=output_directory_path,
+    )
+
+    mock_save.assert_not_called()
+
+
+def test_translation_failure_save_skips_prompt(mocker: MockerFixture) -> None:
+    """Tests that --on-translation-failure=save bypasses the prompt entirely."""
+    mocker.patch(
+        "koffee.cli.commands.run", side_effect=TranslationError("boom", segments=[])
+    )
+    mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
+    mock_save = mocker.patch("koffee.cli.commands._save_raw_transcription")
+    mock_confirm = mocker.patch("koffee.cli.commands.Confirm.ask")
+
+    cli(
+        korean_video_path,
+        output_dir=output_directory_path,
+        on_translation_failure="save",
+    )
+
+    mock_confirm.assert_not_called()
+    mock_save.assert_called_once()
+
+
+def test_translation_failure_abort_skips_prompt_and_save(mocker: MockerFixture) -> None:
+    """Tests that --on-translation-failure=abort skips both the prompt and the save."""
+    mocker.patch(
+        "koffee.cli.commands.run", side_effect=TranslationError("boom", segments=[])
+    )
+    mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
+    mock_save = mocker.patch("koffee.cli.commands._save_raw_transcription")
+    mock_confirm = mocker.patch("koffee.cli.commands.Confirm.ask")
+
+    cli(
+        korean_video_path,
+        output_dir=output_directory_path,
+        on_translation_failure="abort",
+    )
+
+    mock_confirm.assert_not_called()
+    mock_save.assert_not_called()
+
+
+def test_translation_failure_non_tty_falls_back_to_save(mocker: MockerFixture) -> None:
+    """Tests that a non-TTY stdin auto-saves instead of attempting a prompt."""
+    mocker.patch(
+        "koffee.cli.commands.run", side_effect=TranslationError("boom", segments=[])
+    )
+    mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
+    mock_save = mocker.patch("koffee.cli.commands._save_raw_transcription")
+    mock_confirm = mocker.patch("koffee.cli.commands.Confirm.ask")
+    mocker.patch("koffee.cli.commands.sys.stdin.isatty", return_value=False)
+
+    cli(korean_video_path, output_dir=output_directory_path)
+
+    mock_confirm.assert_not_called()
+    mock_save.assert_called_once()
+
+
+def test_batch_continues_after_translation_failure(mocker: MockerFixture) -> None:
+    """Tests that a translation failure on one file does not stop later files."""
+    mock_run = mocker.patch(
+        "koffee.cli.commands.run",
+        side_effect=[TranslationError("boom", segments=[]), None, None],
+    )
+    mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
+    mocker.patch("koffee.cli.commands._save_raw_transcription")
+    mocker.patch("koffee.cli.commands.Confirm.ask", return_value=True)
+    mocker.patch("koffee.cli.commands.sys.stdin.isatty", return_value=True)
+
+    cli(
+        korean_video_path,
+        korean_video_path,
+        korean_video_path,
+        output_dir=output_directory_path,
+    )
+
+    assert mock_run.call_count == 3
 
 
 def test_prompt_flag(mocker: MockerFixture) -> None:
