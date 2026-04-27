@@ -6,7 +6,7 @@ authors = [
     {name = "Kim, Andrew", email = "andrewkimka@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.11, <3.14"
+requires-python = ">=3.11, <3.15"
 dependencies = [
     "faster-whisper>=1.0.3",
     "torch>=2.12.1",
