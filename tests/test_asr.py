@@ -29,11 +29,11 @@ def test_transcribe(mocker: MockerFixture) -> None:
 
     mocker.patch("koffee.asr.WhisperModel", return_value=mock_model)
 
-    result = transcribe("mock_video_file.mp4", "int8", "auto", "large-v3", "whisper")
+    result = transcribe("mock_video_file.mp4", "int8", "auto", "large-v3", "transcribe")
 
     mock_model.transcribe.assert_called_once_with(
         "mock_video_file.mp4",
-        task="translate",
+        task="transcribe",
         word_timestamps=True,
         vad_filter=True,
     )
@@ -61,7 +61,7 @@ def test_transcribe_reports_progress(mocker: MockerFixture) -> None:
         "int8",
         "auto",
         "large-v3",
-        "whisper",
+        "translate",
         on_progress=progress_calls.append,
     )
 

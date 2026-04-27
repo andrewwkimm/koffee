@@ -195,12 +195,13 @@ def _transcribe(
     on_progress: Callable[[float], None] | None,
 ) -> Transcript:
     """Transcribes audio from the file, returning the raw transcript."""
+    task = "translate" if config.provider == "whisper" else "transcribe"
     transcript = transcribe(
         str(input_path),
         config.compute_type,
         config.device,
         config.whisper_model,
-        config.provider,
+        task,
         on_progress=on_progress,
         vad_filter=config.vad_filter,
     )
