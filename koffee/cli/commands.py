@@ -164,30 +164,7 @@ def cli(
         _print_dry_run(resolved_paths, config)
         return
 
-    total = len(resolved_paths)
-    failed = []
-    with _create_progress_bar() as progress:
-        for i, video_path in enumerate(resolved_paths, 1):
-            if total > 1:
-                log.info(f"[{i}/{total}] Processing {video_path.name}")
-            try:
-                _translate_with_progress(video_path, config, progress)
-            except (
-                FileExistsError,
-                FileNotFoundError,
-                KoffeeError,
-                subprocess.CalledProcessError,
-                subprocess.TimeoutExpired,
-            ) as exc:
-                log.error(f"Failed to process {video_path.name}: {exc}")
-                failed.append(video_path)
-
-    if total > 1:
-        succeeded = total - len(failed)
-        log.info(f"Batch complete: {succeeded}/{total} succeeded.")
-        if failed:
-            for path in failed:
-                log.info(f"  failed: {path.name}")
+    _run_batch(resolved_paths, config)
 
 
 def _print_dry_run(resolved_paths: list[Path], config: KoffeeConfig) -> None:
@@ -234,6 +211,84 @@ def _resolve_paths(file_path: tuple) -> list[Path]:
     return resolved_paths
 
 
+def _run_batch(resolved_paths: list[Path], config: KoffeeConfig) -> None:
+    """Processes each resolved path, handling failures without aborting the batch."""
+    total = len(resolved_paths)
+    failed = []
+    with _create_progress_bar() as progress:
+        for i, video_path in enumerate(resolved_paths, 1):
+            if total > 1:
+                log.info(f"[{i}/{total}] Processing {video_path.name}")
+            try:
+                _translate_with_progress(video_path, config, progress)
+            except TranslationError as exc:
+                if not _handle_translation_failure(exc, video_path, config, progress):
+                    failed.append(video_path)
+            except (
+                FileExistsError,
+                FileNotFoundError,
+                KoffeeError,
+                subprocess.CalledProcessError,
+                subprocess.TimeoutExpired,
+            ) as exc:
+                log.error(f"Failed to process {video_path.name}: {exc}")
+                failed.append(video_path)
+
+    if total > 1:
+        succeeded = total - len(failed)
+        log.info(f"Batch complete: {succeeded}/{total} succeeded.")
+        if failed:
+            for path in failed:
+                log.info(f"  failed: {path.name}")
+
+
+def _handle_translation_failure(
+    exc: TranslationError,
+    video_path: Path,
+    config: KoffeeConfig,
+    progress: Progress,
+) -> bool:
+    """Decides whether to save the raw transcription after a translation failure.
+
+    Returns True if the failure was handled (saved or explicitly skipped) so the
+    batch can continue cleanly; returns False to mark the file as failed.
+    """
+    log.error(f"Translation failed: {exc}")
+
+    decision = config.on_translation_failure
+    if decision == "abort":
+        return False
+
+    if decision == "prompt":
+        answer = input("Save transcription as subtitles for manual retry? [y/N] ")
+        if answer.strip().lower() != "y":
+            return False
+
+    _save_raw_transcription(exc, video_path, config)
+    return True
+
+
+def _save_raw_transcription(
+    exc: TranslationError,
+    video_path: Path,
+    config: KoffeeConfig,
+) -> None:
+    """Writes the raw (untranslated) transcript to disk for manual retry."""
+    raw_path = generate_subtitles(config.subtitle_format, exc.segments)
+    output_path = _write_output(
+        raw_path,
+        video_path,
+        config.subtitle_format,
+        config.output_dir,
+        config.output_name,
+        config.overwrite,
+    )
+    log.info(
+        f"Transcription saved to {output_path}. "
+        f"Retry: koffee {output_path} --provider=<provider>"
+    )
+
+
 def _translate_with_progress(
     video_path: Path,
     config: KoffeeConfig,
@@ -272,32 +327,12 @@ def _translate_with_progress(
                     progress.update(translate_task, visible=True)
                     progress.start_task(translate_task)
 
-        try:
-            run(
-                input_path=video_path,
-                config=config,
-                on_asr_progress=on_asr_progress,
-                on_translate_progress=translate_callback,
-            )
-        except TranslationError as exc:
-            log.error(f"Translation failed: {exc}")
-            answer = input("Save transcription as subtitles for manual retry? [y/N] ")
-            if answer.strip().lower() == "y":
-                raw_path = generate_subtitles(config.subtitle_format, exc.segments)
-                output_path = _write_output(
-                    raw_path,
-                    video_path,
-                    config.subtitle_format,
-                    config.output_dir,
-                    config.output_name,
-                    config.overwrite,
-                )
-                log.info(
-                    f"Transcription saved to {output_path}. "
-                    f"Retry: koffee {output_path} --provider=<provider>"
-                )
-            else:
-                raise
+        run(
+            input_path=video_path,
+            config=config,
+            on_asr_progress=on_asr_progress,
+            on_translate_progress=translate_callback,
+        )
 
 
 @app.command()
