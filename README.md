@@ -95,6 +95,7 @@ Refer below for a list of all arguments, commands, parameters, and options.
     --context-size              Number of preceding entries passed as context per request (auto-selected per model if unset)
     --prompt                    Custom system prompt for the LLM translation model
     --api-key                   API key for an LLM service
+    --on-translation-failure    What to do when LLM translation fails: prompt (default), save, or abort. Non-TTY stdin falls back to save
 
 ### Options
 
