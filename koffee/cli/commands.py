@@ -9,6 +9,7 @@ from typing import Annotated
 from cyclopts import Parameter, validators
 from rich.console import Console
 from rich.progress import Progress
+from rich.prompt import Confirm
 from rich.table import Table
 
 from koffee import asr
@@ -260,8 +261,12 @@ def _handle_translation_failure(
         return False
 
     if decision == "prompt":
-        answer = input("Save transcription as subtitles for manual retry? [y/N] ")
-        if answer.strip().lower() != "y":
+        save = Confirm.ask(
+            "Save transcription as subtitles for manual retry?",
+            default=False,
+            console=progress.console,
+        )
+        if not save:
             return False
 
     _save_raw_transcription(exc, video_path, config)
