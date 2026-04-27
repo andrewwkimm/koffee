@@ -584,7 +584,7 @@ def transcribe(
             compute_type,
             device,
             whisper_model,
-            "whisper",
+            "transcribe",
             on_progress=_make_progress_callback(progress, asr_task),
             vad_filter=vad_filter,
         )
