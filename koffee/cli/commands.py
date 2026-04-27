@@ -3,6 +3,7 @@
 import logging
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -257,6 +258,10 @@ def _handle_translation_failure(
     log.error(f"Translation failed: {exc}")
 
     decision = config.on_translation_failure
+    if decision == "prompt" and not sys.stdin.isatty():
+        log.info("stdin is not a TTY; saving transcription instead of prompting.")
+        decision = "save"
+
     if decision == "abort":
         return False
 
