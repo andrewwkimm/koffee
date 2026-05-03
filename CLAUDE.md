@@ -1,0 +1,22 @@
+# Personal conventions
+
+## Commits
+- Atomic commits: each commit is a single concern. Don't bundle unrelated fixes.
+- Single-line commit messages by default. Add a body only if I ask for one.
+- Make changes, verify with the project's test/lint command, usually `make ci`, then wait for me to say "commit". Never auto-commit.
+
+## Pull requests
+- Always rebase and merge. Never create merge commits unless told to do so.
+- PR descriptions: terse prose plus bullets when there are many changes. No headers, no "Summary"/"Test plan" scaffolding.
+
+## Code style
+- Catch specific exceptions, never blanket `except Exception`.
+- Prefer named return variables over long chained return expressions.
+- Follow the Stepdown Rule (a.k.a. Newspaper Metaphor, from *Clean Code*): public functions at the top, then helpers ordered so each caller appears above its callees. Shared helpers live nested under their first caller, not hoisted to the top. Among peers at the same level, order by Protocol/ABC declaration if one exists, otherwise alphabetically. The traversal order is depth-first: a function is followed by its callees in full before the next peer at the same level. This is intended to be opinionated and called out in code review.
+- Declare variables close to where they are used. Don't bind a name at the top of a function and then reach for it 20 lines later. Inline the expression at the use site, or if it must be named, define it on the line before it is consumed. Same readability motivation as the Stepdown Rule.
+- Indentation depth: aim for at most 2 levels of nesting inside a function. Go to 3 only when the loops/conditionals are so tightly coupled that splitting them would obscure the logic. Never beyond 3, and if you're getting there, extract a helper so the reader can name what each layer is doing instead of decoding indentation.
+
+## Docstrings
+- Module-level docstrings: descriptive (sentence about what the module is/does).
+- Function and method docstrings: prefer non-imperative phrasing, eg "Returns the parsed config" not "Return the parsed config", "Tests that X" not "Test that X", "Raises ValueError when..." not "Raise ValueError when...".
+- The non-imperative rule isn't absolute: when a noun-phrase reads more naturally, use it (e.g. a Pydantic model class can have `"""Pydantic base model for koffee configuration."""`). The goal is description over command, not blind grammar.
