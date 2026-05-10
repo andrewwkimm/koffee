@@ -266,11 +266,13 @@ def _handle_translation_failure(
         return False
 
     if decision == "prompt":
+        progress.stop()
         save = Confirm.ask(
             "Save transcription as subtitles for manual retry?",
-            default=False,
+            default=True,
             console=progress.console,
         )
+        progress.start()
         if not save:
             return False
 
