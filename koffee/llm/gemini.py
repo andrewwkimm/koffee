@@ -25,6 +25,9 @@ def attempt_generate(client, prompt: str, model: str, system_prompt: str):
             "system_instruction": system_prompt,
         },
     )
+    if not response.candidates:
+        block_reason = getattr(response.prompt_feedback, "block_reason", "unknown")
+        raise ValueError(f"Gemini returned no candidates (block_reason={block_reason})")
     usage = response.usage_metadata
     log.debug(
         f"Gemini usage — prompt: {usage.prompt_token_count}, "
