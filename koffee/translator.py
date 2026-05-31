@@ -119,7 +119,7 @@ def _chunk_segments(
             "chunk": segments[i : i + chunk_size],
             "source_language": source_language,
             "target_language": target_language,
-            "start_entry": i * chunk_size + 1,
+            "start_entry": i + 1,
         }
         for i in range(0, len(segments), chunk_size)
     ]
