@@ -8,7 +8,7 @@ from types import ModuleType
 from koffee._retry import with_retries
 from koffee.llm._protocol import TranslationProvider
 from koffee.schemas.types import Chunk, Segment, Transcript
-from koffee.subtitle import convert_to_timestamp
+from koffee.subtitle import segments_to_srt
 
 log = logging.getLogger(__name__)
 
@@ -213,27 +213,15 @@ def _build_prompt(
                 "in your translation."
                 f" output. Begin your translation from entry {start_entry} only.\n",
                 "[CONTEXT - DO NOT TRANSLATE]\n",
-                _segments_to_srt(context_segments),
+                segments_to_srt(context_segments),
                 "\n[TRANSLATE FROM HERE]\n",
             ]
         )
 
-    prompt_parts.append(_segments_to_srt(chunk))
+    prompt_parts.append(segments_to_srt(chunk))
     translation_prompt = "\n".join(prompt_parts)
 
     return translation_prompt
-
-
-def _segments_to_srt(segments: list[Segment]) -> str:
-    """Converts a list of segments to SRT format string."""
-    lines = []
-    for i, seg in enumerate(segments, 1):
-        start = convert_to_timestamp(seg["start"], "srt")
-        end = convert_to_timestamp(seg["end"], "srt")
-        lines.append(f"{i}\n{start} --> {end}\n{seg['text'].strip()}\n")
-
-    srt_text = "\n".join(lines)
-    return srt_text
 
 
 def _translate_chunk(
