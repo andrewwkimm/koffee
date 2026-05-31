@@ -312,3 +312,15 @@ def _timestamp_to_seconds(timestamp: str) -> float:
     return (
         int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(milliseconds) / 1000
     )
+
+
+def segments_to_srt(segments: list[Segment]) -> str:
+    """Converts a list of segments to an SRT format string."""
+    lines = []
+    for i, seg in enumerate(segments, 1):
+        start = convert_to_timestamp(seg["start"], "srt")
+        end = convert_to_timestamp(seg["end"], "srt")
+        lines.append(f"{i}\n{start} --> {end}\n{seg['text'].strip()}\n")
+
+    srt_text = "\n".join(lines)
+    return srt_text
