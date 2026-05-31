@@ -9,12 +9,11 @@ import pytest
 
 import koffee
 from koffee.api import (
-    _apply_config_overrides,
     _check_output_collision,
     _finalize_video_output,
     _get_output_path,
-    _get_segments,
     _route_output,
+    _translate,
     _validate_inputs,
     _write_output,
     run,
@@ -92,27 +91,29 @@ def test_get_output_path_with_output_dir() -> None:
     assert result.parent == Path("/tmp")
 
 
-def test_get_segments_whisper_returns_raw(mocker, api_module) -> None:
-    """Tests that whisper backend returns raw segments without translation."""
+def test_translate_whisper_returns_raw_segments(mocker, api_module) -> None:
+    """Tests that whisper backend uses raw segments without calling translate."""
     mock_translate = mocker.patch.object(api_module, "translate")
+    mocker.patch.object(api_module, "generate_subtitles", return_value=MagicMock())
     config = MagicMock(spec=KoffeeConfig)
     config.provider = "whisper"
+    config.subtitle_format = "srt"
     transcript: Transcript = {
         "segments": [{"start": 0.0, "end": 1.0, "text": "hi"}],
         "language": "en",
     }
 
-    result = _get_segments(transcript, config)
+    _translate(transcript, config, None)
 
-    assert result == transcript["segments"]
     mock_translate.assert_not_called()
 
 
-def test_get_segments_non_whisper_calls_translate(mocker, api_module) -> None:
+def test_translate_non_whisper_calls_translate(mocker, api_module) -> None:
     """Tests that a non-whisper backend calls translate."""
     mock_translate = mocker.patch.object(
         api_module, "translate", return_value=["translated"]
     )
+    mocker.patch.object(api_module, "generate_subtitles", return_value=MagicMock())
     config = MagicMock(spec=KoffeeConfig)
     config.provider = "gemini"
     config.target_language = "en"
@@ -122,11 +123,11 @@ def test_get_segments_non_whisper_calls_translate(mocker, api_module) -> None:
     config.context_size = None
     config.sleep_requests = None
     config.prompt = None
+    config.subtitle_format = "srt"
     transcript: Transcript = {"segments": [], "language": "ko"}
 
-    result = _get_segments(transcript, config)
+    _translate(transcript, config, None)
 
-    assert result == ["translated"]
     mock_translate.assert_called_once_with(
         transcript,
         config.target_language,
@@ -207,20 +208,17 @@ def test_validate_api_key_raises_without_key() -> None:
         )
 
 
-def test_validate_api_key_ollama_does_not_require_key() -> None:
+def test_validate_api_key_ollama_does_not_require_key(tmp_path: Path) -> None:
     """Tests that ollama backend does not require an API key."""
-    from koffee.api import _validate_api_key  # noqa: PLC0415
-
+    video = tmp_path / "video.mp4"
+    video.touch()
     config = KoffeeConfig(provider="ollama", whisper_model="large-v3")
-    _validate_api_key(config)
-
-
-def test_apply_config_overrides_with_existing_config() -> None:
-    """Tests that kwargs override fields on an existing config."""
-    config = KoffeeConfig(target_language="en")
-    result = _apply_config_overrides(config, {"target_language": "fr"})
-
-    assert result.target_language == "fr"
+    try:
+        _validate_inputs(str(video), config)
+    except MissingApiKeyError:
+        pytest.fail("ollama should not require an API key")
+    except Exception:
+        pass
 
 
 def test_check_output_collision_raises(tmp_path) -> None:

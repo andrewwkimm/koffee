@@ -18,7 +18,7 @@ from koffee.exceptions import (
     UnsupportedFileError,
 )
 from koffee.schemas.config import KoffeeConfig
-from koffee.schemas.types import Segment, Transcript
+from koffee.schemas.types import Transcript
 from koffee.subtitle import (
     extract_subtitle_track,
     generate_subtitles,
@@ -45,7 +45,11 @@ def run(
     """Processes a video or audio file for translation and subtitle generation."""
     log.info("Translating file...")
 
-    config = _apply_config_overrides(config, kwargs)
+    if config is None:
+        config = KoffeeConfig(**kwargs)
+    else:
+        config = KoffeeConfig(**{**config.model_dump(), **kwargs})
+
     _validate_inputs(input_path, config)
 
     if Path(input_path).suffix.lower() in SUBTITLE_EXTENSIONS:
@@ -54,7 +58,17 @@ def run(
     if config.use_embedded_subtitles:
         return _translate_embedded_subtitles(input_path, config, on_translate_progress)
 
-    transcript = _transcribe(input_path, config, on_asr_progress)
+    task = "translate" if config.provider == "whisper" else "transcribe"
+    transcript = transcribe(
+        str(input_path),
+        config.compute_type,
+        config.device,
+        config.whisper_model,
+        task,
+        on_progress=on_asr_progress,
+        vad_filter=config.vad_filter,
+    )
+
     try:
         subtitle_path = _translate(transcript, config, on_translate_progress)
     except Exception as exc:
@@ -62,16 +76,6 @@ def run(
     output_path = _route_output(input_path, subtitle_path, config)
 
     return output_path
-
-
-def _apply_config_overrides(config: KoffeeConfig | None, kwargs: dict) -> KoffeeConfig:
-    """Resolves config, applying any kwarg overrides on top of an existing config."""
-    if config is None:
-        config = KoffeeConfig(**kwargs)
-    else:
-        config = KoffeeConfig(**{**config.model_dump(), **kwargs})
-
-    return config
 
 
 def _route_output(
@@ -189,44 +193,12 @@ def _get_output_path(
     return output_path
 
 
-def _transcribe(
-    input_path: Path | str,
-    config: KoffeeConfig,
-    on_progress: Callable[[float], None] | None,
-) -> Transcript:
-    """Transcribes audio from the file, returning the raw transcript."""
-    task = "translate" if config.provider == "whisper" else "transcribe"
-    transcript = transcribe(
-        str(input_path),
-        config.compute_type,
-        config.device,
-        config.whisper_model,
-        task,
-        on_progress=on_progress,
-        vad_filter=config.vad_filter,
-    )
-
-    return transcript
-
-
 def _translate(
     transcript: Transcript,
     config: KoffeeConfig,
     on_progress: Callable[[float], None] | None,
 ) -> Path:
     """Translates transcript segments and writes the subtitle file."""
-    segments = _get_segments(transcript, config, on_progress=on_progress)
-    subtitle_path = generate_subtitles(config.subtitle_format, segments)
-
-    return subtitle_path
-
-
-def _get_segments(
-    transcript: Transcript,
-    config: KoffeeConfig,
-    on_progress: Callable[[float], None] | None = None,
-) -> list[Segment]:
-    """Returns translated or raw segments based on the translation backend."""
     if config.provider == "whisper":
         segments = transcript["segments"]
     else:
@@ -243,7 +215,8 @@ def _get_segments(
             sleep_requests=config.sleep_requests,
         )
 
-    return segments
+    subtitle_path = generate_subtitles(config.subtitle_format, segments)
+    return subtitle_path
 
 
 def _translate_embedded_subtitles(
@@ -297,7 +270,10 @@ def _translate_subtitle_file(
 
 def _validate_inputs(input_path: Path | str, config: KoffeeConfig) -> None:
     """Runs pre-flight checks on the input file, dependencies, and config options."""
-    _validate_file(input_path)
+    if not Path(input_path).exists() or not Path(input_path).is_file():
+        error_message = "Input file is not valid or does not exist."
+        log.error(error_message)
+        raise InvalidVideoFileError(error_message)
 
     suffix = Path(input_path).suffix.lower()
     allowed = SUPPORTED_EXTENSIONS | SUBTITLE_EXTENSIONS
@@ -339,12 +315,6 @@ def _validate_inputs(input_path: Path | str, config: KoffeeConfig) -> None:
             error_message = f"No embedded subtitle tracks found in {input_path}."
             raise IncompatibleOptionsError(error_message)
 
-    _validate_api_key(config)
-    _validate_output_path(input_path, config)
-
-
-def _validate_api_key(config: KoffeeConfig) -> None:
-    """Raises MissingApiKeyError if an LLM backend is selected without an API key."""
     if config.provider not in ("whisper", "ollama") and not config.api_key:
         error_message = (
             f"An API key is required when using the {config.provider} "
@@ -353,13 +323,7 @@ def _validate_api_key(config: KoffeeConfig) -> None:
         )
         raise MissingApiKeyError(error_message)
 
-
-def _validate_file(input_path: Path | str) -> None:
-    """Raises InvalidVideoFileError if the file does not exist or is not a file."""
-    if not Path(input_path).exists() or not Path(input_path).is_file():
-        error_message = "Input file is not valid or does not exist."
-        log.error(error_message)
-        raise InvalidVideoFileError(error_message)
+    _validate_output_path(input_path, config)
 
 
 def _validate_output_path(input_path: Path | str, config: KoffeeConfig) -> None:
