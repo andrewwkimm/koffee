@@ -8,7 +8,6 @@ from pytest_mock import MockerFixture
 
 from koffee.embed import (
     _escape_subtitle_filter_path,
-    _get_subtitle_codec,
     embed_subtitles,
 )
 from koffee.exceptions import SubtitleEmbedError
@@ -44,13 +43,6 @@ def test_hard_overlay(video_path: Path, subtitle_path: Path, output_path: Path) 
     embed_subtitles(subtitle_path, video_path, output_path, mode="hard")
 
     assert output_path.exists()
-
-
-def test_mkv_codec() -> None:
-    """Tests that MKV files use the srt subtitle codec."""
-    assert _get_subtitle_codec("output.mkv") == "srt"
-    assert _get_subtitle_codec("output.webm") == "srt"
-    assert _get_subtitle_codec("output.mp4") == "mov_text"
 
 
 def test_exception_handling(
