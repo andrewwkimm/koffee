@@ -86,7 +86,10 @@ def _mux_subtitles(
     """Muxes subtitles as a soft track (original behavior)."""
     log.info("Embedding subtitles (soft).")
 
-    subtitle_codec = _get_subtitle_codec(output_path)
+    if Path(output_path).suffix.lower() in MKV_EXTENSIONS:
+        subtitle_codec = "srt"
+    else:
+        subtitle_codec = "mov_text"
 
     cmd = [
         "ffmpeg",
@@ -116,10 +119,3 @@ def _mux_subtitles(
         raise SubtitleEmbedError(error.stderr) from error
 
     return output_path
-
-
-def _get_subtitle_codec(output_path: Path | str) -> str:
-    """Returns the appropriate subtitle codec for the output container."""
-    if Path(output_path).suffix.lower() in MKV_EXTENSIONS:
-        return "srt"
-    return "mov_text"
