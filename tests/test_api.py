@@ -10,11 +10,11 @@ import pytest
 import koffee
 from koffee.api import (
     _check_output_collision,
-    _finalize_video_output,
+    _check_preconditions,
     _get_output_path,
     _route_output,
     _translate,
-    _validate_inputs,
+    _write_embedded_video,
     _write_output,
     run,
 )
@@ -142,7 +142,7 @@ def test_translate_non_whisper_calls_translate(mocker, api_module) -> None:
     )
 
 
-def test_finalize_video_output_deletes_subtitle(mocker, tmp_path, api_module) -> None:
+def test_write_embedded_video_deletes_subtitle(mocker, tmp_path, api_module) -> None:
     """Tests that the subtitle file is always deleted after embed."""
     mocker.patch.object(
         api_module, "embed_subtitles", return_value=tmp_path / "out.mp4"
@@ -150,7 +150,7 @@ def test_finalize_video_output_deletes_subtitle(mocker, tmp_path, api_module) ->
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
 
-    _finalize_video_output(subtitle, tmp_path / "in.mp4", tmp_path / "out.mp4")
+    _write_embedded_video(subtitle, tmp_path / "in.mp4", tmp_path / "out.mp4")
 
     assert not subtitle.exists()
 
@@ -214,7 +214,7 @@ def test_validate_api_key_ollama_does_not_require_key(tmp_path: Path) -> None:
     video.touch()
     config = KoffeeConfig(provider="ollama", whisper_model="large-v3")
     try:
-        _validate_inputs(str(video), config)
+        _check_preconditions(str(video), config)
     except MissingApiKeyError:
         pytest.fail("ollama should not require an API key")
     except Exception:
@@ -244,7 +244,7 @@ def test_route_output_with_embed(mocker, api_module, tmp_path) -> None:
     subtitle.touch()
     mock_finalize = mocker.patch.object(
         api_module,
-        "_finalize_video_output",
+        "_write_embedded_video",
         return_value=tmp_path / "out.mp4",
     )
     mocker.patch.object(
@@ -295,25 +295,25 @@ def test_run_subtitle_file_input(mocker, api_module, tmp_path) -> None:
     mock_generate.assert_called_once()
 
 
-def test_validate_inputs_rejects_unsupported_suffix(tmp_path) -> None:
+def test_check_preconditions_rejects_unsupported_suffix(tmp_path) -> None:
     """Tests that an unsupported file extension raises UnsupportedFileError."""
     bad_file = tmp_path / "notes.txt"
     bad_file.touch()
 
     with pytest.raises(UnsupportedFileError, match="Unsupported file type"):
-        _validate_inputs(bad_file, KoffeeConfig())
+        _check_preconditions(bad_file, KoffeeConfig())
 
 
-def test_validate_inputs_rejects_embed_on_audio(tmp_path) -> None:
+def test_check_preconditions_rejects_embed_on_audio(tmp_path) -> None:
     """Tests that --embed on audio input raises IncompatibleOptionsError."""
     audio = tmp_path / "track.mp3"
     audio.touch()
 
     with pytest.raises(IncompatibleOptionsError, match="--embed is only supported"):
-        _validate_inputs(audio, KoffeeConfig(embed="soft"))
+        _check_preconditions(audio, KoffeeConfig(embed="soft"))
 
 
-def test_validate_inputs_rejects_embedded_subs_on_audio(tmp_path) -> None:
+def test_check_preconditions_rejects_embedded_subs_on_audio(tmp_path) -> None:
     """Tests that --use-embedded-subtitles on audio raises IncompatibleOptionsError."""
     audio = tmp_path / "track.mp3"
     audio.touch()
@@ -321,20 +321,20 @@ def test_validate_inputs_rejects_embedded_subs_on_audio(tmp_path) -> None:
     with pytest.raises(
         IncompatibleOptionsError, match="--use-embedded-subtitles is only supported"
     ):
-        _validate_inputs(audio, KoffeeConfig(use_embedded_subtitles=True))
+        _check_preconditions(audio, KoffeeConfig(use_embedded_subtitles=True))
 
 
-def test_validate_inputs_rejects_missing_ffmpeg(mocker, tmp_path) -> None:
+def test_check_preconditions_rejects_missing_ffmpeg(mocker, tmp_path) -> None:
     """Tests that missing ffmpeg raises MissingDependencyError when embedding."""
     video = tmp_path / "clip.mp4"
     video.touch()
     mocker.patch("koffee.api.shutil.which", return_value=None)
 
     with pytest.raises(MissingDependencyError, match="ffmpeg was not found"):
-        _validate_inputs(video, KoffeeConfig(embed="soft"))
+        _check_preconditions(video, KoffeeConfig(embed="soft"))
 
 
-def test_validate_inputs_rejects_no_embedded_tracks(mocker, tmp_path) -> None:
+def test_check_preconditions_rejects_no_embedded_tracks(mocker, tmp_path) -> None:
     """Tests that a video with no subtitle tracks raises IncompatibleOptionsError."""
     video = tmp_path / "clip.mp4"
     video.touch()
@@ -342,19 +342,19 @@ def test_validate_inputs_rejects_no_embedded_tracks(mocker, tmp_path) -> None:
     mocker.patch("koffee.api.get_subtitle_tracks", return_value=[])
 
     with pytest.raises(IncompatibleOptionsError, match="No embedded subtitle tracks"):
-        _validate_inputs(video, KoffeeConfig(use_embedded_subtitles=True))
+        _check_preconditions(video, KoffeeConfig(use_embedded_subtitles=True))
 
 
-def test_validate_inputs_passes_on_valid_video(mocker, tmp_path) -> None:
+def test_check_preconditions_passes_on_valid_video(mocker, tmp_path) -> None:
     """Tests that a valid video file with a valid config passes validation."""
     video = tmp_path / "clip.mp4"
     video.touch()
     mocker.patch("koffee.api.shutil.which", return_value="/usr/bin/ffmpeg")
 
-    _validate_inputs(video, KoffeeConfig(embed="soft"))
+    _check_preconditions(video, KoffeeConfig(embed="soft"))
 
 
-def test_validate_inputs_rejects_existing_output(tmp_path) -> None:
+def test_check_preconditions_rejects_existing_output(tmp_path) -> None:
     """Tests that an existing output file raises FileExistsError upfront."""
     audio = tmp_path / "track.mp3"
     audio.touch()
@@ -362,31 +362,33 @@ def test_validate_inputs_rejects_existing_output(tmp_path) -> None:
     existing_output.touch()
 
     with pytest.raises(FileExistsError, match="Output file already exists"):
-        _validate_inputs(audio, KoffeeConfig())
+        _check_preconditions(audio, KoffeeConfig())
 
 
-def test_validate_inputs_allows_existing_output_with_overwrite(tmp_path) -> None:
+def test_check_preconditions_allows_existing_output_with_overwrite(tmp_path) -> None:
     """Tests that an existing output is tolerated when overwrite is enabled."""
     audio = tmp_path / "track.mp3"
     audio.touch()
     existing_output = tmp_path / "track.vtt"
     existing_output.touch()
 
-    _validate_inputs(audio, KoffeeConfig(overwrite=True))
+    _check_preconditions(audio, KoffeeConfig(overwrite=True))
 
 
-def test_validate_inputs_creates_missing_output_dir(tmp_path) -> None:
+def test_check_preconditions_creates_missing_output_dir(tmp_path) -> None:
     """Tests that a missing output_dir is created during validation."""
     audio = tmp_path / "track.mp3"
     audio.touch()
     new_dir = tmp_path / "nested" / "out"
 
-    _validate_inputs(audio, KoffeeConfig(output_dir=new_dir))
+    _check_preconditions(audio, KoffeeConfig(output_dir=new_dir))
 
     assert new_dir.is_dir()
 
 
-def test_validate_inputs_embed_checks_video_suffix_collision(mocker, tmp_path) -> None:
+def test_check_preconditions_embed_checks_video_suffix_collision(
+    mocker, tmp_path
+) -> None:
     """Tests that embed mode checks for collision against the video-suffix output."""
     video = tmp_path / "clip.mp4"
     video.touch()
@@ -395,7 +397,7 @@ def test_validate_inputs_embed_checks_video_suffix_collision(mocker, tmp_path) -
     colliding.touch()
 
     with pytest.raises(FileExistsError, match="Output file already exists"):
-        _validate_inputs(video, KoffeeConfig(embed="soft"))
+        _check_preconditions(video, KoffeeConfig(embed="soft"))
 
 
 def test_write_output_audio_input_uses_audio_stem(tmp_path) -> None:
