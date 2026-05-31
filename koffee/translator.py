@@ -242,27 +242,15 @@ def _translate_chunk(
     system_prompt: str,
 ) -> list[Segment]:
     """Calls the LLM with a prompt and parses the response."""
-    response = _call_with_retries(backend, client, prompt, llm_model, system_prompt)
+    response = with_retries(
+        lambda: backend.attempt_generate(client, prompt, llm_model, system_prompt),
+        backend.is_retryable,
+        max_retries=3,
+    )
     response_text = backend.extract_text(response)
     translated_chunk = _parse_srt_response(response_text, chunk)
 
     return translated_chunk
-
-
-def _call_with_retries(
-    backend: ModuleType,
-    client,
-    prompt: str,
-    llm_model: str,
-    system_prompt: str,
-    max_retries: int = 3,
-):
-    """Calls an LLM backend with exponential backoff on transient failures."""
-    return with_retries(
-        lambda: backend.attempt_generate(client, prompt, llm_model, system_prompt),
-        backend.is_retryable,
-        max_retries=max_retries,
-    )
 
 
 def _parse_srt_response(
