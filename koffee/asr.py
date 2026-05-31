@@ -8,7 +8,7 @@ from pathlib import Path
 
 from faster_whisper import WhisperModel
 
-from koffee.schemas.types import Segment, Transcript
+from koffee.schemas.types import Transcript
 
 log = logging.getLogger(__name__)
 
@@ -25,36 +25,6 @@ def transcribe(
     """Transcribes a video or audio file."""
     log.info("Transcribing file.")
 
-    loaded_model = _load_model(compute_type, device, model)
-    segments, info = _run_transcription(loaded_model, video_file, task, vad_filter)
-
-    transcript = {
-        "segments": _consume_segments(segments, video_file, on_progress),
-        "language": info.language,
-    }
-
-    return transcript
-
-
-def _consume_segments(
-    segments, video_file: str, on_progress: Callable[[float], None] | None
-) -> list[Segment]:
-    """Consumes the segment generator, reporting progress as each segment is yielded."""
-    duration = _get_video_duration(video_file) if on_progress else None
-    result = []
-    for segment in segments:
-        result.append(asdict(segment))
-        if on_progress and duration:
-            on_progress(min(segment.end / duration, 1.0))
-
-    if on_progress:
-        on_progress(1.0)
-
-    return result
-
-
-def _load_model(compute_type: str, device: str, model: str) -> WhisperModel:
-    """Loads and returns a Whisper model with the given configuration."""
     loaded_model = WhisperModel(
         model_size_or_path=model,
         device=device,
@@ -62,18 +32,24 @@ def _load_model(compute_type: str, device: str, model: str) -> WhisperModel:
         local_files_only=False,
     )
 
-    return loaded_model
-
-
-def _run_transcription(
-    loaded_model: WhisperModel, video_file: str, task: str, vad_filter: bool
-) -> tuple:
-    """Runs transcription on the video file, returning segments and info."""
     segments, info = loaded_model.transcribe(
         video_file, task=task, word_timestamps=True, vad_filter=vad_filter
     )
 
-    return segments, info
+    duration = _get_video_duration(video_file) if on_progress else None
+    result = []
+    for segment in segments:
+        result.append(asdict(segment))
+        if on_progress and duration:
+            on_progress(min(segment.end / duration, 1.0))
+    if on_progress:
+        on_progress(1.0)
+
+    transcript = {
+        "segments": result,
+        "language": info.language,
+    }
+    return transcript
 
 
 def _get_video_duration(video_path: Path | str) -> float:
