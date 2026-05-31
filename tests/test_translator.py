@@ -13,7 +13,6 @@ from koffee.translator import (
     CONTEXT_SIZE_BY_MODEL,
     SYSTEM_PROMPT,
     _build_prompt,
-    _call_with_retries,
     _chunk_segments,
     _load_backend,
     _parse_srt_response,
@@ -314,20 +313,6 @@ def test_translate_reports_progress(mocker: MockerFixture) -> None:
     )
 
     assert progress_calls == [0.5, 1.0]
-
-
-def test_call_with_retries_exhaustion(mocker: MockerFixture) -> None:
-    """Tests that retry exhaustion raises the last error."""
-    mocker.patch("koffee._retry.time.sleep")
-    error = APIError(code=500, response_json={"error": "server error"})
-    mock_backend = mocker.MagicMock()
-    mock_backend.attempt_generate.side_effect = error
-    mock_backend.is_retryable.return_value = True
-
-    with pytest.raises(APIError):
-        _call_with_retries(
-            mock_backend, None, "prompt", "model", SYSTEM_PROMPT, max_retries=2
-        )
 
 
 def test_gemini_attempt_generate_raises_on_error(mocker: MockerFixture) -> None:
