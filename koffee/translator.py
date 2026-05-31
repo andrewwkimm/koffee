@@ -81,7 +81,11 @@ def translate(
     system_prompt = prompt if prompt else SYSTEM_PROMPT
     backend = _load_backend(provider)
     model = llm_model or backend.DEFAULT_MODEL
-    resolved_chunk_size = chunk_size or CHUNK_SIZE_BY_MODEL.get(model, CHUNK_SIZE)
+    resolved_chunk_size = (
+        chunk_size
+        if chunk_size is not None
+        else CHUNK_SIZE_BY_MODEL.get(model, CHUNK_SIZE)
+    )
     resolved_context_size = (
         context_size
         if context_size is not None
