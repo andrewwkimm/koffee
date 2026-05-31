@@ -50,7 +50,7 @@ def run(
     else:
         config = KoffeeConfig(**{**config.model_dump(), **kwargs})
 
-    _validate_inputs(input_path, config)
+    _check_preconditions(input_path, config)
 
     if Path(input_path).suffix.lower() in SUBTITLE_EXTENSIONS:
         return _translate_subtitle_file(input_path, config, on_translate_progress)
@@ -93,7 +93,7 @@ def _route_output(
 
     if has_embed:
         _check_output_collision(output_path, config.overwrite)
-        result_path = _finalize_video_output(
+        result_path = _write_embedded_video(
             subtitle_path,
             input_path,
             output_path,
@@ -113,7 +113,7 @@ def _route_output(
     return result_path
 
 
-def _finalize_video_output(
+def _write_embedded_video(
     subtitle_path: Path,
     input_path: Path,
     output_path: Path,
@@ -268,13 +268,15 @@ def _translate_subtitle_file(
     return output_subtitle_path
 
 
-def _validate_inputs(input_path: Path | str, config: KoffeeConfig) -> None:
-    """Runs pre-flight checks on the input file, dependencies, and config options."""
+def _check_preconditions(input_path: Path | str, config: KoffeeConfig) -> None:
+    """Checks all preconditions before processing begins."""
+    # File Must Exist and Be a Valid File
     if not Path(input_path).exists() or not Path(input_path).is_file():
         error_message = "Input file is not valid or does not exist."
         log.error(error_message)
         raise InvalidVideoFileError(error_message)
 
+    # File Extension Must Be a Supported Type
     suffix = Path(input_path).suffix.lower()
     allowed = SUPPORTED_EXTENSIONS | SUBTITLE_EXTENSIONS
     if suffix not in allowed:
@@ -286,6 +288,7 @@ def _validate_inputs(input_path: Path | str, config: KoffeeConfig) -> None:
 
     is_video = suffix in VIDEO_EXTENSIONS
 
+    # Embed and Use-Embedded-Subtitles Are Video-Only Options
     if config.embed != "none" and not is_video:
         error_message = "--embed is only supported for video file inputs."
         raise IncompatibleOptionsError(error_message)
@@ -296,6 +299,7 @@ def _validate_inputs(input_path: Path | str, config: KoffeeConfig) -> None:
         )
         raise IncompatibleOptionsError(error_message)
 
+    # ffmpeg and ffprobe Must Be Installed for Embed/Subtitle Extraction
     needs_ffmpeg = config.embed != "none" or config.use_embedded_subtitles
     if needs_ffmpeg and shutil.which("ffmpeg") is None:
         error_message = (
@@ -315,6 +319,7 @@ def _validate_inputs(input_path: Path | str, config: KoffeeConfig) -> None:
             error_message = f"No embedded subtitle tracks found in {input_path}."
             raise IncompatibleOptionsError(error_message)
 
+    # LLM Backends Require an API Key
     if config.provider not in ("whisper", "ollama") and not config.api_key:
         error_message = (
             f"An API key is required when using the {config.provider} "
@@ -323,22 +328,14 @@ def _validate_inputs(input_path: Path | str, config: KoffeeConfig) -> None:
         )
         raise MissingApiKeyError(error_message)
 
-    _validate_output_path(input_path, config)
-
-
-def _validate_output_path(input_path: Path | str, config: KoffeeConfig) -> None:
-    """Ensures the resolved output path is writable and not already occupied."""
-    input_suffix = Path(input_path).suffix.lower()
-    is_video = input_suffix in VIDEO_EXTENSIONS
+    # Output Path Must Not Already Exist (or Overwrite Must Be Set)
     has_embed = (
         is_video and not config.use_embedded_subtitles and config.embed != "none"
     )
-
     base_path = _get_output_path(
         input_path, config.output_dir, config.output_name, date_suffix=has_embed
     )
     output_path = (
         base_path if has_embed else base_path.with_suffix(f".{config.subtitle_format}")
     )
-
     _check_output_collision(output_path, config.overwrite)
