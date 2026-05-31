@@ -270,6 +270,31 @@ def _parse_srt_response(
     return _merge_translated_segments(translation_map, original_segments)
 
 
+def _sanitize_response(response_text: str | None) -> str:
+    """Strips thinking blocks, markdown fences, and normalizes line endings."""
+    if not response_text:
+        return ""
+
+    text = response_text.replace("\r\n", "\n").strip()
+
+    if "<think>" in text:
+        end = text.find("</think>")
+        if end != -1:
+            text = text[end + len("</think>") :].strip()
+        else:
+            text = text[text.find("<think>") + len("<think>") :].strip()
+
+    if text.startswith("```"):
+        first_newline = text.find("\n")
+        if first_newline != -1:
+            text = text[first_newline + 1 :]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+
+    return text
+
+
 def _blocks_to_translation_map(blocks: list[str]) -> dict[int, str]:
     """Parses SRT blocks into a {entry_number: translated_text} mapping."""
     translation_map: dict[int, str] = {}
@@ -304,28 +329,3 @@ def _merge_translated_segments(
                 }
             )
     return merged_segments
-
-
-def _sanitize_response(response_text: str | None) -> str:
-    """Strips thinking blocks, markdown fences, and normalizes line endings."""
-    if not response_text:
-        return ""
-
-    text = response_text.replace("\r\n", "\n").strip()
-
-    if "<think>" in text:
-        end = text.find("</think>")
-        if end != -1:
-            text = text[end + len("</think>") :].strip()
-        else:
-            text = text[text.find("<think>") + len("<think>") :].strip()
-
-    if text.startswith("```"):
-        first_newline = text.find("\n")
-        if first_newline != -1:
-            text = text[first_newline + 1 :]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
-
-    return text
