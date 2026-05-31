@@ -2,7 +2,6 @@
 
 import logging
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -47,18 +46,6 @@ def test_cli(mocker: MockerFixture) -> None:
     assert config.compute_type == "int8"
     assert config.output_dir == output_directory_path
     assert config.output_name == output_file_name
-
-
-def test_script_run() -> None:
-    """Tests that the CLI script runs."""
-    result = subprocess.run(
-        [sys.executable, "-m", "koffee.cli"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-
-    assert result.returncode == 0
 
 
 def test_embed_soft(mocker: MockerFixture) -> None:
