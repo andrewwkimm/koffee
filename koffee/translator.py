@@ -162,7 +162,10 @@ def _translate_chunks(
     translated_segments = []
     for i, chunk_data in enumerate(chunks):
         prompt = _build_prompt(
-            **chunk_data,
+            chunk=chunk_data["chunk"],
+            source_language=chunk_data["source_language"],
+            target_language=chunk_data["target_language"],
+            start_entry=chunk_data["start_entry"],
             context_segments=translated_segments[-context_size:],
         )
         translated_chunk = _translate_chunk(
