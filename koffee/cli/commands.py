@@ -32,7 +32,7 @@ from koffee.subtitle import generate_subtitles, get_subtitle_tracks, parse_subti
 
 @app.default()
 def cli(
-    *file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
+    *file_path: Annotated[Path, Parameter()],
     compute_type: Annotated[
         str, Parameter(name=("--compute-type", "-c"))
     ] = defaults.compute_type,
@@ -208,7 +208,7 @@ def _resolve_paths(file_path: tuple) -> list[Path]:
             if matches:
                 resolved_paths.extend(matches)
             else:
-                resolved_paths.append(path)
+                raise FileNotFoundError(f"No such file or pattern: {pattern}")
 
     return resolved_paths
 

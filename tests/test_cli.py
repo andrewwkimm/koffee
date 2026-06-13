@@ -138,13 +138,11 @@ def test_resolve_paths_glob_pattern(tmp_path, monkeypatch) -> None:
 
 
 def test_resolve_paths_glob_no_match(tmp_path, monkeypatch) -> None:
-    """Tests that unmatched glob patterns pass through as-is."""
+    """Tests that unmatched glob patterns raise FileNotFoundError."""
     monkeypatch.chdir(tmp_path)
 
-    result = _resolve_paths((Path("nonexistent*.mp4"),))
-
-    assert len(result) == 1
-    assert result[0] == Path("nonexistent*.mp4")
+    with pytest.raises(FileNotFoundError, match="nonexistent"):
+        _resolve_paths((Path("nonexistent*.mp4"),))
 
 
 def test_dry_run(mocker: MockerFixture) -> None:
