@@ -25,6 +25,7 @@ jobs:
       - name: Install ffmpeg (attempt 1)
         id: ffmpeg1
         uses: FedericoCarboni/setup-ffmpeg@v3
+        timeout-minutes: 1
         continue-on-error: true
         with:
           architecture: 'x64'
@@ -34,14 +35,36 @@ jobs:
         id: ffmpeg2
         if: steps.ffmpeg1.outcome == 'failure'
         uses: FedericoCarboni/setup-ffmpeg@v3
+        timeout-minutes: 1
         continue-on-error: true
         with:
           architecture: 'x64'
           github-token: ${{ github.token }}
 
       - name: Install ffmpeg (attempt 3)
+        id: ffmpeg3
         if: steps.ffmpeg2.outcome == 'failure'
         uses: FedericoCarboni/setup-ffmpeg@v3
+        timeout-minutes: 1
+        continue-on-error: true
+        with:
+          architecture: 'x64'
+          github-token: ${{ github.token }}
+
+      - name: Install ffmpeg (attempt 4)
+        id: ffmpeg4
+        if: steps.ffmpeg3.outcome == 'failure'
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        timeout-minutes: 1
+        continue-on-error: true
+        with:
+          architecture: 'x64'
+          github-token: ${{ github.token }}
+
+      - name: Install ffmpeg (attempt 5)
+        if: steps.ffmpeg4.outcome == 'failure'
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        timeout-minutes: 1
         with:
           architecture: 'x64'
           github-token: ${{ github.token }}
