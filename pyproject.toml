@@ -11,29 +11,29 @@ dependencies = [
     "faster-whisper>=1.0.3",
     "torch>=2.12.0",
     "accelerate>=0.29.3",
-    "cyclopts>=4.15.0",
+    "cyclopts>=4.17.0",
     "rich>=15.0.0",
     "pydantic>=2.13.4",
-    "av>=17.0.1",
-    "google-genai>=2.5.0",
-    "openai>=2.37.0",
-    "anthropic>=0.103.1",
+    "av>=17.1.0",
+    "google-genai>=2.8.0",
+    "openai>=2.41.1",
+    "anthropic>=0.109.1",
 ]
 
 [dependency-groups]
 dev = [
-    "coverage>=7.14.0",
+    "coverage>=7.14.1",
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
     "pytest-mock>=3.14.1",
-    "ruff>=0.15.13",
+    "ruff>=0.15.16",
     "behave>=1.2.6",
     "pre-commit>=4.6.0",
     "nox>=2026.4.10",
-    "ty>=0.0.38",
+    "ty>=0.0.48",
 ]
 docs = [
-    "cyclopts[mkdocs]>=4.15.0",
+    "cyclopts[mkdocs]>=4.17.0",
     "mkdocs-material>=9.7.6",
 ]
 
