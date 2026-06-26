@@ -146,7 +146,7 @@ def test_api_key_prefers_explicit_value(monkeypatch) -> None:
 def test_api_key_is_none_without_env_var(monkeypatch) -> None:
     """Tests that api_key is None when neither flag nor env var is set."""
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-    config = KoffeeConfig()
+    config = KoffeeConfig(provider="gemini")
     assert config.api_key is None
 
 
