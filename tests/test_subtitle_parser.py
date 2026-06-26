@@ -38,8 +38,8 @@ def test_parse_vtt_file(tmp_path) -> None:
 
     expected_segment_count = 2
     assert len(result) == expected_segment_count
-    assert result[0]["start"] == 1.0
-    assert result[1]["text"] == "Goodbye world."
+    assert result[0] == {"start": 1.0, "end": 4.5, "text": "Hello world."}
+    assert result[1] == {"start": 5.0, "end": 8.0, "text": "Goodbye world."}
 
 
 def test_parse_multiline_text(tmp_path) -> None:
