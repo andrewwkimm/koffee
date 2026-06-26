@@ -35,18 +35,19 @@ def test_with_retries_returns_on_first_success() -> None:
 def test_with_retries_retries_on_retryable_error(mocker: MockerFixture) -> None:
     """Tests that a retryable error triggers a retry and then succeeds."""
     mocker.patch("koffee._retry.time.sleep")
+    attempts_until_success = 2
     attempts = {"n": 0}
 
     def fn():
         attempts["n"] += 1
-        if attempts["n"] < 2:
+        if attempts["n"] < attempts_until_success:
             raise RetryableError("flaky")
         return "ok"
 
     result = with_retries(fn, _is_retryable)
 
     assert result == "ok"
-    assert attempts["n"] == 2
+    assert attempts["n"] == attempts_until_success
 
 
 def test_with_retries_propagates_non_retryable_immediately() -> None:

@@ -18,7 +18,8 @@ def test_parse_srt_file(tmp_path) -> None:
 
     result = parse_subtitle_file(srt)
 
-    assert len(result) == 2
+    expected_segment_count = 2
+    assert len(result) == expected_segment_count
     assert result[0] == {"start": 1.0, "end": 4.5, "text": "Hello world."}
     assert result[1] == {"start": 5.0, "end": 8.0, "text": "Goodbye world."}
 
@@ -35,7 +36,8 @@ def test_parse_vtt_file(tmp_path) -> None:
 
     result = parse_subtitle_file(vtt)
 
-    assert len(result) == 2
+    expected_segment_count = 2
+    assert len(result) == expected_segment_count
     assert result[0]["start"] == 1.0
     assert result[1]["text"] == "Goodbye world."
 
@@ -77,7 +79,8 @@ def test_parse_ass_file(tmp_path) -> None:
 
     result = parse_subtitle_file(ass)
 
-    assert len(result) == 2
+    expected_segment_count = 2
+    assert len(result) == expected_segment_count
     assert result[0] == {"start": 1.0, "end": 4.5, "text": "Hello world."}
     assert result[1] == {"start": 5.0, "end": 8.0, "text": "Goodbye world."}
 

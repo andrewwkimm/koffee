@@ -9,13 +9,14 @@ from koffee.asr import _get_video_duration as get_video_duration
 
 def test_returns_duration(mocker) -> None:
     """Tests that a valid ffprobe output is parsed as a float."""
+    expected_duration = 123.45
     mocker.patch(
         "subprocess.run",
         return_value=subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="123.45\n"
+            args=[], returncode=0, stdout=f"{expected_duration}\n"
         ),
     )
-    assert get_video_duration("video.mp4") == 123.45
+    assert get_video_duration("video.mp4") == expected_duration
 
 
 def test_empty_stdout_returns_zero(mocker) -> None:

@@ -110,7 +110,8 @@ def test_resolve_paths_expands_directory(tmp_path) -> None:
 
     suffixes = {p.suffix for p in result}
     assert suffixes == {".mp4", ".wav"}
-    assert len(result) == 2
+    expected_file_count = 2
+    assert len(result) == expected_file_count
 
 
 def test_resolve_paths_glob_pattern(tmp_path, monkeypatch) -> None:
@@ -121,7 +122,8 @@ def test_resolve_paths_glob_pattern(tmp_path, monkeypatch) -> None:
 
     result = _resolve_paths((Path("*.mp4"),))
 
-    assert len(result) == 2
+    expected_match_count = 2
+    assert len(result) == expected_match_count
 
 
 def test_resolve_paths_glob_no_match(tmp_path, monkeypatch) -> None:
@@ -254,7 +256,8 @@ def test_batch_progress_logging(mocker: MockerFixture) -> None:
         output_dir=output_directory_path,
     )
 
-    assert mock_translate.call_count == 2
+    expected_file_count = 2
+    assert mock_translate.call_count == expected_file_count
     log_messages = [call.args[0] for call in mock_log.info.call_args_list]
     assert any("[1/2]" in msg for msg in log_messages)
     assert any("[2/2]" in msg for msg in log_messages)
@@ -401,7 +404,8 @@ def test_batch_continues_after_translation_failure(mocker: MockerFixture) -> Non
         output_dir=output_directory_path,
     )
 
-    assert mock_run.call_count == 3
+    expected_file_count = 3
+    assert mock_run.call_count == expected_file_count
 
 
 def test_prompt_flag(mocker: MockerFixture) -> None:
