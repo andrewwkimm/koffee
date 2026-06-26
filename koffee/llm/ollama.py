@@ -1,5 +1,7 @@
 """Ollama translation backend."""
 
+from http import HTTPStatus
+
 from openai import APIConnectionError, APIStatusError, OpenAI, RateLimitError
 
 OLLAMA_BASE_URL = "http://localhost:11434/v1"
@@ -34,5 +36,5 @@ def is_retryable(exc: Exception) -> bool:
     if isinstance(exc, (RateLimitError, APIConnectionError)):
         return True
     if isinstance(exc, APIStatusError):
-        return exc.status_code >= 500
+        return exc.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR
     return False

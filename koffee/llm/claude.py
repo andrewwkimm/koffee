@@ -1,5 +1,7 @@
 """Claude translation backend."""
 
+from http import HTTPStatus
+
 from anthropic import Anthropic, APIConnectionError, APIStatusError, RateLimitError
 
 NAME = "claude"
@@ -31,5 +33,5 @@ def is_retryable(exc: Exception) -> bool:
     if isinstance(exc, (RateLimitError, APIConnectionError)):
         return True
     if isinstance(exc, APIStatusError):
-        return exc.status_code >= 500
+        return exc.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR
     return False

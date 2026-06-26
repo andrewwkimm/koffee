@@ -298,9 +298,10 @@ def _sanitize_response(response_text: str | None) -> str:
 def _blocks_to_translation_map(blocks: list[str]) -> dict[int, str]:
     """Parses SRT blocks into a {entry_number: translated_text} mapping."""
     translation_map: dict[int, str] = {}
+    min_block_lines = 3  # index, timestamp, at least one text line
     for block in blocks:
         lines = block.split("\n")
-        if len(lines) < 3:
+        if len(lines) < min_block_lines:
             continue
         try:
             entry_num = int(lines[0].strip())
