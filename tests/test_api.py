@@ -209,16 +209,12 @@ def test_validate_api_key_raises_without_key() -> None:
 
 
 def test_validate_api_key_ollama_does_not_require_key(tmp_path: Path) -> None:
-    """Tests that ollama backend does not require an API key."""
+    """Tests that the ollama backend does not require an API key."""
     video = tmp_path / "video.mp4"
     video.touch()
     config = KoffeeConfig(provider="ollama", whisper_model="large-v3")
-    try:
-        _check_preconditions(str(video), config)
-    except MissingApiKeyError:
-        pytest.fail("ollama should not require an API key")
-    except Exception:
-        pass
+
+    _check_preconditions(str(video), config)
 
 
 def test_check_output_collision_raises(tmp_path) -> None:
