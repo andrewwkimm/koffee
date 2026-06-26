@@ -1,6 +1,7 @@
 """Gemini translation backend."""
 
 import logging
+from http import HTTPStatus
 
 from google import genai
 from google.genai.errors import APIError, ClientError
@@ -47,5 +48,5 @@ def extract_text(response) -> str:
 def is_retryable(exc: Exception) -> bool:
     """Returns True for transient Gemini errors worth retrying."""
     if isinstance(exc, ClientError):
-        return exc.code == 429
+        return exc.code == HTTPStatus.TOO_MANY_REQUESTS
     return isinstance(exc, APIError)
