@@ -50,6 +50,9 @@ fail_under = 80
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: tests that exercise real external tools (ffmpeg, ASR models)",
+]
 
 [tool.ruff]
 target-version = "py311"
