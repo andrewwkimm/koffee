@@ -26,11 +26,12 @@ def subtitle_path() -> Path:
 
 
 @pytest.fixture
-def output_path() -> Path:
+def output_path(tmp_path: Path) -> Path:
     """Pytest fixture for the output file path."""
-    return Path("scratch/output_with_subtitles.mp4")
+    return tmp_path / "output_with_subtitles.mp4"
 
 
+@pytest.mark.integration
 def test_overlay(video_path: Path, subtitle_path: Path, output_path: Path) -> None:
     """Tests that the subtitle has been overlayed onto the video."""
     embed_subtitles(subtitle_path, video_path, output_path)
@@ -38,6 +39,7 @@ def test_overlay(video_path: Path, subtitle_path: Path, output_path: Path) -> No
     assert output_path.exists()
 
 
+@pytest.mark.integration
 def test_hard_overlay(video_path: Path, subtitle_path: Path, output_path: Path) -> None:
     """Tests that hard burn-in produces an output file."""
     embed_subtitles(subtitle_path, video_path, output_path, mode="hard")
