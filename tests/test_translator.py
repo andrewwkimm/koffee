@@ -90,7 +90,7 @@ def test_parse_srt_response() -> None:
     """Tests that a well-formed SRT response is parsed correctly."""
     result = _parse_srt_response(SAMPLE_SRT_RESPONSE, SAMPLE_SEGMENTS)
 
-    assert len(result) == 2
+    assert len(result) == len(SAMPLE_SEGMENTS)
     assert result[0]["text"] == "Hello."
     assert result[1]["text"] == "How have you been?"
 
@@ -129,7 +129,7 @@ def test_translate_single_chunk(mocker: MockerFixture) -> None:
 
     result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
 
-    assert len(result) == 2
+    assert len(result) == len(SAMPLE_SEGMENTS)
     assert result[0]["text"] == "Hello."
     assert result[1]["text"] == "How have you been?"
     mock_client.models.generate_content.assert_called_once()
@@ -149,8 +149,9 @@ def test_translate_sleeps_between_chunks(mocker: MockerFixture) -> None:
     translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
 
     # 2 segments with chunk size 1 = 2 chunks, sleep called once (not after last chunk)
+    expected_sleep_seconds = 4
     assert mock_sleep.call_count == 1
-    assert mock_sleep.call_args.args[0] == 4
+    assert mock_sleep.call_args.args[0] == expected_sleep_seconds
 
 
 def test_translate_skips_sleep_when_zero(mocker: MockerFixture) -> None:
@@ -199,11 +200,16 @@ def test_translate_explicit_sleep_overrides_default(mocker: MockerFixture) -> No
         "1\n00:00:00,000 --> 00:00:06,360\nHello."
     )
 
+    sleep_seconds = 9
     translate(
-        SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini", sleep_requests=9
+        SAMPLE_TRANSCRIPT,
+        "en",
+        api_key=None,
+        provider="gemini",
+        sleep_requests=sleep_seconds,
     )
 
-    assert mock_sleep.call_args.args[0] == 9
+    assert mock_sleep.call_args.args[0] == sleep_seconds
 
 
 def test_translate_passes_api_key(mocker: MockerFixture) -> None:
@@ -279,7 +285,7 @@ def test_parse_srt_response_extra_blank_lines() -> None:
         "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?\n\n"
     )
     result = _parse_srt_response(response_with_extra_blanks, SAMPLE_SEGMENTS)
-    assert len(result) == 2
+    assert len(result) == len(SAMPLE_SEGMENTS)
     assert result[0]["text"] == "Hello."
     assert result[1]["text"] == "How have you been?"
 
@@ -288,7 +294,7 @@ def test_parse_srt_response_markdown_fenced() -> None:
     """Tests that a markdown-fenced SRT response is parsed correctly."""
     fenced = "```srt\n" + SAMPLE_SRT_RESPONSE + "\n```"
     result = _parse_srt_response(fenced, SAMPLE_SEGMENTS)
-    assert len(result) == 2
+    assert len(result) == len(SAMPLE_SEGMENTS)
     assert result[0]["text"] == "Hello."
 
 
@@ -543,7 +549,7 @@ def test_chatgpt_translate(mocker: MockerFixture) -> None:
 
     result = translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", provider="chatgpt")
 
-    assert len(result) == 2
+    assert len(result) == len(SAMPLE_SEGMENTS)
     assert result[0]["text"] == "Hello."
     assert result[1]["text"] == "How have you been?"
 
@@ -663,7 +669,7 @@ def test_claude_translate(mocker: MockerFixture) -> None:
 
     result = translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", provider="claude")
 
-    assert len(result) == 2
+    assert len(result) == len(SAMPLE_SEGMENTS)
     assert result[0]["text"] == "Hello."
     assert result[1]["text"] == "How have you been?"
 
@@ -769,7 +775,7 @@ def test_ollama_translate(mocker: MockerFixture) -> None:
 
     result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="ollama")
 
-    assert len(result) == 2
+    assert len(result) == len(SAMPLE_SEGMENTS)
     assert result[0]["text"] == "Hello."
     assert result[1]["text"] == "How have you been?"
 
@@ -807,7 +813,8 @@ def test_chunk_segments_default_chunk_size() -> None:
 
     chunks = _chunk_segments(transcript, "ko")
 
-    assert len(chunks) == 2
+    expected_chunk_count = 2
+    assert len(chunks) == expected_chunk_count
     assert len(chunks[0]["chunk"]) == CHUNK_SIZE
     assert len(chunks[1]["chunk"]) == 1
 
@@ -819,10 +826,12 @@ def test_chunk_segments_explicit_chunk_size() -> None:
     ]
     transcript: Transcript = {"segments": segments, "language": "ja"}
 
-    chunks = _chunk_segments(transcript, "ko", chunk_size=3)
+    chunk_size = 3
+    chunks = _chunk_segments(transcript, "ko", chunk_size=chunk_size)
 
-    assert len(chunks) == 4
-    assert len(chunks[0]["chunk"]) == 3
+    expected_chunk_count = 4
+    assert len(chunks) == expected_chunk_count
+    assert len(chunks[0]["chunk"]) == chunk_size
     assert len(chunks[-1]["chunk"]) == 1
 
 
@@ -855,7 +864,8 @@ def test_translate_uses_model_chunk_size(mocker: MockerFixture) -> None:
         llm_model=model,
     )
 
-    assert mock_client.chat.completions.create.call_count == 2
+    expected_request_count = 2
+    assert mock_client.chat.completions.create.call_count == expected_request_count
 
 
 def test_translate_explicit_chunk_size_overrides_model_default(
@@ -886,7 +896,8 @@ def test_translate_explicit_chunk_size_overrides_model_default(
     )
 
     # 5 segments at chunk_size=2 → 3 chunks, not the model default of 80
-    assert mock_client.chat.completions.create.call_count == 3
+    expected_request_count = 3
+    assert mock_client.chat.completions.create.call_count == expected_request_count
 
 
 # --- Context size tests ---
@@ -945,17 +956,18 @@ def test_translate_explicit_context_size_overrides_model_default(
         "1\n00:00:00,000 --> 00:00:01,000\nHello."
     )
 
+    context_size = 2
     translate(
         SAMPLE_TRANSCRIPT,
         "en",
         api_key=None,
         provider="gemini",
-        context_size=2,
+        context_size=context_size,
     )
 
     for call in mock_build.call_args_list:
         _, kwargs = call
-        assert len(kwargs["context_segments"]) <= 2
+        assert len(kwargs["context_segments"]) <= context_size
 
 
 def test_translate_uses_default_context_size_for_unknown_model(
