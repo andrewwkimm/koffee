@@ -2,13 +2,15 @@
 
 import json
 import subprocess
+from pathlib import Path
 
 import pytest
+from pytest_mock import MockerFixture
 
 from koffee.subtitle import extract_subtitle_track, get_subtitle_tracks
 
 
-def test_get_subtitle_tracks_returns_streams(mocker) -> None:
+def test_get_subtitle_tracks_returns_streams(mocker: MockerFixture) -> None:
     """Tests that subtitle tracks are parsed from ffprobe output."""
     ffprobe_output = json.dumps(
         {
@@ -30,7 +32,7 @@ def test_get_subtitle_tracks_returns_streams(mocker) -> None:
     assert result[0]["tags"]["language"] == "jpn"
 
 
-def test_get_subtitle_tracks_no_streams(mocker) -> None:
+def test_get_subtitle_tracks_no_streams(mocker: MockerFixture) -> None:
     """Tests that an empty list is returned when no subtitle tracks exist."""
     mocker.patch(
         "koffee.subtitle.subprocess.run",
@@ -44,7 +46,7 @@ def test_get_subtitle_tracks_no_streams(mocker) -> None:
     assert result == []
 
 
-def test_get_subtitle_tracks_missing_ffprobe(mocker) -> None:
+def test_get_subtitle_tracks_missing_ffprobe(mocker: MockerFixture) -> None:
     """Tests that missing ffprobe raises FileNotFoundError."""
     mocker.patch(
         "koffee.subtitle.subprocess.run",
@@ -55,7 +57,7 @@ def test_get_subtitle_tracks_missing_ffprobe(mocker) -> None:
         get_subtitle_tracks("video.mkv")
 
 
-def test_extract_subtitle_track(mocker, tmp_path) -> None:
+def test_extract_subtitle_track(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that a subtitle track is extracted to an SRT file."""
     video = tmp_path / "video.mkv"
     video.touch()
@@ -71,7 +73,7 @@ def test_extract_subtitle_track(mocker, tmp_path) -> None:
     assert result == expected_output
 
 
-def test_extract_subtitle_track_failure(mocker, tmp_path) -> None:
+def test_extract_subtitle_track_failure(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that extraction failure raises CalledProcessError."""
     video = tmp_path / "video.mkv"
     video.touch()
@@ -85,7 +87,9 @@ def test_extract_subtitle_track_failure(mocker, tmp_path) -> None:
         extract_subtitle_track(video)
 
 
-def test_extract_subtitle_track_missing_ffmpeg(mocker, tmp_path) -> None:
+def test_extract_subtitle_track_missing_ffmpeg(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
     """Tests that missing ffmpeg raises FileNotFoundError."""
     video = tmp_path / "video.mkv"
     video.touch()
@@ -99,7 +103,7 @@ def test_extract_subtitle_track_missing_ffmpeg(mocker, tmp_path) -> None:
         extract_subtitle_track(video)
 
 
-def test_get_subtitle_tracks_timeout(mocker) -> None:
+def test_get_subtitle_tracks_timeout(mocker: MockerFixture) -> None:
     """Tests that a timed-out ffprobe raises TimeoutExpired."""
     mocker.patch(
         "koffee.subtitle.subprocess.run",
@@ -110,7 +114,7 @@ def test_get_subtitle_tracks_timeout(mocker) -> None:
         get_subtitle_tracks("video.mkv")
 
 
-def test_extract_subtitle_track_timeout(mocker, tmp_path) -> None:
+def test_extract_subtitle_track_timeout(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that a timed-out ffmpeg raises TimeoutExpired."""
     video = tmp_path / "video.mkv"
     video.touch()

@@ -100,7 +100,7 @@ def test_verbose(mocker: MockerFixture) -> None:
     logger_instance.setLevel.assert_called_once_with(logging.DEBUG)
 
 
-def test_resolve_paths_expands_directory(tmp_path) -> None:
+def test_resolve_paths_expands_directory(tmp_path: Path) -> None:
     """Tests that a directory input resolves to supported files within it."""
     (tmp_path / "video.mp4").touch()
     (tmp_path / "audio.wav").touch()
@@ -114,7 +114,9 @@ def test_resolve_paths_expands_directory(tmp_path) -> None:
     assert len(result) == expected_file_count
 
 
-def test_resolve_paths_glob_pattern(tmp_path, monkeypatch) -> None:
+def test_resolve_paths_glob_pattern(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Tests that glob patterns resolve to matching files."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "a.mp4").touch()
@@ -126,7 +128,9 @@ def test_resolve_paths_glob_pattern(tmp_path, monkeypatch) -> None:
     assert len(result) == expected_match_count
 
 
-def test_resolve_paths_glob_no_match(tmp_path, monkeypatch) -> None:
+def test_resolve_paths_glob_no_match(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Tests that unmatched glob patterns raise FileNotFoundError."""
     monkeypatch.chdir(tmp_path)
 
@@ -148,7 +152,7 @@ def test_dry_run(mocker: MockerFixture) -> None:
     mock_translate.assert_not_called()
 
 
-def test_dry_run_subtitle_file(mocker: MockerFixture, tmp_path) -> None:
+def test_dry_run_subtitle_file(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that dry-run shows subtitle translation mode for .srt files."""
     mock_translate = mocker.patch("koffee.cli.commands.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
@@ -179,7 +183,7 @@ def test_dry_run_with_embed(mocker: MockerFixture) -> None:
 
 
 def test_handle_embedded_subtitles_skips_subtitle_files(
-    tmp_path,
+    tmp_path: Path,
 ) -> None:
     """Tests that subtitle files skip the embedded subtitle check."""
     srt = tmp_path / "test.srt"
@@ -234,7 +238,9 @@ def test_handle_embedded_subtitles_user_declines(
     assert result.use_embedded_subtitles is False
 
 
-def test_translate_with_progress_subtitle_file(mocker: MockerFixture, tmp_path) -> None:
+def test_translate_with_progress_subtitle_file(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
     """Tests that subtitle files skip the ASR progress bar."""
     mock_translate = mocker.patch("koffee.cli.commands.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
@@ -429,7 +435,7 @@ def test_prompt_flag(mocker: MockerFixture) -> None:
     assert config.prompt == "You are a medical translator."
 
 
-def test_config_flag_loads_file(mocker: MockerFixture, tmp_path) -> None:
+def test_config_flag_loads_file(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that --config loads the specified config file."""
     config_file = tmp_path / "custom.toml"
     config_file.write_text('target_language = "fr"\n')
@@ -553,7 +559,7 @@ def test_tracks_command_no_tracks(mocker: MockerFixture) -> None:
     assert any("No subtitle tracks found" in msg for msg in log_messages)
 
 
-def test_find_config_path_returns_none(monkeypatch) -> None:
+def test_find_config_path_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tests that _find_config_path returns None when no config exists."""
     monkeypatch.setattr(
         "koffee.cli.commands.CONFIG_SEARCH_PATHS",
@@ -563,7 +569,7 @@ def test_find_config_path_returns_none(monkeypatch) -> None:
     assert _find_config_path() is None
 
 
-def test_embed_command(mocker: MockerFixture, tmp_path) -> None:
+def test_embed_command(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that embed command calls embed_subtitles."""
     video = tmp_path / "video.mp4"
     video.touch()
@@ -580,7 +586,7 @@ def test_embed_command(mocker: MockerFixture, tmp_path) -> None:
     mock_embed.assert_called_once_with(sub, video, output, mode="soft")
 
 
-def test_embed_command_hard_mode(mocker: MockerFixture, tmp_path) -> None:
+def test_embed_command_hard_mode(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that embed command passes hard mode."""
     video = tmp_path / "video.mp4"
     video.touch()
@@ -597,7 +603,7 @@ def test_embed_command_hard_mode(mocker: MockerFixture, tmp_path) -> None:
     mock_embed.assert_called_once_with(sub, video, output, mode="hard")
 
 
-def test_embed_command_default_output(mocker: MockerFixture, tmp_path) -> None:
+def test_embed_command_default_output(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that embed generates a default output name."""
     video = tmp_path / "video.mp4"
     video.touch()
@@ -614,7 +620,7 @@ def test_embed_command_default_output(mocker: MockerFixture, tmp_path) -> None:
     mock_embed.assert_called_once_with(sub, video, expected_output, mode="soft")
 
 
-def test_embed_command_collision(tmp_path) -> None:
+def test_embed_command_collision(tmp_path: Path) -> None:
     """Tests that embed raises FileExistsError without --overwrite."""
     video = tmp_path / "video.mp4"
     video.touch()
@@ -627,7 +633,7 @@ def test_embed_command_collision(tmp_path) -> None:
         embed(video, sub, output_path=output)
 
 
-def test_transcribe_command(mocker: MockerFixture, tmp_path) -> None:
+def test_transcribe_command(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that transcribe command runs ASR and generates subtitles."""
     audio = tmp_path / "audio.mp3"
     audio.touch()
@@ -650,7 +656,7 @@ def test_transcribe_command(mocker: MockerFixture, tmp_path) -> None:
     transcribe(audio, output_dir=tmp_path, output_name="output")
 
 
-def test_transcribe_command_collision(mocker: MockerFixture, tmp_path) -> None:
+def test_transcribe_command_collision(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that transcribe raises FileExistsError without --overwrite."""
     audio = tmp_path / "audio.mp3"
     audio.touch()
@@ -675,7 +681,7 @@ def test_transcribe_command_collision(mocker: MockerFixture, tmp_path) -> None:
         transcribe(audio, output_dir=tmp_path)
 
 
-def test_convert_command(mocker: MockerFixture, tmp_path) -> None:
+def test_convert_command(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that convert command parses and regenerates subtitles."""
     srt = tmp_path / "test.srt"
     srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello.\n")
@@ -697,7 +703,7 @@ def test_convert_command(mocker: MockerFixture, tmp_path) -> None:
     mock_parse.assert_called_once_with(srt)
 
 
-def test_convert_command_default_output(mocker: MockerFixture, tmp_path) -> None:
+def test_convert_command_default_output(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that convert uses the input filename as default output name."""
     srt = tmp_path / "test.srt"
     srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello.\n")
@@ -717,7 +723,7 @@ def test_convert_command_default_output(mocker: MockerFixture, tmp_path) -> None
     convert(srt, subtitle_format="vtt", output_dir=tmp_path)
 
 
-def test_convert_command_collision(mocker: MockerFixture, tmp_path) -> None:
+def test_convert_command_collision(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that convert raises FileExistsError without --overwrite."""
     srt = tmp_path / "test.srt"
     srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello.\n")
@@ -739,7 +745,7 @@ def test_convert_command_collision(mocker: MockerFixture, tmp_path) -> None:
         convert(srt, subtitle_format="vtt", output_dir=tmp_path)
 
 
-def test_languages_command(capsys) -> None:
+def test_languages_command(capsys: pytest.CaptureFixture[str]) -> None:
     """Tests that languages command prints all supported language codes."""
     languages()
 
@@ -749,7 +755,7 @@ def test_languages_command(capsys) -> None:
         assert code in captured.out
 
 
-def test_languages_command_shows_count(capsys) -> None:
+def test_languages_command_shows_count(capsys: pytest.CaptureFixture[str]) -> None:
     """Tests that languages command displays the total count."""
     languages()
 
@@ -758,7 +764,7 @@ def test_languages_command_shows_count(capsys) -> None:
     assert str(expected_count) in captured.out
 
 
-def test_languages_command_excludes_auto(capsys) -> None:
+def test_languages_command_excludes_auto(capsys: pytest.CaptureFixture[str]) -> None:
     """Tests that languages command excludes the 'auto' pseudo-language."""
     languages()
 
@@ -766,7 +772,7 @@ def test_languages_command_excludes_auto(capsys) -> None:
     assert "auto" not in captured.out.split()
 
 
-def test_languages_command_shows_names(capsys) -> None:
+def test_languages_command_shows_names(capsys: pytest.CaptureFixture[str]) -> None:
     """Tests that languages command displays full language names."""
     languages()
 

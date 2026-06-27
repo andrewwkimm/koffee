@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from pytest_mock import MockerFixture
 
 import koffee
 import koffee.api as api_module
@@ -62,7 +63,7 @@ def test_get_output_path_no_output_name() -> None:
     assert result.suffix == ".mp3"
 
 
-def test_get_output_path_date_suffix(mocker) -> None:
+def test_get_output_path_date_suffix(mocker: MockerFixture) -> None:
     """Tests that date_suffix adds a date stamp to the filename."""
     mocker.patch("koffee.api.datetime").now.return_value = datetime(2026, 1, 15)
 
@@ -88,7 +89,7 @@ def test_get_output_path_with_output_dir() -> None:
     assert result.parent == Path("/tmp")
 
 
-def test_translate_whisper_returns_raw_segments(mocker) -> None:
+def test_translate_whisper_returns_raw_segments(mocker: MockerFixture) -> None:
     """Tests that whisper backend uses raw segments without calling translate."""
     mock_translate = mocker.patch.object(api_module, "translate")
     mocker.patch.object(api_module, "generate_subtitles", return_value=MagicMock())
@@ -105,7 +106,7 @@ def test_translate_whisper_returns_raw_segments(mocker) -> None:
     mock_translate.assert_not_called()
 
 
-def test_translate_non_whisper_calls_translate(mocker) -> None:
+def test_translate_non_whisper_calls_translate(mocker: MockerFixture) -> None:
     """Tests that a non-whisper backend calls translate."""
     mock_translate = mocker.patch.object(
         api_module, "translate", return_value=["translated"]
@@ -139,7 +140,9 @@ def test_translate_non_whisper_calls_translate(mocker) -> None:
     )
 
 
-def test_write_embedded_video_deletes_subtitle(mocker, tmp_path) -> None:
+def test_write_embedded_video_deletes_subtitle(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
     """Tests that the subtitle file is always deleted after embed."""
     mocker.patch.object(
         api_module, "embed_subtitles", return_value=tmp_path / "out.mp4"
@@ -152,7 +155,7 @@ def test_write_embedded_video_deletes_subtitle(mocker, tmp_path) -> None:
     assert not subtitle.exists()
 
 
-def test_write_output_moves_subtitle_to_target(tmp_path) -> None:
+def test_write_output_moves_subtitle_to_target(tmp_path: Path) -> None:
     """Tests that `_write_output` moves the source to the resolved target path."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
@@ -166,7 +169,7 @@ def test_write_output_moves_subtitle_to_target(tmp_path) -> None:
     assert not subtitle.exists()
 
 
-def test_write_output_unlinks_source_on_collision(tmp_path) -> None:
+def test_write_output_unlinks_source_on_collision(tmp_path: Path) -> None:
     """Tests that a collision unlinks the source file before raising."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
@@ -182,7 +185,7 @@ def test_write_output_unlinks_source_on_collision(tmp_path) -> None:
     assert existing.exists()
 
 
-def test_write_output_overwrites_when_allowed(tmp_path) -> None:
+def test_write_output_overwrites_when_allowed(tmp_path: Path) -> None:
     """Tests that overwrite=True replaces an existing target."""
     subtitle = tmp_path / "sub.srt"
     subtitle.write_text("new")
@@ -214,7 +217,7 @@ def test_validate_api_key_ollama_does_not_require_key(tmp_path: Path) -> None:
     _check_preconditions(str(video), config)
 
 
-def test_check_output_collision_raises(tmp_path) -> None:
+def test_check_output_collision_raises(tmp_path: Path) -> None:
     """Tests that an existing output file raises FileExistsError."""
     existing = tmp_path / "output.vtt"
     existing.touch()
@@ -223,7 +226,7 @@ def test_check_output_collision_raises(tmp_path) -> None:
         _check_output_collision(existing, overwrite=False)
 
 
-def test_check_output_collision_allows_overwrite(tmp_path) -> None:
+def test_check_output_collision_allows_overwrite(tmp_path: Path) -> None:
     """Tests that overwrite=True skips the collision check."""
     existing = tmp_path / "output.vtt"
     existing.touch()
@@ -231,7 +234,7 @@ def test_check_output_collision_allows_overwrite(tmp_path) -> None:
     _check_output_collision(existing, overwrite=True)
 
 
-def test_route_output_with_embed(mocker, tmp_path) -> None:
+def test_route_output_with_embed(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that embed mode routes to video output."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
@@ -250,7 +253,7 @@ def test_route_output_with_embed(mocker, tmp_path) -> None:
     mock_finalize.assert_called_once()
 
 
-def test_run_subtitle_file_input(mocker, tmp_path) -> None:
+def test_run_subtitle_file_input(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that a subtitle file input skips ASR and translates directly."""
     srt = tmp_path / "test.srt"
     srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello.\n")
@@ -288,7 +291,7 @@ def test_run_subtitle_file_input(mocker, tmp_path) -> None:
     mock_generate.assert_called_once()
 
 
-def test_check_preconditions_rejects_unsupported_suffix(tmp_path) -> None:
+def test_check_preconditions_rejects_unsupported_suffix(tmp_path: Path) -> None:
     """Tests that an unsupported file extension raises UnsupportedFileError."""
     bad_file = tmp_path / "notes.txt"
     bad_file.touch()
@@ -297,7 +300,7 @@ def test_check_preconditions_rejects_unsupported_suffix(tmp_path) -> None:
         _check_preconditions(bad_file, KoffeeConfig())
 
 
-def test_check_preconditions_rejects_embed_on_audio(tmp_path) -> None:
+def test_check_preconditions_rejects_embed_on_audio(tmp_path: Path) -> None:
     """Tests that --embed on audio input raises IncompatibleOptionsError."""
     audio = tmp_path / "track.mp3"
     audio.touch()
@@ -306,7 +309,7 @@ def test_check_preconditions_rejects_embed_on_audio(tmp_path) -> None:
         _check_preconditions(audio, KoffeeConfig(embed="soft"))
 
 
-def test_check_preconditions_rejects_embedded_subs_on_audio(tmp_path) -> None:
+def test_check_preconditions_rejects_embedded_subs_on_audio(tmp_path: Path) -> None:
     """Tests that --use-embedded-subtitles on audio raises IncompatibleOptionsError."""
     audio = tmp_path / "track.mp3"
     audio.touch()
@@ -317,7 +320,9 @@ def test_check_preconditions_rejects_embedded_subs_on_audio(tmp_path) -> None:
         _check_preconditions(audio, KoffeeConfig(use_embedded_subtitles=True))
 
 
-def test_check_preconditions_rejects_missing_ffmpeg(mocker, tmp_path) -> None:
+def test_check_preconditions_rejects_missing_ffmpeg(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
     """Tests that missing ffmpeg raises MissingDependencyError when embedding."""
     video = tmp_path / "clip.mp4"
     video.touch()
@@ -327,7 +332,9 @@ def test_check_preconditions_rejects_missing_ffmpeg(mocker, tmp_path) -> None:
         _check_preconditions(video, KoffeeConfig(embed="soft"))
 
 
-def test_check_preconditions_rejects_no_embedded_tracks(mocker, tmp_path) -> None:
+def test_check_preconditions_rejects_no_embedded_tracks(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
     """Tests that a video with no subtitle tracks raises IncompatibleOptionsError."""
     video = tmp_path / "clip.mp4"
     video.touch()
@@ -338,7 +345,9 @@ def test_check_preconditions_rejects_no_embedded_tracks(mocker, tmp_path) -> Non
         _check_preconditions(video, KoffeeConfig(use_embedded_subtitles=True))
 
 
-def test_check_preconditions_passes_on_valid_video(mocker, tmp_path) -> None:
+def test_check_preconditions_passes_on_valid_video(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
     """Tests that a valid video file with a valid config passes validation."""
     video = tmp_path / "clip.mp4"
     video.touch()
@@ -347,7 +356,7 @@ def test_check_preconditions_passes_on_valid_video(mocker, tmp_path) -> None:
     _check_preconditions(video, KoffeeConfig(embed="soft"))
 
 
-def test_check_preconditions_rejects_existing_output(tmp_path) -> None:
+def test_check_preconditions_rejects_existing_output(tmp_path: Path) -> None:
     """Tests that an existing output file raises FileExistsError upfront."""
     audio = tmp_path / "track.mp3"
     audio.touch()
@@ -358,7 +367,9 @@ def test_check_preconditions_rejects_existing_output(tmp_path) -> None:
         _check_preconditions(audio, KoffeeConfig())
 
 
-def test_check_preconditions_allows_existing_output_with_overwrite(tmp_path) -> None:
+def test_check_preconditions_allows_existing_output_with_overwrite(
+    tmp_path: Path,
+) -> None:
     """Tests that an existing output is tolerated when overwrite is enabled."""
     audio = tmp_path / "track.mp3"
     audio.touch()
@@ -368,7 +379,7 @@ def test_check_preconditions_allows_existing_output_with_overwrite(tmp_path) -> 
     _check_preconditions(audio, KoffeeConfig(overwrite=True))
 
 
-def test_check_preconditions_creates_missing_output_dir(tmp_path) -> None:
+def test_check_preconditions_creates_missing_output_dir(tmp_path: Path) -> None:
     """Tests that a missing output_dir is created during validation."""
     audio = tmp_path / "track.mp3"
     audio.touch()
@@ -380,7 +391,7 @@ def test_check_preconditions_creates_missing_output_dir(tmp_path) -> None:
 
 
 def test_check_preconditions_embed_checks_video_suffix_collision(
-    mocker, tmp_path
+    mocker: MockerFixture, tmp_path
 ) -> None:
     """Tests that embed mode checks for collision against the video-suffix output."""
     video = tmp_path / "clip.mp4"
@@ -394,7 +405,7 @@ def test_check_preconditions_embed_checks_video_suffix_collision(
         _check_preconditions(video, KoffeeConfig(embed="soft"))
 
 
-def test_write_output_audio_input_uses_audio_stem(tmp_path) -> None:
+def test_write_output_audio_input_uses_audio_stem(tmp_path: Path) -> None:
     """Tests that `_write_output` derives the stem from an audio input."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
