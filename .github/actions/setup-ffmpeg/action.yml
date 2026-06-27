@@ -1,0 +1,47 @@
+name: Set up ffmpeg
+description: >-
+  Installs ffmpeg using the runner's native package manager (apt on Linux,
+  Homebrew on macOS, Chocolatey on Windows), with backoff retries. This avoids
+  third-party actions that download from a single upstream host, which rate
+  limits GitHub IPs and causes frequent CI flakes.
+
+runs:
+  using: composite
+  steps:
+    - name: Install ffmpeg (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        for attempt in 1 2 3; do
+          if sudo apt-get update && sudo apt-get install -y ffmpeg; then
+            break
+          fi
+          echo "ffmpeg install attempt ${attempt} failed; retrying in $((attempt * 15))s" >&2
+          sleep $((attempt * 15))
+        done
+        ffmpeg -version
+
+    - name: Install ffmpeg (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        for attempt in 1 2 3; do
+          if brew install ffmpeg; then
+            break
+          fi
+          echo "ffmpeg install attempt ${attempt} failed; retrying in $((attempt * 15))s" >&2
+          sleep $((attempt * 15))
+        done
+        ffmpeg -version
+
+    - name: Install ffmpeg (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+          choco install ffmpeg -y --no-progress
+          if ($LASTEXITCODE -eq 0) { break }
+          Write-Host "ffmpeg install attempt $attempt failed; retrying in $($attempt * 15)s"
+          Start-Sleep -Seconds ($attempt * 15)
+        }
+        ffmpeg -version
