@@ -7,10 +7,6 @@ from pytest_mock import MockerFixture
 from koffee.llm import chatgpt, claude, gemini, ollama
 from koffee.schemas.types import Segment, Transcript
 from koffee.translator import (
-    CHUNK_SIZE,
-    CHUNK_SIZE_BY_MODEL,
-    CONTEXT_SIZE,
-    CONTEXT_SIZE_BY_MODEL,
     SYSTEM_PROMPT,
     _build_prompt,
     _chunk_segments,
@@ -804,10 +800,11 @@ def test_ollama_translate_uses_default_model(mocker: MockerFixture) -> None:
 
 
 def test_chunk_segments_default_chunk_size() -> None:
-    """Tests that _chunk_segments uses CHUNK_SIZE when no chunk_size is given."""
+    """Tests that _chunk_segments uses the default chunk size when none is given."""
+    default_chunk_size = 200
     many_segments: list[Segment] = [
         {"start": float(i), "end": float(i + 1), "text": "x"}
-        for i in range(CHUNK_SIZE + 1)
+        for i in range(default_chunk_size + 1)
     ]
     transcript: Transcript = {"segments": many_segments, "language": "ja"}
 
@@ -815,7 +812,7 @@ def test_chunk_segments_default_chunk_size() -> None:
 
     expected_chunk_count = 2
     assert len(chunks) == expected_chunk_count
-    assert len(chunks[0]["chunk"]) == CHUNK_SIZE
+    assert len(chunks[0]["chunk"]) == default_chunk_size
     assert len(chunks[1]["chunk"]) == 1
 
 
@@ -836,23 +833,23 @@ def test_chunk_segments_explicit_chunk_size() -> None:
 
 
 def test_translate_uses_model_chunk_size(mocker: MockerFixture) -> None:
-    """Tests that a model in CHUNK_SIZE_BY_MODEL uses its configured chunk size."""
+    """Tests that the qwen3:14b model uses its configured chunk size of 80."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(ollama, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
 
     model = "qwen3:14b"
-    expected_chunk_size = CHUNK_SIZE_BY_MODEL[model]
+    model_chunk_size = 80
     many_segments: list[Segment] = [
         {"start": float(i), "end": float(i + 1), "text": "x"}
-        for i in range(expected_chunk_size + 1)
+        for i in range(model_chunk_size + 1)
     ]
 
     mock_response = mocker.MagicMock()
     mock_response.choices = [mocker.MagicMock()]
     mock_response.choices[0].message.content = "\n\n".join(
         f"{i + 1}\n00:00:0{i},000 --> 00:00:0{i + 1},000\nHello."
-        for i in range(expected_chunk_size + 1)
+        for i in range(model_chunk_size + 1)
     )
     mock_client.chat.completions.create.return_value = mock_response
 
@@ -904,13 +901,13 @@ def test_translate_explicit_chunk_size_overrides_model_default(
 
 
 def test_translate_uses_model_context_size(mocker: MockerFixture) -> None:
-    """Tests that a model uses its configured context window."""
+    """Tests that the qwen3:14b model uses its configured context window of 8."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(ollama, "create_client", return_value=mock_client)
     mock_sleep = mocker.patch("koffee.translator.time.sleep")
 
     model = "qwen3:14b"
-    expected_context = CONTEXT_SIZE_BY_MODEL[model]
+    model_context_size = 8
 
     segments: list[Segment] = [
         {"start": float(i), "end": float(i + 1), "text": "x"} for i in range(3)
@@ -934,7 +931,7 @@ def test_translate_uses_model_context_size(mocker: MockerFixture) -> None:
     )
 
     _, kwargs = mock_build.call_args
-    assert len(kwargs["context_segments"]) <= expected_context
+    assert len(kwargs["context_segments"]) <= model_context_size
     mock_sleep.assert_not_called()
 
 
@@ -973,7 +970,7 @@ def test_translate_explicit_context_size_overrides_model_default(
 def test_translate_uses_default_context_size_for_unknown_model(
     mocker: MockerFixture,
 ) -> None:
-    """Tests that CONTEXT_SIZE is used for models not in CONTEXT_SIZE_BY_MODEL."""
+    """Tests that the default context size is used for unknown models."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(gemini, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
@@ -987,5 +984,6 @@ def test_translate_uses_default_context_size_for_unknown_model(
 
     translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
 
+    default_context_size = 20
     _, kwargs = mock_build.call_args
-    assert len(kwargs["context_segments"]) <= CONTEXT_SIZE
+    assert len(kwargs["context_segments"]) <= default_context_size
