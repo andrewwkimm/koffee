@@ -19,7 +19,6 @@ class MockSegment:
 def test_transcribe(mocker: MockerFixture) -> None:
     """Tests a given video file is transcribed properly."""
     mock_segment = MockSegment(start=0.0, end=7.0, text="Mock transcription text.")
-    mock_segment.text = "Mock transcription text."
 
     mock_model = mocker.MagicMock()
     mock_model.transcribe.return_value = (
