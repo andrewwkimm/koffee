@@ -84,7 +84,7 @@ def test_embed_defaults_to_none(mocker: MockerFixture) -> None:
 
 
 def test_verbose(mocker: MockerFixture) -> None:
-    """Tests if verbose flag sets log level to DEBUG."""
+    """Tests that the verbose flag sets log level to DEBUG."""
     mocker.patch("koffee.cli.commands.run")
     mock_logger = mocker.patch("logging.getLogger")
     logger_instance = mock_logger.return_value
