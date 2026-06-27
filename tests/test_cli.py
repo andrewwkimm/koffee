@@ -161,9 +161,10 @@ def test_dry_run_subtitle_file(mocker: MockerFixture, tmp_path) -> None:
 
 
 def test_dry_run_with_embed(mocker: MockerFixture) -> None:
-    """Tests that dry-run shows embed info when flag is set."""
-    mocker.patch("koffee.cli.commands.run")
+    """Tests that dry-run reports embed info when the flag is set."""
+    mock_translate = mocker.patch("koffee.cli.commands.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
+    mock_log = mocker.patch("koffee.cli.commands.log")
 
     cli(
         korean_video_path,
@@ -171,6 +172,10 @@ def test_dry_run_with_embed(mocker: MockerFixture) -> None:
         dry_run=True,
         embed="soft",
     )
+
+    mock_translate.assert_not_called()
+    log_messages = [call.args[0] for call in mock_log.info.call_args_list]
+    assert any("embedded" in msg for msg in log_messages)
 
 
 def test_handle_embedded_subtitles_skips_subtitle_files(
@@ -492,7 +497,7 @@ def test_select_subtitle_track_missing_language_tag() -> None:
 
 
 def test_info_command(mocker: MockerFixture) -> None:
-    """Tests that info command runs without error."""
+    """Tests that info command reports the ffmpeg version when present."""
     mocker.patch("koffee.cli.commands.shutil.which", return_value="/usr/bin/ffmpeg")
     mocker.patch(
         "koffee.cli.commands.subprocess.run",
@@ -500,19 +505,27 @@ def test_info_command(mocker: MockerFixture) -> None:
             args=[], returncode=0, stdout="ffmpeg version 7.0\n"
         ),
     )
+    mock_log = mocker.patch("koffee.cli.commands.log")
 
     info()
+
+    log_messages = [call.args[0] for call in mock_log.info.call_args_list]
+    assert any("ffmpeg version 7.0" in msg for msg in log_messages)
 
 
 def test_info_command_no_ffmpeg(mocker: MockerFixture) -> None:
-    """Tests that info command handles missing ffmpeg."""
+    """Tests that info command reports ffmpeg as not found when missing."""
     mocker.patch("koffee.cli.commands.shutil.which", return_value=None)
+    mock_log = mocker.patch("koffee.cli.commands.log")
 
     info()
 
+    log_messages = [call.args[0] for call in mock_log.info.call_args_list]
+    assert any("ffmpeg: not found" in msg for msg in log_messages)
+
 
 def test_tracks_command(mocker: MockerFixture) -> None:
-    """Tests that tracks command lists subtitle tracks."""
+    """Tests that tracks command lists each subtitle track."""
     mocker.patch(
         "koffee.cli.commands.get_subtitle_tracks",
         return_value=[
@@ -520,15 +533,24 @@ def test_tracks_command(mocker: MockerFixture) -> None:
             {"index": 1, "tags": {"language": "en"}},
         ],
     )
+    mock_log = mocker.patch("koffee.cli.commands.log")
 
     tracks(korean_video_path)
+
+    log_messages = [call.args[0] for call in mock_log.info.call_args_list]
+    assert any("[0] ja" in msg and "Japanese" in msg for msg in log_messages)
+    assert any("[1] en" in msg for msg in log_messages)
 
 
 def test_tracks_command_no_tracks(mocker: MockerFixture) -> None:
-    """Tests that tracks command handles no subtitle tracks."""
+    """Tests that tracks command reports when no subtitle tracks are found."""
     mocker.patch("koffee.cli.commands.get_subtitle_tracks", return_value=[])
+    mock_log = mocker.patch("koffee.cli.commands.log")
 
     tracks(korean_video_path)
+
+    log_messages = [call.args[0] for call in mock_log.info.call_args_list]
+    assert any("No subtitle tracks found" in msg for msg in log_messages)
 
 
 def test_find_config_path_returns_none(monkeypatch) -> None:
