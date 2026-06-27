@@ -18,71 +18,55 @@ def _is_retryable(exc: Exception) -> bool:
     return isinstance(exc, RetryableError)
 
 
-def test_with_retries_returns_on_first_success() -> None:
+def test_with_retries_returns_on_first_success(mocker: MockerFixture) -> None:
     """Tests that a successful call returns the result without retrying."""
-    calls = {"n": 0}
+    mock_retried_call = mocker.Mock(return_value="ok")
 
-    def fn():
-        calls["n"] += 1
-        return "ok"
-
-    result = with_retries(fn, _is_retryable)
+    result = with_retries(mock_retried_call, _is_retryable)
 
     assert result == "ok"
-    assert calls["n"] == 1
+    mock_retried_call.assert_called_once()
 
 
 def test_with_retries_retries_on_retryable_error(mocker: MockerFixture) -> None:
     """Tests that a retryable error triggers a retry and then succeeds."""
     mocker.patch("koffee._retry.time.sleep")
-    attempts_until_success = 2
-    attempts = {"n": 0}
+    mock_retried_call = mocker.Mock(side_effect=[RetryableError("flaky"), "ok"])
 
-    def fn():
-        attempts["n"] += 1
-        if attempts["n"] < attempts_until_success:
-            raise RetryableError("flaky")
-        return "ok"
-
-    result = with_retries(fn, _is_retryable)
+    result = with_retries(mock_retried_call, _is_retryable)
 
     assert result == "ok"
-    assert attempts["n"] == attempts_until_success
+    expected_attempts = 2
+    assert mock_retried_call.call_count == expected_attempts
 
 
-def test_with_retries_propagates_non_retryable_immediately() -> None:
+def test_with_retries_propagates_non_retryable_immediately(
+    mocker: MockerFixture,
+) -> None:
     """Tests that a non-retryable error is raised without retrying."""
-    attempts = {"n": 0}
-
-    def fn():
-        attempts["n"] += 1
-        raise TerminalError("nope")
+    mock_retried_call = mocker.Mock(side_effect=TerminalError("nope"))
 
     with pytest.raises(TerminalError):
-        with_retries(fn, _is_retryable)
+        with_retries(mock_retried_call, _is_retryable)
 
-    assert attempts["n"] == 1
+    mock_retried_call.assert_called_once()
 
 
 def test_with_retries_exhaustion_raises_last_error(mocker: MockerFixture) -> None:
     """Tests that after max_retries, the last retryable error is re-raised."""
     mocker.patch("koffee._retry.time.sleep")
-
-    def fn():
-        raise RetryableError("still flaky")
+    mock_retried_call = mocker.Mock(side_effect=RetryableError("still flaky"))
 
     with pytest.raises(RetryableError, match="still flaky"):
-        with_retries(fn, _is_retryable, max_retries=2)
+        with_retries(mock_retried_call, _is_retryable, max_retries=2)
 
 
 def test_with_retries_uses_exponential_backoff(mocker: MockerFixture) -> None:
     """Tests that backoff doubles between retries."""
     mock_sleep = mocker.patch("koffee._retry.time.sleep")
-
-    def fn():
-        raise RetryableError("flaky")
+    mock_retried_call = mocker.Mock(side_effect=RetryableError("flaky"))
 
     with pytest.raises(RetryableError):
-        with_retries(fn, _is_retryable, max_retries=3)
+        with_retries(mock_retried_call, _is_retryable, max_retries=3)
 
     assert [call.args[0] for call in mock_sleep.call_args_list] == [2, 4]
