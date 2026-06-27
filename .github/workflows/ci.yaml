@@ -23,7 +23,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install ffmpeg
-        uses: ./.github/actions/ffmpeg
+        uses: ./.github/actions/setup-ffmpeg
         timeout-minutes: 5
 
       - name: Install uv
