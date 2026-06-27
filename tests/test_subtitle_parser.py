@@ -1,5 +1,7 @@
 """Tests for subtitle file parser."""
 
+from pathlib import Path
+
 from koffee.subtitle import parse_subtitle_file
 
 _ASS_EVENT_FMT = (
@@ -7,7 +9,7 @@ _ASS_EVENT_FMT = (
 )
 
 
-def test_parse_srt_file(tmp_path) -> None:
+def test_parse_srt_file(tmp_path: Path) -> None:
     """Tests that an SRT file is parsed into segments."""
     srt = tmp_path / "test.srt"
     srt.write_text(
@@ -24,7 +26,7 @@ def test_parse_srt_file(tmp_path) -> None:
     assert result[1] == {"start": 5.0, "end": 8.0, "text": "Goodbye world."}
 
 
-def test_parse_vtt_file(tmp_path) -> None:
+def test_parse_vtt_file(tmp_path: Path) -> None:
     """Tests that a VTT file is parsed into segments."""
     vtt = tmp_path / "test.vtt"
     vtt.write_text(
@@ -42,7 +44,7 @@ def test_parse_vtt_file(tmp_path) -> None:
     assert result[1] == {"start": 5.0, "end": 8.0, "text": "Goodbye world."}
 
 
-def test_parse_multiline_text(tmp_path) -> None:
+def test_parse_multiline_text(tmp_path: Path) -> None:
     """Tests that multi-line subtitle text is joined."""
     srt = tmp_path / "test.srt"
     srt.write_text(
@@ -55,7 +57,7 @@ def test_parse_multiline_text(tmp_path) -> None:
     assert result[0]["text"] == "Line one Line two"
 
 
-def test_parse_empty_file(tmp_path) -> None:
+def test_parse_empty_file(tmp_path: Path) -> None:
     """Tests that an empty file returns no segments."""
     srt = tmp_path / "test.srt"
     srt.write_text("", encoding="utf-8")
@@ -65,7 +67,7 @@ def test_parse_empty_file(tmp_path) -> None:
     assert result == []
 
 
-def test_parse_ass_file(tmp_path) -> None:
+def test_parse_ass_file(tmp_path: Path) -> None:
     """Tests that an ASS file is parsed into segments."""
     ass = tmp_path / "test.ass"
     ass.write_text(
@@ -85,7 +87,7 @@ def test_parse_ass_file(tmp_path) -> None:
     assert result[1] == {"start": 5.0, "end": 8.0, "text": "Goodbye world."}
 
 
-def test_parse_ass_strips_style_tags(tmp_path) -> None:
+def test_parse_ass_strips_style_tags(tmp_path: Path) -> None:
     """Tests that ASS style override tags are stripped from dialogue text."""
     ass = tmp_path / "test.ass"
     ass.write_text(
@@ -101,7 +103,7 @@ def test_parse_ass_strips_style_tags(tmp_path) -> None:
     assert result[0]["text"] == "Bold text"
 
 
-def test_parse_ass_replaces_newlines(tmp_path) -> None:
+def test_parse_ass_replaces_newlines(tmp_path: Path) -> None:
     r"""Tests that ASS \\N line breaks are replaced with spaces."""
     ass = tmp_path / "test.ass"
     ass.write_text(
@@ -116,7 +118,7 @@ def test_parse_ass_replaces_newlines(tmp_path) -> None:
     assert result[0]["text"] == "Line one Line two"
 
 
-def test_parse_srt_skips_empty_text_blocks(tmp_path) -> None:
+def test_parse_srt_skips_empty_text_blocks(tmp_path: Path) -> None:
     """Tests that SRT blocks with no text lines are skipped."""
     srt = tmp_path / "test.srt"
     srt.write_text(
@@ -131,7 +133,7 @@ def test_parse_srt_skips_empty_text_blocks(tmp_path) -> None:
     assert result[0]["text"] == "Hello."
 
 
-def test_parse_ass_skips_empty_dialogue(tmp_path) -> None:
+def test_parse_ass_skips_empty_dialogue(tmp_path: Path) -> None:
     """Tests that ASS dialogue lines with only style tags are skipped."""
     ass = tmp_path / "test.ass"
     ass.write_text(
