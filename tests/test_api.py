@@ -68,12 +68,15 @@ def test_get_output_path_no_output_name() -> None:
     assert result.suffix == ".mp3"
 
 
-def test_get_output_path_date_suffix() -> None:
+def test_get_output_path_date_suffix(mocker) -> None:
     """Tests that date_suffix adds a date stamp to the filename."""
+    mocker.patch("koffee.api.datetime").now.return_value = datetime(2026, 1, 15)
+
     result = _get_output_path(
         "video/track.mp4", output_dir=None, output_name=None, date_suffix=True
     )
-    assert result.stem.startswith("track_")
+
+    assert result.stem == "track_01-15-2026"
     assert result.suffix == ".mp4"
 
 
@@ -389,7 +392,8 @@ def test_check_preconditions_embed_checks_video_suffix_collision(
     video = tmp_path / "clip.mp4"
     video.touch()
     mocker.patch("koffee.api.shutil.which", return_value="/usr/bin/ffmpeg")
-    colliding = tmp_path / f"clip_{datetime.now().strftime('%m-%d-%Y')}.mp4"
+    mocker.patch("koffee.api.datetime").now.return_value = datetime(2026, 1, 15)
+    colliding = tmp_path / "clip_01-15-2026.mp4"
     colliding.touch()
 
     with pytest.raises(FileExistsError, match="Output file already exists"):
