@@ -1,6 +1,5 @@
 """Tests for the koffee API."""
 
-import importlib
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -8,6 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 
 import koffee
+import koffee.api as api_module
 from koffee.api import (
     _check_output_collision,
     _check_preconditions,
@@ -27,12 +27,6 @@ from koffee.exceptions import (
 )
 from koffee.schemas.config import KoffeeConfig
 from koffee.schemas.types import Transcript
-
-
-@pytest.fixture
-def api_module():
-    """Fixture to import the api module for mocking purposes."""
-    return importlib.import_module("koffee.api")
 
 
 @pytest.mark.integration
@@ -94,7 +88,7 @@ def test_get_output_path_with_output_dir() -> None:
     assert result.parent == Path("/tmp")
 
 
-def test_translate_whisper_returns_raw_segments(mocker, api_module) -> None:
+def test_translate_whisper_returns_raw_segments(mocker) -> None:
     """Tests that whisper backend uses raw segments without calling translate."""
     mock_translate = mocker.patch.object(api_module, "translate")
     mocker.patch.object(api_module, "generate_subtitles", return_value=MagicMock())
@@ -111,7 +105,7 @@ def test_translate_whisper_returns_raw_segments(mocker, api_module) -> None:
     mock_translate.assert_not_called()
 
 
-def test_translate_non_whisper_calls_translate(mocker, api_module) -> None:
+def test_translate_non_whisper_calls_translate(mocker) -> None:
     """Tests that a non-whisper backend calls translate."""
     mock_translate = mocker.patch.object(
         api_module, "translate", return_value=["translated"]
@@ -145,7 +139,7 @@ def test_translate_non_whisper_calls_translate(mocker, api_module) -> None:
     )
 
 
-def test_write_embedded_video_deletes_subtitle(mocker, tmp_path, api_module) -> None:
+def test_write_embedded_video_deletes_subtitle(mocker, tmp_path) -> None:
     """Tests that the subtitle file is always deleted after embed."""
     mocker.patch.object(
         api_module, "embed_subtitles", return_value=tmp_path / "out.mp4"
@@ -237,7 +231,7 @@ def test_check_output_collision_allows_overwrite(tmp_path) -> None:
     _check_output_collision(existing, overwrite=True)
 
 
-def test_route_output_with_embed(mocker, api_module, tmp_path) -> None:
+def test_route_output_with_embed(mocker, tmp_path) -> None:
     """Tests that embed mode routes to video output."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
@@ -256,7 +250,7 @@ def test_route_output_with_embed(mocker, api_module, tmp_path) -> None:
     mock_finalize.assert_called_once()
 
 
-def test_run_subtitle_file_input(mocker, api_module, tmp_path) -> None:
+def test_run_subtitle_file_input(mocker, tmp_path) -> None:
     """Tests that a subtitle file input skips ASR and translates directly."""
     srt = tmp_path / "test.srt"
     srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello.\n")
