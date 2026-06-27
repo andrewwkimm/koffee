@@ -207,8 +207,8 @@ def test_handle_embedded_subtitles_user_accepts(
     mocker: MockerFixture,
 ) -> None:
     """Tests that accepting embedded subtitles updates config."""
-    tracks = [{"index": 0, "codec": "srt", "tags": {"language": "ko"}}]
-    mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=tracks)
+    track_list = [{"index": 0, "codec": "srt", "tags": {"language": "ko"}}]
+    mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=track_list)
     mocker.patch("builtins.input", return_value="y")
     config = KoffeeConfig()
 
@@ -450,9 +450,9 @@ def test_config_flag_loads_file(mocker: MockerFixture, tmp_path) -> None:
 
 def test_select_subtitle_track_single() -> None:
     """Tests that a single track is selected automatically."""
-    tracks = [{"index": 0, "tags": {"language": "ja"}}]
+    track_list = [{"index": 0, "tags": {"language": "ja"}}]
 
-    index, lang = _select_subtitle_track(tracks)
+    index, lang = _select_subtitle_track(track_list)
 
     assert index == 0
     assert lang == "ja"
@@ -460,13 +460,13 @@ def test_select_subtitle_track_single() -> None:
 
 def test_select_subtitle_track_multiple(mocker: MockerFixture) -> None:
     """Tests that user can select from multiple tracks."""
-    tracks = [
+    track_list = [
         {"index": 0, "tags": {"language": "ja", "title": "Japanese"}},
         {"index": 1, "tags": {"language": "ko", "title": "Korean"}},
     ]
     mocker.patch("builtins.input", return_value="1")
 
-    index, lang = _select_subtitle_track(tracks)
+    index, lang = _select_subtitle_track(track_list)
 
     assert index == 1
     assert lang == "ko"
@@ -474,13 +474,13 @@ def test_select_subtitle_track_multiple(mocker: MockerFixture) -> None:
 
 def test_select_subtitle_track_default_on_empty_input(mocker: MockerFixture) -> None:
     """Tests that empty input defaults to track 0."""
-    tracks = [
+    track_list = [
         {"index": 0, "tags": {"language": "ja"}},
         {"index": 1, "tags": {"language": "ko"}},
     ]
     mocker.patch("builtins.input", return_value="")
 
-    index, lang = _select_subtitle_track(tracks)
+    index, lang = _select_subtitle_track(track_list)
 
     assert index == 0
     assert lang == "ja"
