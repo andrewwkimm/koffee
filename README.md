@@ -24,7 +24,7 @@
 
 ## Dependencies
 
-Python versions 3.11 to 3.13 are supported. Additionally, [ffmpeg](https://www.ffmpeg.org/download.html) is required for koffee to run.
+Python versions 3.11 to 3.14 are supported. Additionally, [ffmpeg](https://www.ffmpeg.org/download.html) is required for koffee to run.
 
 ## Installation
 
