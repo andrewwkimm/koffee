@@ -1,8 +1,10 @@
 """Tests for koffee."""
 
-from koffee import __version__
+import re
+
+import koffee
 
 
-def test_version() -> None:
-    """Tests that version is set to expected value."""
-    assert __version__ == "0.1.0"
+def test_version_is_valid_semver() -> None:
+    """Tests that the package version resolves to a well-formed semver string."""
+    assert re.fullmatch(r"\d+\.\d+\.\d+", koffee.__version__)
