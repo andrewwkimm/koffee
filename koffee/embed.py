@@ -41,6 +41,15 @@ def _burn_in_subtitles(
     """Burns subtitles into the video frames (hard subtitles)."""
     log.info("Burning in subtitles (hard).")
 
+    if not _ffmpeg_supports_subtitles_filter():
+        raise SubtitleEmbedError(
+            "Hard subtitle burn-in requires an ffmpeg built with libass, but the "
+            "installed ffmpeg does not provide the `subtitles` filter. On macOS, "
+            "Homebrew's default `ffmpeg` no longer bundles libass (since January "
+            "2026). Install the full build with `brew install ffmpeg-full`."
+            "For more details: https://github.com/Homebrew/homebrew-core/pull/261303"
+        )
+
     escaped_path = _escape_subtitle_filter_path(subtitle_path)
 
     cmd = [
@@ -67,6 +76,17 @@ def _burn_in_subtitles(
         raise SubtitleEmbedError(error.stderr) from error
 
     return output_path
+
+
+def _ffmpeg_supports_subtitles_filter() -> bool:
+    """Returns whether the installed ffmpeg provides the libass `subtitles` filter."""
+    result = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-filters"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return "subtitles" in result.stdout
 
 
 def _escape_subtitle_filter_path(subtitle_path: Path | str) -> str:

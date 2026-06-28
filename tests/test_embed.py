@@ -8,6 +8,7 @@ from pytest_mock import MockerFixture
 
 from koffee.embed import (
     _escape_subtitle_filter_path,
+    _ffmpeg_supports_subtitles_filter,
     embed_subtitles,
 )
 from koffee.exceptions import SubtitleEmbedError
@@ -45,6 +46,52 @@ def test_hard_overlay(video_path: Path, subtitle_path: Path, output_path: Path) 
     embed_subtitles(subtitle_path, video_path, output_path, mode="hard")
 
     assert output_path.exists()
+
+
+def test_burn_in_without_libass_raises_helpful_error(
+    subtitle_path: Path,
+    video_path: Path,
+    output_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    """Tests that burn-in without the libass filter raises a descriptive error."""
+    mocker.patch("koffee.embed._ffmpeg_supports_subtitles_filter", return_value=False)
+
+    with pytest.raises(SubtitleEmbedError) as exc_info:
+        embed_subtitles(subtitle_path, video_path, output_path, mode="hard")
+
+    assert "libass" in str(exc_info.value)
+    assert "ffmpeg-full" in str(exc_info.value)
+
+
+def test_ffmpeg_supports_subtitles_filter_when_present(mocker: MockerFixture) -> None:
+    """Tests that the subtitles filter is detected in ffmpeg -filters output."""
+    mocker.patch(
+        "subprocess.run",
+        return_value=subprocess.CompletedProcess(
+            args=["ffmpeg"],
+            returncode=0,
+            stdout=" T.. subtitles    V->V  Render text subtitles onto input video.\n",
+            stderr="",
+        ),
+    )
+
+    assert _ffmpeg_supports_subtitles_filter() is True
+
+
+def test_ffmpeg_supports_subtitles_filter_when_absent(mocker: MockerFixture) -> None:
+    """Tests that a missing subtitles filter is detected in ffmpeg -filters output."""
+    mocker.patch(
+        "subprocess.run",
+        return_value=subprocess.CompletedProcess(
+            args=["ffmpeg"],
+            returncode=0,
+            stdout=" ... scale          V->V  Scale the input video size.\n",
+            stderr="",
+        ),
+    )
+
+    assert _ffmpeg_supports_subtitles_filter() is False
 
 
 def test_exception_handling(
@@ -104,6 +151,7 @@ def test_burn_in_subtitles_uses_escaped_path(
     mocker: MockerFixture,
 ) -> None:
     """Tests that `_burn_in_subtitles` passes an escaped path to ffmpeg."""
+    mocker.patch("koffee.embed._ffmpeg_supports_subtitles_filter", return_value=True)
     mock_run = mocker.patch("subprocess.run")
 
     embed_subtitles("C:\\subs\\track.srt", video_path, output_path, mode="hard")
