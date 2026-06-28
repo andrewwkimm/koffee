@@ -28,10 +28,7 @@ runs:
         FFMPEG_URL="https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip"
         FFPROBE_URL="https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip"
         for attempt in 1 2 3; do
-          if curl -fsSL "$FFMPEG_URL" -o /tmp/ffmpeg.zip \
-              && curl -fsSL "$FFPROBE_URL" -o /tmp/ffprobe.zip \
-              && unzip -o /tmp/ffmpeg.zip -d /usr/local/bin \
-              && unzip -o /tmp/ffprobe.zip -d /usr/local/bin; then
+          if brew install ffmpeg fontconfig; then
             break
           fi
           echo "ffmpeg install attempt ${attempt} failed; retrying in $((attempt * 15))s" >&2
