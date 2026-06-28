@@ -26,6 +26,12 @@
 
 Python versions 3.11 to 3.13 are supported. Additionally, [ffmpeg](https://www.ffmpeg.org/download.html) is required for koffee to run.
 
+Hard subtitle burn-in (`--embed=hard`) needs an ffmpeg built with libass. On macOS, Homebrew's default `ffmpeg` formula dropped libass in January 2026 ([Pull #261303](https://github.com/Homebrew/homebrew-core/pull/261303)). Install the full build instead:
+
+```bash
+brew install ffmpeg-full
+```
+
 ## Installation
 
 koffee can be installed using `pip`.

@@ -4,7 +4,7 @@
 
 **Prerequisites**
 * Python 3.11 – 3.13
-* [ffmpeg](https://www.ffmpeg.org/download.html) (must be in system PATH)
+* [ffmpeg](https://www.ffmpeg.org/download.html) (Must be in system PATH. Hard burn-in (`--embed=hard`) needs a build with libass; macOS users installing from Homebrew need to use `brew install ffmpeg-full`)
 
 **Install via pip**
 ```console
