@@ -1,9 +1,10 @@
 name: Set up ffmpeg
 description: >-
-  Installs ffmpeg with backoff retries. Linux uses apt; macOS downloads a
-  static build from evermeet.cx (same source as FedericoCarboni/setup-ffmpeg,
-  includes libass); Windows uses Chocolatey. Avoids johnvansickle.com, which
-  rate-limits GitHub IPs on Linux and caused frequent CI flakes.
+  Installs ffmpeg with backoff retries: apt on Linux, ffmpeg-full via Homebrew
+  on macOS (the default ffmpeg formula dropped libass in 2026, breaking the
+  subtitles filter), and Chocolatey on Windows. Avoids third-party actions that
+  download from johnvansickle.com, which rate-limits GitHub IPs and caused frequent
+  failures.
 
 runs:
   using: composite
@@ -25,10 +26,8 @@ runs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        FFMPEG_URL="https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip"
-        FFPROBE_URL="https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip"
         for attempt in 1 2 3; do
-          if brew install ffmpeg fontconfig; then
+          if brew install ffmpeg-full; then
             break
           fi
           echo "ffmpeg install attempt ${attempt} failed; retrying in $((attempt * 15))s" >&2
