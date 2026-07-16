@@ -9,31 +9,31 @@ readme = "README.md"
 requires-python = ">=3.11, <3.14"
 dependencies = [
     "faster-whisper>=1.0.3",
-    "torch>=2.12.1",
+    "torch>=2.13.0",
     "accelerate>=1.14.0",
-    "cyclopts>=4.20.0",
+    "cyclopts>=4.21.0",
     "rich>=15.0.0",
     "pydantic>=2.13.4",
     "av>=18.0.0",
-    "google-genai>=2.10.0",
-    "openai>=2.44.0",
-    "anthropic>=0.115.1",
+    "google-genai>=2.12.0",
+    "openai>=2.45.0",
+    "anthropic>=0.116.0",
 ]
 
 [dependency-groups]
 dev = [
-    "coverage>=7.14.3",
+    "coverage>=7.15.2",
     "pytest>=9.1.1",
     "pytest-cov>=6.2.1",
     "pytest-mock>=3.14.1",
-    "ruff>=0.15.20",
+    "ruff>=0.15.21",
     "behave>=1.2.6",
     "pre-commit>=4.6.0",
-    "nox>=2026.4.10",
-    "ty>=0.0.56",
+    "nox>=2026.7.11",
+    "ty>=0.0.60",
 ]
 docs = [
-    "cyclopts[mkdocs]>=4.20.0",
+    "cyclopts[mkdocs]>=4.21.0",
     "mkdocs-material>=9.7.6",
 ]
 
