@@ -77,7 +77,6 @@ lint.select = [
     "UP",   # pyupgrade
 ]
 
-
 lint.ignore = [
     "PLR0913", # Too many arguments in function definition
 ]
