@@ -162,9 +162,15 @@ def convert_to_timestamp(seconds: float | int, subtitle_format: str) -> str:
     return timestamp
 
 
-def extract_subtitle_track(video_path: Path | str, track_index: int = 0) -> Path:
-    """Extracts a subtitle track from a video file to a temporary SRT file."""
-    output_path = Path(video_path).parent / f".koffee_extracted_{track_index}.srt"
+def extract_subtitle_track(
+    video_path: Path | str,
+    track_index: int = 0,
+    output_dir: Path | None = None,
+) -> Path:
+    """Extracts a subtitle track into the caller-owned directory."""
+    destination = output_dir if output_dir is not None else Path(video_path).parent
+    destination.mkdir(parents=True, exist_ok=True)
+    output_path = destination / f"embedded_subtitle_{track_index}.srt"
 
     try:
         subprocess.run(

@@ -5,7 +5,12 @@ import shutil
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
+
+from anthropic import APIError as AnthropicAPIError
+from google.genai.errors import APIError as GeminiAPIError
+from openai import OpenAIError
 
 from koffee.asr import transcribe
 from koffee.embed import embed_subtitles
@@ -15,6 +20,7 @@ from koffee.exceptions import (
     MissingApiKeyError,
     MissingDependencyError,
     TranslationError,
+    TranslationIntegrityError,
     UnsupportedFileError,
 )
 from koffee.schemas.config import KoffeeConfig
@@ -42,7 +48,7 @@ def run(
     on_translate_progress: Callable[[float], None] | None = None,
     **kwargs: Any,
 ) -> Path | str:
-    """Processes a video or audio file for translation and subtitle generation."""
+    """Processes one media or subtitle file into translated output."""
     log.info("Translating file...")
 
     if config is None:
@@ -53,10 +59,19 @@ def run(
     _check_preconditions(input_path, config)
 
     if Path(input_path).suffix.lower() in SUBTITLE_EXTENSIONS:
-        return _translate_subtitle_file(input_path, config, on_translate_progress)
+        subtitle_path = _translate_subtitle_file(
+            input_path,
+            config,
+            on_translate_progress,
+        )
+        return _route_output(input_path, subtitle_path, config)
 
     if config.use_embedded_subtitles:
-        return _translate_embedded_subtitles(input_path, config, on_translate_progress)
+        return _translate_embedded_subtitles(
+            input_path,
+            config,
+            on_translate_progress,
+        )
 
     task = "translate" if config.provider == "whisper" else "transcribe"
     transcript = transcribe(
@@ -68,14 +83,12 @@ def run(
         on_progress=on_asr_progress,
         vad_filter=config.vad_filter,
     )
-
-    try:
-        subtitle_path = _translate(transcript, config, on_translate_progress)
-    except Exception as exc:
-        raise TranslationError(str(exc), transcript["segments"]) from exc
-    output_path = _route_output(input_path, subtitle_path, config)
-
-    return output_path
+    subtitle_path = _translate_with_failure_context(
+        transcript,
+        config,
+        on_translate_progress,
+    )
+    return _route_output(input_path, subtitle_path, config)
 
 
 def _route_output(
@@ -197,8 +210,9 @@ def _translate(
     transcript: Transcript,
     config: KoffeeConfig,
     on_progress: Callable[[float], None] | None,
+    output_dir: Path | None = None,
 ) -> Path:
-    """Translates transcript segments and writes the subtitle file."""
+    """Translates segments and writes an intermediate subtitle."""
     if config.provider == "whisper":
         segments = transcript["segments"]
     else:
@@ -215,8 +229,7 @@ def _translate(
             sleep_requests=config.sleep_requests,
         )
 
-    subtitle_path = generate_subtitles(config.subtitle_format, segments)
-    return subtitle_path
+    return generate_subtitles(config.subtitle_format, segments, output_dir)
 
 
 def _translate_embedded_subtitles(
@@ -224,48 +237,63 @@ def _translate_embedded_subtitles(
     config: KoffeeConfig,
     on_progress: Callable[[float], None] | None,
 ) -> Path:
-    """Extracts embedded subtitles from a video and translates them."""
+    """Extracts, translates, and routes one embedded subtitle track."""
     log.info("Extracting embedded subtitles from video.")
 
-    extracted_path = extract_subtitle_track(input_path, config.subtitle_track_index)
-    try:
-        result = _translate_subtitle_file(extracted_path, config, on_progress)
-    finally:
-        extracted_path.unlink(missing_ok=True)
-
-    return result
+    with TemporaryDirectory(prefix="koffee-") as temporary_directory:
+        working_directory = Path(temporary_directory)
+        extracted_path = extract_subtitle_track(
+            input_path,
+            config.subtitle_track_index,
+            output_dir=working_directory,
+        )
+        subtitle_path = _translate_subtitle_file(
+            extracted_path,
+            config,
+            on_progress,
+            output_dir=working_directory,
+        )
+        return _route_output(input_path, subtitle_path, config)
 
 
 def _translate_subtitle_file(
     file_path: Path | str,
     config: KoffeeConfig,
     on_progress: Callable[[float], None] | None,
+    output_dir: Path | None = None,
 ) -> Path:
     """Translates an existing subtitle file without ASR."""
     log.info("Detected subtitle file input, skipping transcription.")
 
-    segments = parse_subtitle_file(file_path)
-    translated_segments = translate(
-        {"segments": segments, "language": config.source_language},
-        config.target_language,
-        config.api_key,
+    transcript: Transcript = {
+        "segments": parse_subtitle_file(file_path),
+        "language": config.source_language,
+    }
+    return _translate_with_failure_context(
+        transcript,
+        config,
         on_progress,
-        llm_model=config.llm_model,
-        prompt=config.prompt,
-        provider=config.provider,
-        sleep_requests=config.sleep_requests,
-    )
-    translated_path = generate_subtitles(config.subtitle_format, translated_segments)
-    output_subtitle_path = _write_output(
-        translated_path,
-        file_path,
-        config.subtitle_format,
-        config.output_dir,
-        config.output_name,
-        config.overwrite,
+        output_dir=output_dir,
     )
 
-    return output_subtitle_path
+
+def _translate_with_failure_context(
+    transcript: Transcript,
+    config: KoffeeConfig,
+    on_progress: Callable[[float], None] | None,
+    output_dir: Path | None = None,
+) -> Path:
+    """Wraps recognized translation failures with source segments."""
+    provider_errors = (
+        AnthropicAPIError,
+        GeminiAPIError,
+        OpenAIError,
+        TranslationIntegrityError,
+    )
+    try:
+        return _translate(transcript, config, on_progress, output_dir)
+    except provider_errors as exc:
+        raise TranslationError(str(exc), transcript["segments"]) from exc
 
 
 def _check_preconditions(input_path: Path | str, config: KoffeeConfig) -> None:
@@ -329,9 +357,7 @@ def _check_preconditions(input_path: Path | str, config: KoffeeConfig) -> None:
         raise MissingApiKeyError(error_message)
 
     # Output Path Must Not Already Exist (or Overwrite Must Be Set)
-    has_embed = (
-        is_video and not config.use_embedded_subtitles and config.embed != "none"
-    )
+    has_embed = is_video and config.embed != "none"
     base_path = _get_output_path(
         input_path, config.output_dir, config.output_name, date_suffix=has_embed
     )

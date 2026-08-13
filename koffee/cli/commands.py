@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Annotated
 
 from cyclopts import Parameter, validators
+from pydantic import BaseModel, ConfigDict
 from rich.console import Console
 from rich.progress import Progress
 from rich.prompt import Confirm
@@ -28,6 +29,15 @@ from koffee.schemas.config import (
     load_config_file,
 )
 from koffee.subtitle import generate_subtitles, get_subtitle_tracks, parse_subtitle_file
+
+
+class _BatchItem(BaseModel):
+    """Binds one input path to its independently resolved configuration."""
+
+    model_config = ConfigDict(frozen=True)
+
+    input_path: Path
+    config: KoffeeConfig
 
 
 @app.default()
@@ -158,21 +168,27 @@ def cli(
     config = KoffeeConfig(**resolved_config)
 
     resolved_paths = _resolve_paths(file_path)
-
-    for video_path in resolved_paths:
-        config = _handle_embedded_subtitles(video_path, config)
+    batch_items = [
+        _BatchItem(
+            input_path=input_path,
+            config=_handle_embedded_subtitles(input_path, config),
+        )
+        for input_path in resolved_paths
+    ]
 
     if config.dry_run:
-        _print_dry_run(resolved_paths, config)
+        _print_dry_run(batch_items)
         return
 
-    _run_batch(resolved_paths, config)
+    _run_batch(batch_items)
 
 
-def _print_dry_run(resolved_paths: list[Path], config: KoffeeConfig) -> None:
-    """Prints a preview of what would be done without running anything."""
+def _print_dry_run(batch_items: list[_BatchItem]) -> None:
+    """Prints the independently resolved operation for each input."""
     log.info("[dry-run] Would process the following files:")
-    for path in resolved_paths:
+    for item in batch_items:
+        path = item.input_path
+        config = item.config
         suffix = path.suffix.lower()
         if suffix in SUBTITLE_EXTENSIONS:
             mode = "subtitle translation (skip ASR)"
@@ -180,12 +196,9 @@ def _print_dry_run(resolved_paths: list[Path], config: KoffeeConfig) -> None:
             mode = "embedded subtitle extraction + translation"
         else:
             mode = f"ASR ({config.whisper_model}) + translation ({config.provider})"
+        if config.embed != "none":
+            mode = f"{mode} + subtitles embedded into video ({config.embed})"
         log.info(f"  {path.name} -> {mode}")
-
-    log.info(f"[dry-run] Target language: {config.target_language}")
-    log.info(f"[dry-run] Output format: {config.subtitle_format}")
-    if config.embed != "none":
-        log.info(f"[dry-run] Subtitles will be embedded into video ({config.embed})")
 
 
 def _resolve_paths(file_path: tuple) -> list[Path]:
@@ -213,19 +226,27 @@ def _resolve_paths(file_path: tuple) -> list[Path]:
     return resolved_paths
 
 
-def _run_batch(resolved_paths: list[Path], config: KoffeeConfig) -> None:
-    """Processes each resolved path, handling failures without aborting the batch."""
-    total = len(resolved_paths)
+def _run_batch(batch_items: list[_BatchItem]) -> None:
+    """Processes independently configured inputs without aborting."""
+    total = len(batch_items)
     failed = []
     with _create_progress_bar() as progress:
-        for i, video_path in enumerate(resolved_paths, 1):
+        for position, item in enumerate(batch_items, start=1):
+            input_path = item.input_path
+            config = item.config
             if total > 1:
-                log.info(f"[{i}/{total}] Processing {video_path.name}")
+                log.info(f"[{position}/{total}] Processing {input_path.name}")
             try:
-                _translate_with_progress(video_path, config, progress)
+                _translate_with_progress(input_path, config, progress)
             except TranslationError as exc:
-                if not _handle_translation_failure(exc, video_path, config, progress):
-                    failed.append(video_path)
+                handled = _handle_translation_failure(
+                    exc,
+                    input_path,
+                    config,
+                    progress,
+                )
+                if not handled:
+                    failed.append(input_path)
             except (
                 FileExistsError,
                 FileNotFoundError,
@@ -233,15 +254,14 @@ def _run_batch(resolved_paths: list[Path], config: KoffeeConfig) -> None:
                 subprocess.CalledProcessError,
                 subprocess.TimeoutExpired,
             ) as exc:
-                log.error(f"Failed to process {video_path.name}: {exc}")
-                failed.append(video_path)
+                log.error(f"Failed to process {input_path.name}: {exc}")
+                failed.append(input_path)
 
     if total > 1:
         succeeded = total - len(failed)
         log.info(f"Batch complete: {succeeded}/{total} succeeded.")
-        if failed:
-            for path in failed:
-                log.info(f"  failed: {path.name}")
+        for path in failed:
+            log.info(f"  failed: {path.name}")
 
 
 def _handle_translation_failure(

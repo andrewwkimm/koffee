@@ -780,3 +780,29 @@ def test_languages_command_shows_names(capsys: pytest.CaptureFixture[str]) -> No
     assert "ko (Korean)" in captured.out
     assert "en (English)" in captured.out
     assert "ja (Japanese)" in captured.out
+
+
+def test_batch_keeps_per_file_embedded_configuration(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Tests that embedded-track choices remain isolated by input."""
+    first = tmp_path / "first.mkv"
+    second = tmp_path / "second.mkv"
+    first.touch()
+    second.touch()
+    embedded_config = KoffeeConfig(
+        use_embedded_subtitles=True,
+        subtitle_track_index=2,
+    )
+    asr_config = KoffeeConfig()
+    mocker.patch(
+        "koffee.cli.commands._handle_embedded_subtitles",
+        side_effect=[embedded_config, asr_config],
+    )
+    mock_run = mocker.patch("koffee.cli.commands.run")
+
+    cli(first, second)
+
+    configs = [call.kwargs["config"] for call in mock_run.call_args_list]
+    assert configs == [embedded_config, asr_config]

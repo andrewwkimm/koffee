@@ -57,20 +57,31 @@ def test_get_subtitle_tracks_missing_ffprobe(mocker: MockerFixture) -> None:
         get_subtitle_tracks("video.mkv")
 
 
-def test_extract_subtitle_track(mocker: MockerFixture, tmp_path: Path) -> None:
-    """Tests that a subtitle track is extracted to an SRT file."""
+def test_extract_subtitle_track(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Tests extraction into the caller-owned output directory."""
     video = tmp_path / "video.mkv"
     video.touch()
-    expected_output = tmp_path / ".koffee_extracted_0.srt"
-
-    mocker.patch(
+    output_dir = tmp_path / "temporary"
+    expected_output = output_dir / "embedded_subtitle_0.srt"
+    mock_run = mocker.patch(
         "koffee.subtitle.subprocess.run",
-        return_value=subprocess.CompletedProcess(args=[], returncode=0),
+        return_value=subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+        ),
     )
 
-    result = extract_subtitle_track(video)
+    result = extract_subtitle_track(
+        video,
+        output_dir=output_dir,
+    )
 
     assert result == expected_output
+    assert output_dir.is_dir()
+    assert str(expected_output) in mock_run.call_args.args[0]
 
 
 def test_extract_subtitle_track_failure(mocker: MockerFixture, tmp_path: Path) -> None:

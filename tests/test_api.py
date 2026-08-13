@@ -15,6 +15,7 @@ from koffee.api import (
     _get_output_path,
     _route_output,
     _translate,
+    _translate_embedded_subtitles,
     _write_embedded_video,
     _write_output,
     run,
@@ -24,6 +25,8 @@ from koffee.exceptions import (
     InvalidVideoFileError,
     MissingApiKeyError,
     MissingDependencyError,
+    TranslationError,
+    TranslationIntegrityError,
     UnsupportedFileError,
 )
 from koffee.schemas.config import KoffeeConfig
@@ -417,3 +420,98 @@ def test_write_output_audio_input_uses_audio_stem(tmp_path: Path) -> None:
     assert result == tmp_path / "track.srt"
     assert result.exists()
     assert not subtitle.exists()
+
+
+def test_embedded_translation_routes_from_original_video(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Tests routing and cleanup for embedded subtitle translation."""
+    video = tmp_path / "movie.mkv"
+    extracted = tmp_path / "embedded.srt"
+    generated = tmp_path / "translated.srt"
+    output = tmp_path / "movie.srt"
+    config = KoffeeConfig(
+        use_embedded_subtitles=True,
+        overwrite=True,
+    )
+    mock_extract = mocker.patch.object(
+        api_module,
+        "extract_subtitle_track",
+        return_value=extracted,
+    )
+    mock_translate = mocker.patch.object(
+        api_module,
+        "_translate_subtitle_file",
+        return_value=generated,
+    )
+    mock_route = mocker.patch.object(
+        api_module,
+        "_route_output",
+        return_value=output,
+    )
+
+    result = _translate_embedded_subtitles(video, config, None)
+
+    assert result == output
+    working_directory = mock_extract.call_args.kwargs["output_dir"]
+    assert mock_extract.call_args.args == (video, 0)
+    assert mock_translate.call_args.kwargs["output_dir"] == working_directory
+    mock_route.assert_called_once_with(video, generated, config)
+    assert not working_directory.exists()
+
+
+def test_run_wraps_translation_integrity_failure(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Tests that integrity failures retain segments for recovery."""
+    video = tmp_path / "movie.mp4"
+    video.touch()
+    transcript: Transcript = {
+        "segments": [{"start": 0.0, "end": 1.0, "text": "source"}],
+        "language": "ja",
+    }
+    mocker.patch.object(api_module, "_check_preconditions")
+    mocker.patch.object(
+        api_module,
+        "transcribe",
+        return_value=transcript,
+    )
+    mocker.patch.object(
+        api_module,
+        "_translate",
+        side_effect=TranslationIntegrityError("invalid response"),
+    )
+
+    with pytest.raises(TranslationError) as error:
+        run(video, config=KoffeeConfig())
+
+    assert error.value.segments == transcript["segments"]
+
+
+def test_run_does_not_wrap_programming_errors(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Tests that unexpected defects bypass translation recovery."""
+    video = tmp_path / "movie.mp4"
+    video.touch()
+    transcript: Transcript = {
+        "segments": [{"start": 0.0, "end": 1.0, "text": "source"}],
+        "language": "ja",
+    }
+    mocker.patch.object(api_module, "_check_preconditions")
+    mocker.patch.object(
+        api_module,
+        "transcribe",
+        return_value=transcript,
+    )
+    mocker.patch.object(
+        api_module,
+        "_translate",
+        side_effect=TypeError("defect"),
+    )
+
+    with pytest.raises(TypeError, match="defect"):
+        run(video, config=KoffeeConfig())
