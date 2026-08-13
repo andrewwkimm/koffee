@@ -21,8 +21,9 @@ def transcribe(
     task: str,
     on_progress: Callable[[float], None] | None = None,
     vad_filter: bool = True,
+    language: str | None = None,
 ) -> Transcript:
-    """Transcribes a video or audio file."""
+    """Transcribes audio with source-language guidance."""
     log.info("Transcribing file.")
 
     loaded_model = WhisperModel(
@@ -33,15 +34,25 @@ def transcribe(
     )
 
     segments, info = loaded_model.transcribe(
-        video_file, task=task, word_timestamps=True, vad_filter=vad_filter
+        video_file,
+        task=task,
+        word_timestamps=True,
+        vad_filter=vad_filter,
+        language=language,
     )
 
-    duration = _get_video_duration(video_file) if on_progress else None
+    duration = (
+        _get_video_duration(video_file)
+        if on_progress
+        else None
+    )
     result = []
     for segment in segments:
         result.append(asdict(segment))
         if on_progress and duration:
-            on_progress(min(segment.end / duration, 1.0))
+            on_progress(
+                min(segment.end / duration, 1.0)
+            )
     if on_progress:
         on_progress(1.0)
 
@@ -50,6 +61,7 @@ def transcribe(
         "language": info.language,
     }
     return transcript
+
 
 
 def _get_video_duration(video_path: Path | str) -> float:

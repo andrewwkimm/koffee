@@ -515,3 +515,70 @@ def test_run_does_not_wrap_programming_errors(
 
     with pytest.raises(TypeError, match="defect"):
         run(video, config=KoffeeConfig())
+
+
+def test_check_preconditions_rejects_whisper_for_subtitle_file(
+    tmp_path: Path,
+) -> None:
+    """Tests Whisper rejecting subtitle translation."""
+    subtitle = tmp_path / "input.srt"
+    subtitle.touch()
+
+    with pytest.raises(
+        IncompatibleOptionsError,
+        match="cannot translate",
+    ):
+        _check_preconditions(
+            subtitle,
+            KoffeeConfig(provider="whisper"),
+        )
+
+
+@pytest.mark.parametrize(
+    ("source_language", "expected_language"),
+    [("auto", None), ("ko", "ko")],
+)
+def test_run_forwards_source_language_to_asr(
+    mocker: MockerFixture,
+    tmp_path: Path,
+    source_language: str,
+    expected_language: str | None,
+) -> None:
+    """Tests API language configuration reaching ASR."""
+    video = tmp_path / "input.mp4"
+    video.touch()
+    transcript: Transcript = {
+        "segments": [],
+        "language": "ko",
+    }
+    mocker.patch.object(
+        api_module,
+        "_check_preconditions",
+    )
+    mock_transcribe = mocker.patch.object(
+        api_module,
+        "transcribe",
+        return_value=transcript,
+    )
+    mocker.patch.object(
+        api_module,
+        "_translate_with_failure_context",
+        return_value=tmp_path / "temporary.vtt",
+    )
+    mocker.patch.object(
+        api_module,
+        "_route_output",
+        return_value=tmp_path / "output.vtt",
+    )
+
+    run(
+        video,
+        config=KoffeeConfig(
+            source_language=source_language
+        ),
+    )
+
+    assert (
+        mock_transcribe.call_args.kwargs["language"]
+        == expected_language
+    )

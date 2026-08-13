@@ -20,7 +20,7 @@ from koffee.cli import (
     tracks,
     transcribe,
 )
-from koffee.exceptions import KoffeeError, TranslationError
+from koffee.exceptions import IncompatibleOptionsError, KoffeeError, TranslationError
 from koffee.schemas.config import LANGUAGE_CODES, KoffeeConfig
 
 korean_video_path = Path("examples/videos/sample_korean_video.mp4")
@@ -104,13 +104,14 @@ def test_resolve_paths_expands_directory(tmp_path: Path) -> None:
     """Tests that a directory input resolves to supported files within it."""
     (tmp_path / "video.mp4").touch()
     (tmp_path / "audio.wav").touch()
+    (tmp_path / "subtitles.srt").touch()
     (tmp_path / "readme.txt").touch()
 
     result = _resolve_paths((tmp_path,))
 
     suffixes = {p.suffix for p in result}
-    assert suffixes == {".mp4", ".wav"}
-    expected_file_count = 2
+    assert suffixes == {".mp4", ".wav", ".srt"}
+    expected_file_count = 3
     assert len(result) == expected_file_count
 
 
@@ -806,3 +807,98 @@ def test_batch_keeps_per_file_embedded_configuration(
 
     configs = [call.kwargs["config"] for call in mock_run.call_args_list]
     assert configs == [embedded_config, asr_config]
+
+
+def test_cli_explicit_default_overrides_config_file(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Tests explicit defaults overriding TOML values."""
+    config_file = tmp_path / "custom.toml"
+    config_file.write_text(
+        'target_language = "fr"\n'
+    )
+    mock_run = mocker.patch(
+        "koffee.cli.commands.run"
+    )
+    mocker.patch(
+        "koffee.cli.embedded.get_subtitle_tracks",
+        return_value=[],
+    )
+
+    cli(
+        korean_video_path,
+        config=config_file,
+        target_language="en",
+    )
+
+    used_config = mock_run.call_args.kwargs["config"]
+    assert used_config.target_language == "en"
+
+
+def test_cli_explicit_true_overrides_false_config_value(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Tests explicit true overriding false TOML."""
+    config_file = tmp_path / "custom.toml"
+    config_file.write_text("vad_filter = false\n")
+    mock_run = mocker.patch(
+        "koffee.cli.commands.run"
+    )
+    mocker.patch(
+        "koffee.cli.embedded.get_subtitle_tracks",
+        return_value=[],
+    )
+
+    cli(
+        korean_video_path,
+        config=config_file,
+        vad_filter=True,
+    )
+
+    used_config = mock_run.call_args.kwargs["config"]
+    assert used_config.vad_filter is True
+
+
+def test_resolve_paths_glob_includes_subtitles(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tests subtitle files as glob inputs."""
+    monkeypatch.chdir(tmp_path)
+    first = tmp_path / "first.srt"
+    second = tmp_path / "second.srt"
+    first.touch()
+    second.touch()
+
+    assert _resolve_paths((Path("*.srt"),)) == [
+        first,
+        second,
+    ]
+
+
+def test_cli_rejects_output_name_for_multiple_inputs(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Tests batch inputs rejecting one output name."""
+    first = tmp_path / "first.mp4"
+    second = tmp_path / "second.mp4"
+    first.touch()
+    second.touch()
+    mock_run = mocker.patch(
+        "koffee.cli.commands.run"
+    )
+
+    with pytest.raises(
+        IncompatibleOptionsError,
+        match="output-name",
+    ):
+        cli(
+            first,
+            second,
+            output_name="shared",
+        )
+
+    mock_run.assert_not_called()

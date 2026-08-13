@@ -4,6 +4,7 @@ import logging
 import shutil
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Annotated
 
@@ -20,7 +21,7 @@ from koffee.cli.app import app, defaults, log, options_group
 from koffee.cli.embedded import _handle_embedded_subtitles
 from koffee.cli.progress import _create_progress_bar, _make_progress_callback
 from koffee.embed import embed_subtitles
-from koffee.exceptions import KoffeeError, TranslationError
+from koffee.exceptions import IncompatibleOptionsError, KoffeeError, TranslationError
 from koffee.schemas.config import (
     CONFIG_SEARCH_PATHS,
     LANGUAGE_CODES,
@@ -44,25 +45,25 @@ class _BatchItem(BaseModel):
 def cli(
     *file_path: Annotated[Path, Parameter()],
     compute_type: Annotated[
-        str, Parameter(name=("--compute-type", "-c"))
-    ] = defaults.compute_type,
-    device: Annotated[str, Parameter(name=("--device", "-d"))] = defaults.device,
+        str | None, Parameter(name=("--compute-type", "-c"))
+    ] = None,
+    device: Annotated[str | None, Parameter(name=("--device", "-d"))] = None,
     whisper_model: Annotated[
-        str, Parameter(name=("--whisper-model", "-m"))
-    ] = defaults.whisper_model,
+        str | None, Parameter(name=("--whisper-model", "-m"))
+    ] = None,
     output_dir: Annotated[Path, Parameter(name=("--output-dir", "-o"))] | None = None,
     output_name: Annotated[str, Parameter(name=("--output-name", "-n"))] | None = None,
     source_language: Annotated[
-        str, Parameter(name=("--source-language", "-s"))
-    ] = defaults.source_language,
+        str | None, Parameter(name=("--source-language", "-s"))
+    ] = None,
     target_language: Annotated[
-        str, Parameter(name=("--target-language", "-t"))
-    ] = defaults.target_language,
+        str | None, Parameter(name=("--target-language", "-t"))
+    ] = None,
     subtitle_format: Annotated[
-        str, Parameter(name=("--subtitle-format", "-f"))
-    ] = defaults.subtitle_format,
-    embed: Annotated[str, Parameter(name=("--embed",))] = defaults.embed,
-    provider: Annotated[str, Parameter(name=("--provider",))] = defaults.provider,
+        str | None, Parameter(name=("--subtitle-format", "-f"))
+    ] = None,
+    embed: Annotated[str | None, Parameter(name=("--embed",))] = None,
+    provider: Annotated[str | None, Parameter(name=("--provider",))] = None,
     llm_model: Annotated[str, Parameter(name=("--llm-model",))] | None = None,
     chunk_size: Annotated[int, Parameter(name=("--chunk-size",))] | None = None,
     context_size: Annotated[int, Parameter(name=("--context-size",))] | None = None,
@@ -70,19 +71,19 @@ def cli(
     prompt: Annotated[str, Parameter(name=("--prompt",))] | None = None,
     api_key: Annotated[str, Parameter(name=("--api-key",))] | None = None,
     on_translation_failure: Annotated[
-        str, Parameter(name=("--on-translation-failure",))
-    ] = defaults.on_translation_failure,
+        str | None, Parameter(name=("--on-translation-failure",))
+    ] = None,
     config: Annotated[Path, Parameter(name=("--config",), group=options_group)]
     | None = None,
     vad_filter: Annotated[
-        bool, Parameter(negative="--no-vad-filter", group=options_group)
-    ] = True,
+        bool | None, Parameter(negative="--no-vad-filter", group=options_group)
+    ] = None,
     dry_run: Annotated[
-        bool, Parameter(name=("--dry-run",), group=options_group)
-    ] = False,
+        bool | None, Parameter(name=("--dry-run",), group=options_group)
+    ] = None,
     overwrite: Annotated[
-        bool, Parameter(name=("--overwrite",), group=options_group)
-    ] = False,
+        bool | None, Parameter(name=("--overwrite",), group=options_group)
+    ] = None,
     verbose: Annotated[
         bool, Parameter(name=("--verbose", "-v"), group=options_group)
     ] = False,
@@ -161,13 +162,10 @@ def cli(
         "on_translation_failure": on_translation_failure,
         "vad_filter": vad_filter,
     }
-    default_config = KoffeeConfig().model_dump()
-    cli_overrides = {k: v for k, v in cli_args.items() if v != default_config.get(k)}
-    file_config = load_config_file(config)
-    resolved_config = {**default_config, **file_config, **cli_overrides}
-    config = KoffeeConfig(**resolved_config)
+    config = _resolve_config(config, cli_args)
 
     resolved_paths = _resolve_paths(file_path)
+    _validate_batch_options(resolved_paths, config)
     batch_items = [
         _BatchItem(
             input_path=input_path,
@@ -181,6 +179,38 @@ def cli(
         return
 
     _run_batch(batch_items)
+
+
+def _resolve_config(
+    config_path: Path | None,
+    cli_values: Mapping[str, object | None],
+) -> KoffeeConfig:
+    """Resolves defaults, TOML, and explicit CLI values."""
+    default_values = KoffeeConfig().model_dump()
+    file_values = load_config_file(config_path)
+    overrides = {
+        name: value
+        for name, value in cli_values.items()
+        if value is not None
+    }
+    return KoffeeConfig(
+        **(default_values | file_values | overrides)
+    )
+
+def _validate_batch_options(
+    input_paths: list[Path],
+    config: KoffeeConfig,
+) -> None:
+    """Rejects options that collide across inputs."""
+    if (
+        len(input_paths) > 1
+        and config.output_name is not None
+    ):
+        error_message = (
+            "--output-name cannot be used with "
+            "multiple input files."
+        )
+        raise IncompatibleOptionsError(error_message)
 
 
 def _print_dry_run(batch_items: list[_BatchItem]) -> None:
@@ -201,29 +231,47 @@ def _print_dry_run(batch_items: list[_BatchItem]) -> None:
         log.info(f"  {path.name} -> {mode}")
 
 
-def _resolve_paths(file_path: tuple) -> list[Path]:
-    """Resolves glob patterns, directories, and files into a flat list of paths."""
+def _resolve_paths(
+    file_path: tuple[Path, ...],
+) -> list[Path]:
+    """Resolves supported files, directories, and globs."""
+    input_extensions = (
+        SUPPORTED_EXTENSIONS | SUBTITLE_EXTENSIONS
+    )
     resolved_paths = []
+
     for pattern in file_path:
         path = Path(pattern)
         if path.is_dir():
             resolved_paths.extend(
                 sorted(
-                    p
-                    for p in path.iterdir()
-                    if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS
+                    candidate
+                    for candidate in path.iterdir()
+                    if candidate.is_file()
+                    and candidate.suffix.lower()
+                    in input_extensions
                 )
             )
         elif path.exists():
             resolved_paths.append(path)
         else:
-            matches = sorted(Path.cwd().glob(str(pattern)))
-            if matches:
-                resolved_paths.extend(matches)
-            else:
-                raise FileNotFoundError(f"No such file or pattern: {pattern}")
+            matches = sorted(
+                candidate
+                for candidate in Path.cwd().glob(
+                    str(pattern)
+                )
+                if candidate.is_file()
+                and candidate.suffix.lower()
+                in input_extensions
+            )
+            if not matches:
+                raise FileNotFoundError(
+                    f"No such file or pattern: {pattern}"
+                )
+            resolved_paths.extend(matches)
 
     return resolved_paths
+
 
 
 def _run_batch(batch_items: list[_BatchItem]) -> None:

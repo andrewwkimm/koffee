@@ -35,6 +35,7 @@ def test_transcribe(mocker: MockerFixture) -> None:
         task="transcribe",
         word_timestamps=True,
         vad_filter=True,
+        language=None,
     )
 
     assert result["language"] == "ko"
@@ -65,3 +66,34 @@ def test_transcribe_reports_progress(mocker: MockerFixture) -> None:
     )
 
     assert progress_calls == [0.5, 1.0]
+
+
+def test_transcribe_forwards_source_language(
+    mocker: MockerFixture,
+) -> None:
+    """Tests configured language reaching Whisper."""
+    mock_model = mocker.MagicMock()
+    mock_model.transcribe.return_value = (
+        [],
+        mocker.MagicMock(language="ko"),
+    )
+    mocker.patch(
+        "koffee.asr.WhisperModel",
+        return_value=mock_model,
+    )
+
+    transcribe(
+        "mock_video_file.mp4",
+        "int8",
+        "auto",
+        "large-v3",
+        "transcribe",
+        language="ko",
+    )
+
+    assert (
+        mock_model.transcribe.call_args.kwargs[
+            "language"
+        ]
+        == "ko"
+    )

@@ -7,10 +7,15 @@ import pytest
 from koffee.schemas.config import KoffeeConfig, load_config_file
 
 
-def test_load_config_file_returns_empty_when_not_found(tmp_path: Path) -> None:
-    """Tests that an empty dict is returned when no config file exists."""
-    result = load_config_file(tmp_path / "nonexistent.toml")
-    assert result == {}
+def test_load_config_file_explicit_missing_path_raises(
+    tmp_path: Path,
+) -> None:
+    """Tests that an explicitly missing config raises."""
+    config_path = tmp_path / "nonexistent.toml"
+
+    with pytest.raises(FileNotFoundError):
+        load_config_file(config_path)
+
 
 
 def test_load_config_file_reads_toml(tmp_path: Path) -> None:
@@ -178,3 +183,47 @@ def test_prompt_from_config_file(tmp_path: Path) -> None:
     config = KoffeeConfig(**file_config)
 
     assert config.prompt == "Translate formally."
+
+
+def test_load_config_file_default_search_returns_empty(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tests that default config files remain optional."""
+    search_paths = [
+        tmp_path / "first.toml",
+        tmp_path / "second.toml",
+    ]
+    monkeypatch.setattr(
+        "koffee.schemas.config.CONFIG_SEARCH_PATHS",
+        search_paths,
+    )
+
+    assert load_config_file() == {}
+
+
+def test_unknown_config_field_raises() -> None:
+    """Tests that unknown configuration fields fail."""
+    with pytest.raises(
+        ValueError,
+        match="Extra inputs are not permitted",
+    ):
+        KoffeeConfig(unknown_option=True)
+
+
+def test_auto_target_language_raises() -> None:
+    """Tests that targets require a language code."""
+    with pytest.raises(
+        ValueError,
+        match="Unsupported language code",
+    ):
+        KoffeeConfig(target_language="auto")
+
+
+def test_negative_subtitle_track_index_raises() -> None:
+    """Tests that subtitle indexes cannot be negative."""
+    with pytest.raises(
+        ValueError,
+        match="must be non-negative",
+    ):
+        KoffeeConfig(subtitle_track_index=-1)

@@ -127,7 +127,7 @@ CONFIG_SEARCH_PATHS = [
 class KoffeeConfig(BaseModel):
     """Configuration data model for koffee."""
 
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     api_key: str | None = None
     compute_type: str = "default"
@@ -171,17 +171,30 @@ class KoffeeConfig(BaseModel):
 
         return values
 
-    @field_validator("source_language", "target_language")
+    @field_validator("source_language")
     @classmethod
-    def _validate_language(cls, value: str) -> str:
-        """Validates that the language code is supported by Whisper."""
-        if value not in LANGUAGE_CODES:
-            error_message = (
-                f"Unsupported language code: {value!r}. "
-                f"Use one of: {', '.join(sorted(LANGUAGE_CODES - {'auto'}))}"
-            )
-            raise ValueError(error_message)
-        return value
+    def _validate_source_language(
+        cls,
+        value: str,
+    ) -> str:
+        """Validates source language and auto-detection."""
+        return _validate_language_code(
+            value,
+            allow_auto=True,
+        )
+
+    @field_validator("target_language")
+    @classmethod
+    def _validate_target_language(
+        cls,
+        value: str,
+    ) -> str:
+        """Validates an explicit target language."""
+        return _validate_language_code(
+            value,
+            allow_auto=False,
+        )
+
 
     @field_validator("whisper_model")
     @classmethod
@@ -213,18 +226,61 @@ class KoffeeConfig(BaseModel):
             raise ValueError(error_message)
         return value
 
+    @field_validator("subtitle_track_index")
+    @classmethod
+    def _validate_subtitle_track_index(
+        cls,
+        value: int,
+    ) -> int:
+        """Rejects negative subtitle-track indexes."""
+        if value < 0:
+            error_message = (
+                "subtitle_track_index must be non-negative, "
+                f"got {value}."
+            )
+            raise ValueError(error_message)
+        return value
 
-def load_config_file(path: Path | None = None) -> dict:
-    """Loads config from a TOML file, searching default paths if none given.
 
-    Returns an empty dict if no config file is found.
+def load_config_file(
+    path: Path | None = None,
+) -> dict:
+    """Loads an explicit config or searches defaults.
+
+    Raises:
+        FileNotFoundError: An explicit path does not exist.
     """
-    search_paths = [path] if path is not None else CONFIG_SEARCH_PATHS
+    if path is not None:
+        return _read_config_file(path)
 
-    for config_path in search_paths:
+    for config_path in CONFIG_SEARCH_PATHS:
         if config_path.is_file():
-            log.debug(f"Loading config from {config_path}")
-            with config_path.open("rb") as f:
-                return tomllib.load(f)
+            return _read_config_file(config_path)
 
     return {}
+
+def _read_config_file(path: Path) -> dict:
+    """Loads one TOML configuration file."""
+    log.debug(f"Loading config from {path}")
+    with path.open("rb") as config_file:
+        return tomllib.load(config_file)
+
+def _validate_language_code(
+    value: str,
+    allow_auto: bool,
+) -> str:
+    """Validates a language code for its assigned role."""
+    allowed_codes = (
+        LANGUAGE_CODES
+        if allow_auto
+        else LANGUAGE_CODES - {"auto"}
+    )
+    if value not in allowed_codes:
+        error_message = (
+            f"Unsupported language code: {value!r}. "
+            f"Use one of: "
+            f"{', '.join(sorted(allowed_codes))}"
+        )
+        raise ValueError(error_message)
+    return value
+
