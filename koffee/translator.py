@@ -249,6 +249,7 @@ def _translate_chunk(
     """Calls the LLM with a prompt and parses the response."""
     response = with_retries(
         lambda: backend.attempt_generate(client, prompt, llm_model, system_prompt),
+        backend.RETRYABLE_ERRORS,
         backend.is_retryable,
         max_retries=3,
     )

@@ -41,18 +41,12 @@ def transcribe(
         language=language,
     )
 
-    duration = (
-        _get_video_duration(video_file)
-        if on_progress
-        else None
-    )
+    duration = _get_video_duration(video_file) if on_progress else None
     result = []
     for segment in segments:
         result.append(asdict(segment))
         if on_progress and duration:
-            on_progress(
-                min(segment.end / duration, 1.0)
-            )
+            on_progress(min(segment.end / duration, 1.0))
     if on_progress:
         on_progress(1.0)
 
@@ -61,7 +55,6 @@ def transcribe(
         "language": info.language,
     }
     return transcript
-
 
 
 def _get_video_duration(video_path: Path | str) -> float:

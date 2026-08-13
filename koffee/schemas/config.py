@@ -195,7 +195,6 @@ class KoffeeConfig(BaseModel):
             allow_auto=False,
         )
 
-
     @field_validator("whisper_model")
     @classmethod
     def _validate_whisper_model(cls, value: str) -> str:
@@ -234,10 +233,7 @@ class KoffeeConfig(BaseModel):
     ) -> int:
         """Rejects negative subtitle-track indexes."""
         if value < 0:
-            error_message = (
-                "subtitle_track_index must be non-negative, "
-                f"got {value}."
-            )
+            error_message = f"subtitle_track_index must be non-negative, got {value}."
             raise ValueError(error_message)
         return value
 
@@ -259,22 +255,20 @@ def load_config_file(
 
     return {}
 
+
 def _read_config_file(path: Path) -> dict:
     """Loads one TOML configuration file."""
     log.debug(f"Loading config from {path}")
     with path.open("rb") as config_file:
         return tomllib.load(config_file)
 
+
 def _validate_language_code(
     value: str,
     allow_auto: bool,
 ) -> str:
     """Validates a language code for its assigned role."""
-    allowed_codes = (
-        LANGUAGE_CODES
-        if allow_auto
-        else LANGUAGE_CODES - {"auto"}
-    )
+    allowed_codes = LANGUAGE_CODES if allow_auto else LANGUAGE_CODES - {"auto"}
     if value not in allowed_codes:
         error_message = (
             f"Unsupported language code: {value!r}. "
@@ -283,4 +277,3 @@ def _validate_language_code(
         )
         raise ValueError(error_message)
     return value
-

@@ -1,4 +1,4 @@
-"""Retry helper with exponential backoff."""
+"""Retry operations with exponential backoff."""
 
 import logging
 import time
@@ -8,30 +8,44 @@ from typing import TypeVar
 log = logging.getLogger(__name__)
 
 T = TypeVar("T")
+RetryableErrors = type[Exception] | tuple[type[Exception], ...]
 
 
 def with_retries(
-    fn: Callable[[], T],
+    operation: Callable[[], T],
+    retryable_errors: RetryableErrors,
     is_retryable: Callable[[Exception], bool],
     max_retries: int = 3,
 ) -> T:
-    """Calls `fn` with exponential backoff on retryable exceptions.
+    """Runs an operation once plus the configured retry count.
 
-    Non-retryable exceptions propagate immediately. After `max_retries` failed
-    attempts, the last retryable exception is re-raised.
+    Args:
+        operation: Operation to run.
+        retryable_errors: Exception types eligible for retry.
+        is_retryable: Policy for classifying eligible exceptions.
+        max_retries: Additional attempts after the initial call.
+
+    Raises:
+        ValueError: ``max_retries`` is negative.
     """
-    last_error: Exception | None = None
-    for attempt in range(max_retries):
-        try:
-            return fn()
-        except Exception as exc:
-            if not is_retryable(exc):
-                raise
-            last_error = exc
-            if attempt < max_retries - 1:
-                wait = 2 ** (attempt + 1)
-                log.warning(f"Retryable error, retrying in {wait}s: {exc}")
-                time.sleep(wait)
+    if max_retries < 0:
+        error_message = f"max_retries must be non-negative, got {max_retries}."
+        raise ValueError(error_message)
 
-    assert last_error is not None
-    raise last_error
+    retry_number = 0
+    while True:
+        try:
+            return operation()
+        except retryable_errors as error:
+            retries_exhausted = retry_number == max_retries
+            if retries_exhausted or not is_retryable(error):
+                raise
+
+            retry_number += 1
+            wait_seconds = 2**retry_number
+            log.warning(
+                "Retryable error, retrying in %ss: %s",
+                wait_seconds,
+                error,
+            )
+            time.sleep(wait_seconds)

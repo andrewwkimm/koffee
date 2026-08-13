@@ -91,9 +91,4 @@ def test_transcribe_forwards_source_language(
         language="ko",
     )
 
-    assert (
-        mock_model.transcribe.call_args.kwargs[
-            "language"
-        ]
-        == "ko"
-    )
+    assert mock_model.transcribe.call_args.kwargs["language"] == "ko"

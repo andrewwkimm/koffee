@@ -815,12 +815,8 @@ def test_cli_explicit_default_overrides_config_file(
 ) -> None:
     """Tests explicit defaults overriding TOML values."""
     config_file = tmp_path / "custom.toml"
-    config_file.write_text(
-        'target_language = "fr"\n'
-    )
-    mock_run = mocker.patch(
-        "koffee.cli.commands.run"
-    )
+    config_file.write_text('target_language = "fr"\n')
+    mock_run = mocker.patch("koffee.cli.commands.run")
     mocker.patch(
         "koffee.cli.embedded.get_subtitle_tracks",
         return_value=[],
@@ -843,9 +839,7 @@ def test_cli_explicit_true_overrides_false_config_value(
     """Tests explicit true overriding false TOML."""
     config_file = tmp_path / "custom.toml"
     config_file.write_text("vad_filter = false\n")
-    mock_run = mocker.patch(
-        "koffee.cli.commands.run"
-    )
+    mock_run = mocker.patch("koffee.cli.commands.run")
     mocker.patch(
         "koffee.cli.embedded.get_subtitle_tracks",
         return_value=[],
@@ -887,9 +881,7 @@ def test_cli_rejects_output_name_for_multiple_inputs(
     second = tmp_path / "second.mp4"
     first.touch()
     second.touch()
-    mock_run = mocker.patch(
-        "koffee.cli.commands.run"
-    )
+    mock_run = mocker.patch("koffee.cli.commands.run")
 
     with pytest.raises(
         IncompatibleOptionsError,

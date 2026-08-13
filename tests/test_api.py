@@ -573,12 +573,7 @@ def test_run_forwards_source_language_to_asr(
 
     run(
         video,
-        config=KoffeeConfig(
-            source_language=source_language
-        ),
+        config=KoffeeConfig(source_language=source_language),
     )
 
-    assert (
-        mock_transcribe.call_args.kwargs["language"]
-        == expected_language
-    )
+    assert mock_transcribe.call_args.kwargs["language"] == expected_language

@@ -767,12 +767,19 @@ def test_claude_translate(mocker: MockerFixture) -> None:
 # --- Ollama backend tests ---
 
 
-def test_ollama_create_client_uses_local_endpoint(mocker: MockerFixture) -> None:
-    """Tests that the Ollama client is configured with the local endpoint."""
+def test_ollama_create_client_uses_local_endpoint(
+    mocker: MockerFixture,
+) -> None:
+    """Tests the local endpoint, timeout, and disabled SDK retries."""
     mock_openai = mocker.patch("koffee.llm.ollama.OpenAI")
+
     ollama.create_client(api_key=None)
+
     mock_openai.assert_called_once_with(
-        base_url="http://localhost:11434/v1", api_key="ollama"
+        base_url=ollama.OLLAMA_BASE_URL,
+        api_key="ollama",
+        timeout=ollama.REQUEST_TIMEOUT_SECONDS,
+        max_retries=0,
     )
 
 

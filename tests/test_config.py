@@ -17,7 +17,6 @@ def test_load_config_file_explicit_missing_path_raises(
         load_config_file(config_path)
 
 
-
 def test_load_config_file_reads_toml(tmp_path: Path) -> None:
     """Tests that a valid TOML file is parsed correctly."""
     config_path = tmp_path / "koffee.toml"
@@ -208,7 +207,7 @@ def test_unknown_config_field_raises() -> None:
         ValueError,
         match="Extra inputs are not permitted",
     ):
-        KoffeeConfig(unknown_option=True)
+        KoffeeConfig.model_validate({"unknown_option": True})
 
 
 def test_auto_target_language_raises() -> None:

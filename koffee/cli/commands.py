@@ -188,28 +188,17 @@ def _resolve_config(
     """Resolves defaults, TOML, and explicit CLI values."""
     default_values = KoffeeConfig().model_dump()
     file_values = load_config_file(config_path)
-    overrides = {
-        name: value
-        for name, value in cli_values.items()
-        if value is not None
-    }
-    return KoffeeConfig(
-        **(default_values | file_values | overrides)
-    )
+    overrides = {name: value for name, value in cli_values.items() if value is not None}
+    return KoffeeConfig(**(default_values | file_values | overrides))
+
 
 def _validate_batch_options(
     input_paths: list[Path],
     config: KoffeeConfig,
 ) -> None:
     """Rejects options that collide across inputs."""
-    if (
-        len(input_paths) > 1
-        and config.output_name is not None
-    ):
-        error_message = (
-            "--output-name cannot be used with "
-            "multiple input files."
-        )
+    if len(input_paths) > 1 and config.output_name is not None:
+        error_message = "--output-name cannot be used with multiple input files."
         raise IncompatibleOptionsError(error_message)
 
 
@@ -235,9 +224,7 @@ def _resolve_paths(
     file_path: tuple[Path, ...],
 ) -> list[Path]:
     """Resolves supported files, directories, and globs."""
-    input_extensions = (
-        SUPPORTED_EXTENSIONS | SUBTITLE_EXTENSIONS
-    )
+    input_extensions = SUPPORTED_EXTENSIONS | SUBTITLE_EXTENSIONS
     resolved_paths = []
 
     for pattern in file_path:
@@ -248,8 +235,7 @@ def _resolve_paths(
                     candidate
                     for candidate in path.iterdir()
                     if candidate.is_file()
-                    and candidate.suffix.lower()
-                    in input_extensions
+                    and candidate.suffix.lower() in input_extensions
                 )
             )
         elif path.exists():
@@ -257,21 +243,14 @@ def _resolve_paths(
         else:
             matches = sorted(
                 candidate
-                for candidate in Path.cwd().glob(
-                    str(pattern)
-                )
-                if candidate.is_file()
-                and candidate.suffix.lower()
-                in input_extensions
+                for candidate in Path.cwd().glob(str(pattern))
+                if candidate.is_file() and candidate.suffix.lower() in input_extensions
             )
             if not matches:
-                raise FileNotFoundError(
-                    f"No such file or pattern: {pattern}"
-                )
+                raise FileNotFoundError(f"No such file or pattern: {pattern}")
             resolved_paths.extend(matches)
 
     return resolved_paths
-
 
 
 def _run_batch(batch_items: list[_BatchItem]) -> None:

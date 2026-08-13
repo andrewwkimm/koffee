@@ -82,9 +82,7 @@ def run(
         task,
         on_progress=on_asr_progress,
         vad_filter=config.vad_filter,
-        language=_resolve_asr_language(
-            config.source_language
-        ),
+        language=_resolve_asr_language(config.source_language),
     )
     subtitle_path = _translate_with_failure_context(
         transcript,
@@ -98,11 +96,8 @@ def _resolve_asr_language(
     source_language: str,
 ) -> str | None:
     """Returns no constraint for automatic detection."""
-    return (
-        None
-        if source_language == "auto"
-        else source_language
-    )
+    return None if source_language == "auto" else source_language
+
 
 def _route_output(
     input_path: Path | str,
@@ -328,18 +323,7 @@ def _check_preconditions(input_path: Path | str, config: KoffeeConfig) -> None:
         raise UnsupportedFileError(error_message)
 
     is_video = suffix in VIDEO_EXTENSIONS
-    is_subtitle_translation = (
-        suffix in SUBTITLE_EXTENSIONS
-    )
-    if (
-        config.provider == "whisper"
-        and is_subtitle_translation
-    ):
-        error_message = (
-            "The whisper provider cannot translate "
-            "subtitle files. Choose an LLM provider."
-        )
-        raise IncompatibleOptionsError(error_message)
+    _check_subtitle_provider(suffix, config)
 
     # Embed and Use-Embedded-Subtitles Are Video-Only Options
     if config.embed != "none" and not is_video:
@@ -390,3 +374,16 @@ def _check_preconditions(input_path: Path | str, config: KoffeeConfig) -> None:
         base_path if has_embed else base_path.with_suffix(f".{config.subtitle_format}")
     )
     _check_output_collision(output_path, config.overwrite)
+
+
+def _check_subtitle_provider(
+    suffix: str,
+    config: KoffeeConfig,
+) -> None:
+    """Rejects Whisper for direct subtitle translation."""
+    if suffix in SUBTITLE_EXTENSIONS and config.provider == "whisper":
+        error_message = (
+            "The whisper provider cannot translate "
+            "subtitle files. Choose an LLM provider."
+        )
+        raise IncompatibleOptionsError(error_message)

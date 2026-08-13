@@ -2,19 +2,41 @@
 
 from http import HTTPStatus
 
-from openai import APIConnectionError, APIStatusError, OpenAI, RateLimitError
+from openai import (
+    APIConnectionError,
+    APIStatusError,
+    OpenAI,
+    RateLimitError,
+)
+
+from koffee.exceptions import TranslationIntegrityError
 
 NAME = "chatgpt"
 DEFAULT_MODEL = "gpt-4o"
+REQUEST_TIMEOUT_SECONDS = 120.0
+RETRYABLE_ERRORS = (
+    RateLimitError,
+    APIConnectionError,
+    APIStatusError,
+)
 
 
 def create_client(api_key: str | None):
-    """Creates an OpenAI client."""
-    return OpenAI(api_key=api_key)
+    """Creates an OpenAI client with application-owned retries."""
+    return OpenAI(
+        api_key=api_key,
+        timeout=REQUEST_TIMEOUT_SECONDS,
+        max_retries=0,
+    )
 
 
-def attempt_generate(client, prompt: str, model: str, system_prompt: str):
-    """Makes a single OpenAI API call, returning the response."""
+def attempt_generate(
+    client,
+    prompt: str,
+    model: str,
+    system_prompt: str,
+):
+    """Makes one OpenAI API call."""
     return client.chat.completions.create(
         model=model,
         messages=[
@@ -25,14 +47,25 @@ def attempt_generate(client, prompt: str, model: str, system_prompt: str):
 
 
 def extract_text(response) -> str:
-    """Extracts the generated text from a ChatGPT response."""
-    return response.choices[0].message.content
+    """Returns nonempty text from a ChatGPT response."""
+    if not response.choices:
+        error_message = "ChatGPT returned no choices."
+        raise TranslationIntegrityError(error_message)
+
+    content = response.choices[0].message.content
+    if not isinstance(content, str) or not content.strip():
+        error_message = "ChatGPT returned empty text."
+        raise TranslationIntegrityError(error_message)
+    return content
 
 
-def is_retryable(exc: Exception) -> bool:
-    """Returns True for transient OpenAI errors worth retrying."""
-    if isinstance(exc, (RateLimitError, APIConnectionError)):
+def is_retryable(error: Exception) -> bool:
+    """Returns whether an OpenAI error is transient."""
+    if isinstance(
+        error,
+        (RateLimitError, APIConnectionError),
+    ):
         return True
-    if isinstance(exc, APIStatusError):
-        return exc.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR
+    if isinstance(error, APIStatusError):
+        return error.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR
     return False
