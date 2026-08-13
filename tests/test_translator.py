@@ -4,6 +4,7 @@ import pytest
 from google.genai.errors import APIError, ClientError
 from pytest_mock import MockerFixture
 
+from koffee.exceptions import TranslationIntegrityError
 from koffee.llm import chatgpt, claude, gemini, ollama
 from koffee.schemas.types import Segment, Transcript
 from koffee.translator import (
@@ -30,6 +31,33 @@ SAMPLE_TRANSCRIPT: Transcript = {
     "segments": SAMPLE_SEGMENTS,
     "language": "ko",
 }
+
+
+def _configure_gemini_chunk_responses(
+    mocker: MockerFixture,
+    mock_client,
+) -> None:
+    """Configures valid global-ID responses for the two sample chunks."""
+    mock_client.models.generate_content.side_effect = [
+        mocker.MagicMock(text="1\n00:00:00,000 --> 00:00:06,360\nHello."),
+        mocker.MagicMock(text="2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"),
+    ]
+
+
+def _configure_ollama_chunk_responses(
+    mocker: MockerFixture,
+    mock_client,
+) -> None:
+    """Configures valid global-ID responses for the two sample chunks."""
+    responses = []
+    for text in (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello.",
+        "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?",
+    ):
+        response = mocker.MagicMock()
+        response.choices = [mocker.MagicMock(message=mocker.MagicMock(content=text))]
+        responses.append(response)
+    mock_client.chat.completions.create.side_effect = responses
 
 
 def test_build_prompt_with_context() -> None:
@@ -101,15 +129,86 @@ def test_parse_srt_response_preserves_original_timestamps() -> None:
     assert result[1]["end"] == SAMPLE_SEGMENTS[1]["end"]
 
 
-def test_parse_srt_response_malformed_block_falls_back_to_original() -> None:
-    """Tests that a malformed SRT block falls back to the original segment."""
+def test_parse_srt_response_rejects_malformed_block() -> None:
+    """Tests that a malformed SRT block fails integrity validation."""
     malformed_block_with_missing_timestamp = "1\nHello."
 
-    result = _parse_srt_response(
-        malformed_block_with_missing_timestamp, SAMPLE_SEGMENTS[:1]
+    with pytest.raises(TranslationIntegrityError, match="invalid timestamp"):
+        _parse_srt_response(
+            malformed_block_with_missing_timestamp,
+            SAMPLE_SEGMENTS[:1],
+        )
+
+
+def test_build_prompt_uses_global_entry_ids() -> None:
+    """Tests that chunk prompts retain global entry IDs and output rules."""
+    result = _build_prompt(
+        chunk=SAMPLE_SEGMENTS,
+        context_segments=[],
+        source_language="ko",
+        target_language="en",
+        start_entry=4,
     )
 
-    assert result[0] == SAMPLE_SEGMENTS[0]
+    assert "Use every entry ID from 4 through 5 exactly once" in result
+    assert "\n4\n" in result
+    assert "\n5\n" in result
+
+
+def test_parse_srt_response_accepts_global_entry_ids() -> None:
+    """Tests that global response IDs map onto the current chunk."""
+    response = (
+        "4\n00:00:00,000 --> 00:00:06,360\nHello.\n\n"
+        "5\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
+    )
+
+    result = _parse_srt_response(response, SAMPLE_SEGMENTS, start_entry=4)
+
+    assert [segment["text"] for segment in result] == [
+        "Hello.",
+        "How have you been?",
+    ]
+
+
+def test_parse_srt_response_rejects_duplicate_entry_id() -> None:
+    """Tests that duplicate response IDs fail integrity validation."""
+    response = (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello.\n\n"
+        "1\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
+    )
+
+    with pytest.raises(TranslationIntegrityError, match="duplicate entry ID 1"):
+        _parse_srt_response(response, SAMPLE_SEGMENTS)
+
+
+def test_parse_srt_response_rejects_empty_translated_text() -> None:
+    """Tests that an entry without translated text fails validation."""
+    response = "1\n00:00:00,000 --> 00:00:06,360\n"
+
+    with pytest.raises(TranslationIntegrityError, match="no translated text"):
+        _parse_srt_response(response, SAMPLE_SEGMENTS[:1])
+
+
+def test_parse_srt_response_rejects_missing_entry_id() -> None:
+    """Tests that an incomplete translation response fails validation."""
+    response = "1\n00:00:00,000 --> 00:00:06,360\nHello."
+
+    with pytest.raises(TranslationIntegrityError, match=r"missing entry IDs \[2\]"):
+        _parse_srt_response(response, SAMPLE_SEGMENTS)
+
+
+def test_parse_srt_response_rejects_unexpected_entry_id() -> None:
+    """Tests that an out-of-range response ID fails validation."""
+    response = (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello.\n\n"
+        "3\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
+    )
+
+    with pytest.raises(
+        TranslationIntegrityError,
+        match=r"unexpected entry IDs \[3\]",
+    ):
+        _parse_srt_response(response, SAMPLE_SEGMENTS)
 
 
 def test_translate_single_chunk(mocker: MockerFixture) -> None:
@@ -138,9 +237,7 @@ def test_translate_sleeps_between_chunks(mocker: MockerFixture) -> None:
     mock_sleep = mocker.patch("koffee.translator.time.sleep")
     mocker.patch("koffee.translator.CHUNK_SIZE", 1)
 
-    mock_client.models.generate_content.return_value.text = (
-        "1\n00:00:00,000 --> 00:00:06,360\nHello."
-    )
+    _configure_gemini_chunk_responses(mocker, mock_client)
 
     translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
 
@@ -156,9 +253,7 @@ def test_translate_skips_sleep_when_zero(mocker: MockerFixture) -> None:
     mocker.patch.object(gemini, "create_client", return_value=mock_client)
     mock_sleep = mocker.patch("koffee.translator.time.sleep")
     mocker.patch("koffee.translator.CHUNK_SIZE", 1)
-    mock_client.models.generate_content.return_value.text = (
-        "1\n00:00:00,000 --> 00:00:06,360\nHello."
-    )
+    _configure_gemini_chunk_responses(mocker, mock_client)
 
     translate(
         SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini", sleep_requests=0
@@ -167,23 +262,25 @@ def test_translate_skips_sleep_when_zero(mocker: MockerFixture) -> None:
     assert mock_sleep.call_count == 0
 
 
-def test_translate_ollama_defaults_to_no_sleep(mocker: MockerFixture) -> None:
-    """Tests that the ollama provider uses zero sleep by default."""
+def test_translate_ollama_defaults_to_no_sleep(
+    mocker: MockerFixture,
+) -> None:
+    """Tests that the Ollama provider uses zero sleep by default."""
     mock_client = mocker.MagicMock()
     mocker.patch("koffee.llm.ollama.create_client", return_value=mock_client)
     mock_sleep = mocker.patch("koffee.translator.time.sleep")
-    mocker.patch("koffee.translator.CHUNK_SIZE", 1)
-    mock_client.chat.completions.create.return_value.choices = [
-        mocker.MagicMock(
-            message=mocker.MagicMock(
-                content=("1\n00:00:00,000 --> 00:00:06,360\nHello.")
-            )
-        )
-    ]
+
+    response = mocker.MagicMock()
+    response.choices = [mocker.MagicMock()]
+    response.choices[0].message.content = (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello.\n\n"
+        "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
+    )
+    mock_client.chat.completions.create.return_value = response
 
     translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="ollama")
 
-    assert mock_sleep.call_count == 0
+    mock_sleep.assert_not_called()
 
 
 def test_translate_explicit_sleep_overrides_default(mocker: MockerFixture) -> None:
@@ -192,9 +289,7 @@ def test_translate_explicit_sleep_overrides_default(mocker: MockerFixture) -> No
     mocker.patch.object(gemini, "create_client", return_value=mock_client)
     mock_sleep = mocker.patch("koffee.translator.time.sleep")
     mocker.patch("koffee.translator.CHUNK_SIZE", 1)
-    mock_client.models.generate_content.return_value.text = (
-        "1\n00:00:00,000 --> 00:00:06,360\nHello."
-    )
+    _configure_gemini_chunk_responses(mocker, mock_client)
 
     sleep_seconds = 9
     translate(
@@ -262,16 +357,16 @@ def test_sanitize_response_strips_unclosed_think_block() -> None:
     assert "<think>" not in result
 
 
-def test_parse_srt_response_empty_returns_originals() -> None:
-    """Tests that an empty response falls back to original segments."""
-    result = _parse_srt_response("", SAMPLE_SEGMENTS)
-    assert result == SAMPLE_SEGMENTS
+def test_parse_srt_response_rejects_empty_response() -> None:
+    """Tests that an empty provider response fails integrity validation."""
+    with pytest.raises(TranslationIntegrityError, match="empty response"):
+        _parse_srt_response("", SAMPLE_SEGMENTS)
 
 
-def test_parse_srt_response_none_returns_originals() -> None:
-    """Tests that a None response falls back to original segments."""
-    result = _parse_srt_response(None, SAMPLE_SEGMENTS)
-    assert result == SAMPLE_SEGMENTS
+def test_parse_srt_response_rejects_none_response() -> None:
+    """Tests that a missing provider response fails integrity validation."""
+    with pytest.raises(TranslationIntegrityError, match="empty response"):
+        _parse_srt_response(None, SAMPLE_SEGMENTS)
 
 
 def test_parse_srt_response_extra_blank_lines() -> None:
@@ -301,9 +396,7 @@ def test_translate_reports_progress(mocker: MockerFixture) -> None:
     mocker.patch("koffee.translator.time.sleep")
     mocker.patch("koffee.translator.CHUNK_SIZE", 1)
 
-    mock_client.models.generate_content.return_value.text = (
-        "1\n00:00:00,000 --> 00:00:06,360\nHello."
-    )
+    _configure_gemini_chunk_responses(mocker, mock_client)
 
     progress_calls = []
     translate(
@@ -373,6 +466,7 @@ def test_translate_uses_custom_prompt(mocker: MockerFixture) -> None:
 
     call_kwargs = mock_client.models.generate_content.call_args.kwargs
     assert call_kwargs["config"]["system_instruction"] == custom_prompt
+    assert "Use every entry ID from 1 through 2 exactly once" in call_kwargs["contents"]
 
 
 def test_translate_falls_back_to_default_prompt(
@@ -833,7 +927,7 @@ def test_chunk_segments_explicit_chunk_size() -> None:
 
 
 def test_translate_uses_model_chunk_size(mocker: MockerFixture) -> None:
-    """Tests that the qwen3:14b model uses its configured chunk size of 80."""
+    """Tests that qwen3:14b uses its configured chunk size."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(ollama, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
@@ -845,13 +939,21 @@ def test_translate_uses_model_chunk_size(mocker: MockerFixture) -> None:
         for i in range(model_chunk_size + 1)
     ]
 
-    mock_response = mocker.MagicMock()
-    mock_response.choices = [mocker.MagicMock()]
-    mock_response.choices[0].message.content = "\n\n".join(
-        f"{i + 1}\n00:00:0{i},000 --> 00:00:0{i + 1},000\nHello."
-        for i in range(model_chunk_size + 1)
+    first_response = mocker.MagicMock()
+    first_response.choices = [mocker.MagicMock()]
+    first_response.choices[0].message.content = "\n\n".join(
+        (f"{entry_number}\n00:00:00,000 --> 00:00:01,000\nHello.")
+        for entry_number in range(1, model_chunk_size + 1)
     )
-    mock_client.chat.completions.create.return_value = mock_response
+    second_response = mocker.MagicMock()
+    second_response.choices = [mocker.MagicMock()]
+    second_response.choices[
+        0
+    ].message.content = f"{model_chunk_size + 1}\n00:00:00,000 --> 00:00:01,000\nHello."
+    mock_client.chat.completions.create.side_effect = [
+        first_response,
+        second_response,
+    ]
 
     translate(
         Transcript(segments=many_segments, language="ja"),
@@ -868,7 +970,7 @@ def test_translate_uses_model_chunk_size(mocker: MockerFixture) -> None:
 def test_translate_explicit_chunk_size_overrides_model_default(
     mocker: MockerFixture,
 ) -> None:
-    """Tests that an explicit chunk_size overrides the per-model default."""
+    """Tests that an explicit chunk size overrides the model default."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(ollama, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
@@ -876,12 +978,17 @@ def test_translate_explicit_chunk_size_overrides_model_default(
     segments: list[Segment] = [
         {"start": float(i), "end": float(i + 1), "text": "x"} for i in range(5)
     ]
-    mock_response = mocker.MagicMock()
-    mock_response.choices = [mocker.MagicMock()]
-    mock_response.choices[0].message.content = "\n\n".join(
-        f"{i + 1}\n00:00:0{i},000 --> 00:00:0{i + 1},000\nHello." for i in range(5)
-    )
-    mock_client.chat.completions.create.return_value = mock_response
+    entries_by_chunk = ((1, 2), (3, 4), (5,))
+    responses = []
+    for entries in entries_by_chunk:
+        response = mocker.MagicMock()
+        response.choices = [mocker.MagicMock()]
+        response.choices[0].message.content = "\n\n".join(
+            (f"{entry_number}\n00:00:00,000 --> 00:00:01,000\nHello.")
+            for entry_number in entries
+        )
+        responses.append(response)
+    mock_client.chat.completions.create.side_effect = responses
 
     translate(
         Transcript(segments=segments, language="ja"),
@@ -892,9 +999,7 @@ def test_translate_explicit_chunk_size_overrides_model_default(
         chunk_size=2,
     )
 
-    # 5 segments at chunk_size=2 → 3 chunks, not the model default of 80
-    expected_request_count = 3
-    assert mock_client.chat.completions.create.call_count == expected_request_count
+    assert mock_client.chat.completions.create.call_count == len(entries_by_chunk)
 
 
 # --- Context size tests ---
@@ -944,9 +1049,7 @@ def test_translate_explicit_context_size_overrides_model_default(
     mocker.patch("koffee.translator.time.sleep")
     mocker.patch("koffee.translator.CHUNK_SIZE", 1)
 
-    mock_client.models.generate_content.return_value.text = (
-        "1\n00:00:00,000 --> 00:00:06,360\nHello."
-    )
+    _configure_gemini_chunk_responses(mocker, mock_client)
 
     mock_build = mocker.patch("koffee.translator._build_prompt", return_value="prompt")
     mock_client.models.generate_content.return_value.text = (

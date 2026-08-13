@@ -314,13 +314,14 @@ def _timestamp_to_seconds(timestamp: str) -> float:
     )
 
 
-def segments_to_srt(segments: list[Segment]) -> str:
-    """Converts a list of segments to an SRT format string."""
+def segments_to_srt(segments: list[Segment], start_entry: int = 1) -> str:
+    """Converts segments to SRT text beginning at the requested entry number."""
     lines = []
-    for i, seg in enumerate(segments, 1):
-        start = convert_to_timestamp(seg["start"], "srt")
-        end = convert_to_timestamp(seg["end"], "srt")
-        lines.append(f"{i}\n{start} --> {end}\n{seg['text'].strip()}\n")
+    for entry_number, segment in enumerate(segments, start_entry):
+        start = convert_to_timestamp(segment["start"], "srt")
+        end = convert_to_timestamp(segment["end"], "srt")
+        text = segment["text"].strip()
+        lines.append(f"{entry_number}\n{start} --> {end}\n{text}\n")
 
     srt_text = "\n".join(lines)
     return srt_text

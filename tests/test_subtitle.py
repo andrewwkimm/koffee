@@ -6,7 +6,7 @@ import pytest
 
 from koffee.exceptions import InvalidSubtitleFormatError
 from koffee.schemas.types import Segment
-from koffee.subtitle import generate_subtitles
+from koffee.subtitle import generate_subtitles, segments_to_srt
 
 SAMPLE_SEGMENTS: list[Segment] = [
     {
@@ -112,3 +112,11 @@ def test_invalid_format(subtitle_format: str) -> None:
     error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
     with pytest.raises(InvalidSubtitleFormatError, match=error_message):
         generate_subtitles(subtitle_format, sample_text)
+
+
+def test_segments_to_srt_uses_requested_start_entry() -> None:
+    """Tests that prompt SRT entries can retain global numbering."""
+    result = segments_to_srt(SAMPLE_SEGMENTS[:2], start_entry=7)
+
+    assert result.startswith("7\n")
+    assert "\n8\n" in result

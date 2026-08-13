@@ -29,6 +29,10 @@ class SubtitleEmbedError(KoffeeError):
     """Subtitle embedding not possible for the given file."""
 
 
+class TranslationIntegrityError(KoffeeError):
+    """LLM response does not satisfy the subtitle translation contract."""
+
+
 class TranslationError(KoffeeError):
     """Translation step failed after successful transcription."""
 

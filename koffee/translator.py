@@ -1,11 +1,13 @@
 """Text translator for koffee."""
 
 import logging
+import re
 import time
 from collections.abc import Callable
 from types import ModuleType
 
 from koffee._retry import with_retries
+from koffee.exceptions import TranslationIntegrityError
 from koffee.llm._protocol import TranslationProvider
 from koffee.schemas.types import Chunk, Segment, Transcript
 from koffee.subtitle import segments_to_srt
@@ -175,6 +177,7 @@ def _translate_chunks(
             chunk_data["chunk"],
             llm_model,
             system_prompt,
+            start_entry=chunk_data["start_entry"],
         )
         translated_segments.extend(translated_chunk)
 
@@ -203,22 +206,32 @@ def _build_prompt(
             f"{source_language} to {target_language}."
         )
 
-    prompt_parts = [instruction]
+    end_entry = start_entry + len(chunk) - 1
+    output_contract = (
+        "Return only valid SRT blocks. "
+        f"Use every entry ID from {start_entry} through {end_entry} exactly once, "
+        "in ascending order. Preserve each timestamp exactly. Include no commentary "
+        "or Markdown fences."
+    )
+    prompt_parts = [instruction, output_contract]
 
     if context_segments:
+        context_start_entry = start_entry - len(context_segments)
         prompt_parts.extend(
             [
-                f"The following {len(context_segments)} entries are provided as "
-                "context only to maintain narrative continuity. Do not include them "
-                "in your translation."
-                f" output. Begin your translation from entry {start_entry} only.\n",
+                f"The following {len(context_segments)} entries provide narrative "
+                "context only. Do not include them in the output. "
+                f"Begin the translation at entry {start_entry}.\n",
                 "[CONTEXT - DO NOT TRANSLATE]\n",
-                segments_to_srt(context_segments),
+                segments_to_srt(
+                    context_segments,
+                    start_entry=context_start_entry,
+                ),
                 "\n[TRANSLATE FROM HERE]\n",
             ]
         )
 
-    prompt_parts.append(segments_to_srt(chunk))
+    prompt_parts.append(segments_to_srt(chunk, start_entry=start_entry))
     translation_prompt = "\n".join(prompt_parts)
 
     return translation_prompt
@@ -231,6 +244,7 @@ def _translate_chunk(
     chunk: list[Segment],
     llm_model: str,
     system_prompt: str,
+    start_entry: int,
 ) -> list[Segment]:
     """Calls the LLM with a prompt and parses the response."""
     response = with_retries(
@@ -239,39 +253,41 @@ def _translate_chunk(
         max_retries=3,
     )
     response_text = backend.extract_text(response)
-    translated_chunk = _parse_srt_response(response_text, chunk)
+    translated_chunk = _parse_srt_response(response_text, chunk, start_entry)
 
     return translated_chunk
 
 
 def _parse_srt_response(
-    response_text: str | None, original_segments: list[Segment]
+    response_text: str | None,
+    original_segments: list[Segment],
+    start_entry: int = 1,
 ) -> list[Segment]:
-    """Parses SRT formatted response back into segments.
-
-    Matches blocks to original segments by entry number rather than position,
-    so skipped or reordered entries fall back to the original text instead of
-    misaligning all subsequent entries.
-    """
+    """Parses and validates an SRT response against the requested entries."""
     sanitized = _sanitize_response(response_text)
     if not sanitized:
-        log.warning("Empty LLM response, using original segments.")
-        return list(original_segments)
+        error_message = "Translation provider returned an empty response."
+        raise TranslationIntegrityError(error_message)
 
-    blocks = [b.strip() for b in sanitized.split("\n\n") if b.strip()]
-
-    if len(blocks) != len(original_segments):
-        log.warning(
-            f"LLM returned {len(blocks)} blocks but expected "
-            f"{len(original_segments)}; output may have missing or extra segments."
-        )
-
+    blocks = [
+        block.strip() for block in re.split(r"\n{2,}", sanitized) if block.strip()
+    ]
     translation_map = _blocks_to_translation_map(blocks)
-    return _merge_translated_segments(translation_map, original_segments)
+    _validate_translation_entries(
+        translation_map,
+        start_entry=start_entry,
+        entry_count=len(original_segments),
+    )
+    translated_segments = _merge_translated_segments(
+        translation_map,
+        original_segments,
+        start_entry=start_entry,
+    )
+    return translated_segments
 
 
 def _sanitize_response(response_text: str | None) -> str:
-    """Strips thinking blocks, markdown fences, and normalizes line endings."""
+    """Strips thinking blocks and Markdown fences and normalizes line endings."""
     if not response_text:
         return ""
 
@@ -296,37 +312,93 @@ def _sanitize_response(response_text: str | None) -> str:
 
 
 def _blocks_to_translation_map(blocks: list[str]) -> dict[int, str]:
-    """Parses SRT blocks into a {entry_number: translated_text} mapping."""
+    """Parses structurally valid SRT blocks into translated text by entry ID."""
     translation_map: dict[int, str] = {}
-    min_block_lines = 3  # index, timestamp, at least one text line
-    for block in blocks:
+    minimum_header_lines = 2
+    timestamp_pattern = re.compile(
+        r"\d{2}:\d{2}:\d{2}[,.]\d{3}\s*-->\s*"
+        r"\d{2}:\d{2}:\d{2}[,.]\d{3}"
+    )
+
+    for block_number, block in enumerate(blocks, start=1):
         lines = block.split("\n")
-        if len(lines) < min_block_lines:
-            continue
+        if len(lines) < minimum_header_lines:
+            error_message = (
+                f"Translation response block {block_number} is malformed: "
+                "expected an entry ID, timestamp, and translated text."
+            )
+            raise TranslationIntegrityError(error_message)
+
         try:
-            entry_num = int(lines[0].strip())
-        except ValueError:
-            continue
-        translation_map[entry_num] = " ".join(lines[2:])
+            entry_number = int(lines[0].strip())
+        except ValueError as exc:
+            error_message = (
+                f"Translation response block {block_number} has an invalid entry ID."
+            )
+            raise TranslationIntegrityError(error_message) from exc
+
+        if timestamp_pattern.fullmatch(lines[1].strip()) is None:
+            error_message = (
+                f"Translation response entry {entry_number} has an invalid timestamp."
+            )
+            raise TranslationIntegrityError(error_message)
+
+        translated_text = " ".join(line.strip() for line in lines[2:] if line.strip())
+        if not translated_text:
+            error_message = (
+                f"Translation response entry {entry_number} has no translated text."
+            )
+            raise TranslationIntegrityError(error_message)
+        if entry_number in translation_map:
+            error_message = (
+                f"Translation response contains duplicate entry ID {entry_number}."
+            )
+            raise TranslationIntegrityError(error_message)
+
+        translation_map[entry_number] = translated_text
+
     return translation_map
 
 
+def _validate_translation_entries(
+    translation_map: dict[int, str],
+    start_entry: int,
+    entry_count: int,
+) -> None:
+    """Raises when translated entry IDs differ from the requested global IDs."""
+    expected_entries = set(range(start_entry, start_entry + entry_count))
+    actual_entries = set(translation_map)
+    missing_entries = sorted(expected_entries - actual_entries)
+    unexpected_entries = sorted(actual_entries - expected_entries)
+    expected_order = list(range(start_entry, start_entry + entry_count))
+    entries_are_reordered = list(translation_map) != expected_order
+
+    problems = []
+    if missing_entries:
+        problems.append(f"missing entry IDs {missing_entries}")
+    if unexpected_entries:
+        problems.append(f"unexpected entry IDs {unexpected_entries}")
+    if not missing_entries and not unexpected_entries and entries_are_reordered:
+        problems.append("entry IDs are not in ascending order")
+    if problems:
+        details = "; ".join(problems)
+        error_message = f"Translation response failed integrity validation: {details}."
+        raise TranslationIntegrityError(error_message)
+
+
 def _merge_translated_segments(
-    translation_map: dict[int, str], original_segments: list[Segment]
+    translation_map: dict[int, str],
+    original_segments: list[Segment],
+    start_entry: int,
 ) -> list[Segment]:
-    """Merges translated text onto original segments."""
+    """Returns translated text with timing copied from the original segments."""
     merged_segments = []
-    for i, original in enumerate(original_segments, start=1):
-        translated_text = translation_map.get(i)
-        if translated_text is None:
-            log.debug(f"Entry {i} missing from LLM response, using original text.")
-            merged_segments.append(original)
-        else:
-            merged_segments.append(
-                {
-                    "start": original["start"],
-                    "end": original["end"],
-                    "text": translated_text,
-                }
-            )
+    for entry_number, original in enumerate(original_segments, start=start_entry):
+        merged_segments.append(
+            {
+                "start": original["start"],
+                "end": original["end"],
+                "text": translation_map[entry_number],
+            }
+        )
     return merged_segments
