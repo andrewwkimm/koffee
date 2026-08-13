@@ -46,7 +46,8 @@ ASS_HEADER = (
 )
 
 TIMESTAMP_PATTERN = re.compile(
-    r"(\d{2}:\d{2}:\d{2}[,\.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,\.]\d{3})"
+    r"((?:\d{2}:)?\d{2}:\d{2}[,.]\d{3})\s*-->\s*"
+    r"((?:\d{2}:)?\d{2}:\d{2}[,.]\d{3})"
 )
 
 ASS_DIALOGUE_PATTERN = re.compile(
@@ -235,37 +236,52 @@ def get_subtitle_tracks(video_path: Path | str) -> list[dict]:
     return data.get("streams", [])
 
 
-def parse_subtitle_file(file_path: Path | str) -> list[Segment]:
-    """Parses an SRT, VTT, or ASS/SSA file into a list of segment dicts."""
-    file_path = Path(file_path)
-    text = file_path.read_text(encoding="utf-8")
+def parse_subtitle_file(
+    file_path: Path | str,
+) -> list[Segment]:
+    """Parses supported subtitles and rejects unusable content."""
+    subtitle_path = Path(file_path)
+    text = subtitle_path.read_text(encoding="utf-8")
+    if not text.strip():
+        return []
 
-    if file_path.suffix.lower() in (".ass", ".ssa"):
-        return _parse_ass(text, file_path)
+    if subtitle_path.suffix.lower() in (".ass", ".ssa"):
+        segments = _parse_ass(text, subtitle_path)
+    else:
+        segments = _parse_srt_or_vtt(text)
 
-    blocks = re.split(r"\n\n+", text.strip())
+    if not segments:
+        error_message = f"No valid subtitle cues found in {subtitle_path.name}."
+        raise InvalidSubtitleFormatError(error_message)
+
+    log.debug(f"Parsed {len(segments)} segments from {subtitle_path.name}")
+    return segments
+
+
+def _parse_srt_or_vtt(text: str) -> list[Segment]:
+    """Returns valid cues from SRT or WebVTT text."""
     segments = []
-
-    for block in blocks:
+    for block in re.split(r"\n\n+", text.strip()):
         lines = block.strip().split("\n")
         match = _find_timestamp_line(lines)
         if match is None:
             continue
 
-        timestamp_idx, start_ts, end_ts = match
-        text_lines = lines[timestamp_idx + 1 :]
+        timestamp_index, start_timestamp, end_timestamp = match
+        text_lines = [
+            line.strip() for line in lines[timestamp_index + 1 :] if line.strip()
+        ]
         if not text_lines:
             continue
 
         segments.append(
             {
-                "start": _timestamp_to_seconds(start_ts),
-                "end": _timestamp_to_seconds(end_ts),
-                "text": " ".join(line.strip() for line in text_lines),
+                "start": _timestamp_to_seconds(start_timestamp),
+                "end": _timestamp_to_seconds(end_timestamp),
+                "text": " ".join(text_lines),
             }
         )
 
-    log.debug(f"Parsed {len(segments)} segments from {file_path.name}")
     return segments
 
 
@@ -311,10 +327,18 @@ def _find_timestamp_line(lines: list[str]) -> tuple[int, str, str] | None:
 
 
 def _timestamp_to_seconds(timestamp: str) -> float:
-    """Converts an SRT/VTT timestamp to seconds."""
-    timestamp = timestamp.replace(",", ".")
-    hours, minutes, rest = timestamp.split(":")
-    seconds, milliseconds = rest.split(".")
+    """Converts an SRT or WebVTT timestamp to seconds."""
+    fields = timestamp.replace(",", ".").split(":")
+    match fields:
+        case [minutes, remainder]:
+            hours = "0"
+        case [hours, minutes, remainder]:
+            pass
+        case _:
+            error_message = f"Invalid subtitle timestamp: {timestamp!r}."
+            raise InvalidSubtitleFormatError(error_message)
+
+    seconds, milliseconds = remainder.split(".")
     return (
         int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(milliseconds) / 1000
     )

@@ -2,6 +2,9 @@
 
 from pathlib import Path
 
+import pytest
+
+from koffee.exceptions import InvalidSubtitleFormatError
 from koffee.subtitle import parse_subtitle_file
 
 _ASS_EVENT_FMT = (
@@ -148,3 +151,41 @@ def test_parse_ass_skips_empty_dialogue(tmp_path: Path) -> None:
 
     assert len(result) == 1
     assert result[0]["text"] == "Hello."
+
+
+def test_parse_vtt_hourless_timestamps(
+    tmp_path: Path,
+) -> None:
+    """Tests WebVTT timestamps without an hour field."""
+    subtitle = tmp_path / "test.vtt"
+    subtitle.write_text(
+        "WEBVTT\n\n00:01.250 --> 00:04.500\nHello.\n",
+        encoding="utf-8",
+    )
+
+    result = parse_subtitle_file(subtitle)
+
+    assert result == [
+        {
+            "start": 1.25,
+            "end": 4.5,
+            "text": "Hello.",
+        }
+    ]
+
+
+def test_parse_nonempty_malformed_file_raises(
+    tmp_path: Path,
+) -> None:
+    """Tests rejection of a nonempty file without cues."""
+    subtitle = tmp_path / "broken.srt"
+    subtitle.write_text(
+        "not a subtitle",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        InvalidSubtitleFormatError,
+        match="No valid subtitle cues",
+    ):
+        parse_subtitle_file(subtitle)

@@ -5,7 +5,7 @@ import shutil
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import Any
 
 from anthropic import APIError as AnthropicAPIError
@@ -19,6 +19,7 @@ from koffee.exceptions import (
     InvalidVideoFileError,
     MissingApiKeyError,
     MissingDependencyError,
+    SubtitleEmbedError,
     TranslationError,
     TranslationIntegrityError,
     UnsupportedFileError,
@@ -141,18 +142,41 @@ def _write_embedded_video(
     embed_mode: str = "soft",
     language: str = "en",
 ) -> Path:
-    """Embeds subtitles into the video and deletes the subtitle file after."""
-    output_video = embed_subtitles(
-        subtitle_path,
-        input_path,
-        output_path,
-        mode=embed_mode,
-        language=language,
-    )
+    """Publishes an embedded video only after FFmpeg succeeds."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with NamedTemporaryFile(
+        prefix=f".{output_path.stem}.",
+        suffix=output_path.suffix,
+        dir=output_path.parent,
+        delete=False,
+    ) as temporary_file:
+        temporary_path = Path(temporary_file.name)
+    temporary_path.unlink()
+
+    published = False
+    try:
+        embedded_path = Path(
+            embed_subtitles(
+                subtitle_path,
+                input_path,
+                temporary_path,
+                mode=embed_mode,
+                language=language,
+            )
+        )
+        if not embedded_path.is_file():
+            error_message = "FFmpeg did not produce the expected output video."
+            raise SubtitleEmbedError(error_message)
+
+        embedded_path.replace(output_path)
+        published = True
+    finally:
+        if not published:
+            temporary_path.unlink(missing_ok=True)
+
     subtitle_path.unlink()
     log.info("Finished processing video!")
-
-    return output_video
+    return output_path
 
 
 def _write_output(
@@ -163,8 +187,12 @@ def _write_output(
     output_name: str | None,
     overwrite: bool,
 ) -> Path:
-    """Moves a generated subtitle file to its resolved output location."""
-    base_path = _get_output_path(input_path, output_dir, output_name)
+    """Copies a subtitle to an atomically published output."""
+    base_path = _get_output_path(
+        input_path,
+        output_dir,
+        output_name,
+    )
     target_path = base_path.with_suffix(f".{subtitle_format}")
 
     try:
@@ -173,9 +201,24 @@ def _write_output(
         source_path.unlink(missing_ok=True)
         raise
 
-    source_path.replace(target_path)
-    log.info("Finished processing file!")
+    with NamedTemporaryFile(
+        prefix=f".{target_path.name}.",
+        dir=target_path.parent,
+        delete=False,
+    ) as temporary_file:
+        temporary_path = Path(temporary_file.name)
 
+    published = False
+    try:
+        shutil.copy2(source_path, temporary_path)
+        temporary_path.replace(target_path)
+        published = True
+    finally:
+        if not published:
+            temporary_path.unlink(missing_ok=True)
+
+    source_path.unlink()
+    log.info("Finished processing file!")
     return target_path
 
 

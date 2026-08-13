@@ -175,3 +175,72 @@ def test_timeout_raises(
 
     with pytest.raises(subprocess.TimeoutExpired):
         embed_subtitles(subtitle_path, video_path, output_path)
+
+
+def test_invalid_embed_mode_raises(
+    subtitle_path: Path,
+    video_path: Path,
+    output_path: Path,
+) -> None:
+    """Tests rejection of unsupported embed modes."""
+    with pytest.raises(
+        SubtitleEmbedError,
+        match="Unsupported",
+    ):
+        embed_subtitles(
+            subtitle_path,
+            video_path,
+            output_path,
+            mode="invalid",
+        )
+
+
+def test_soft_embed_preserves_streams_and_metadata(
+    subtitle_path: Path,
+    video_path: Path,
+    output_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    """Tests source mapping and new subtitle metadata."""
+    mocker.patch(
+        "koffee.embed._count_subtitle_streams",
+        return_value=2,
+    )
+    mock_run = mocker.patch("koffee.embed.subprocess.run")
+
+    embed_subtitles(
+        subtitle_path,
+        video_path,
+        output_path,
+        language="en",
+    )
+
+    command = mock_run.call_args.args[0]
+    assert command[command.index("-map") + 1] == "0"
+    assert "1:0" in command
+    assert "-c:s:2" in command
+    assert "language=eng" in command
+
+
+def test_webm_uses_webvtt_subtitle_codec(
+    subtitle_path: Path,
+    video_path: Path,
+    tmp_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    """Tests the WebM-specific subtitle codec."""
+    mocker.patch(
+        "koffee.embed._count_subtitle_streams",
+        return_value=0,
+    )
+    mock_run = mocker.patch("koffee.embed.subprocess.run")
+
+    embed_subtitles(
+        subtitle_path,
+        video_path,
+        tmp_path / "output.webm",
+    )
+
+    command = mock_run.call_args.args[0]
+    codec_index = command.index("-c:s:0")
+    assert command[codec_index + 1] == "webvtt"

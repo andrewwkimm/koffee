@@ -25,6 +25,7 @@ from koffee.exceptions import (
     InvalidVideoFileError,
     MissingApiKeyError,
     MissingDependencyError,
+    SubtitleEmbedError,
     TranslationError,
     TranslationIntegrityError,
     UnsupportedFileError,
@@ -144,17 +145,38 @@ def test_translate_non_whisper_calls_translate(mocker: MockerFixture) -> None:
 
 
 def test_write_embedded_video_deletes_subtitle(
-    mocker: MockerFixture, tmp_path: Path
+    mocker: MockerFixture,
+    tmp_path: Path,
 ) -> None:
-    """Tests that the subtitle file is always deleted after embed."""
-    mocker.patch.object(
-        api_module, "embed_subtitles", return_value=tmp_path / "out.mp4"
-    )
+    """Tests atomic video publication and subtitle cleanup."""
     subtitle = tmp_path / "sub.srt"
     subtitle.touch()
+    output = tmp_path / "out.mp4"
 
-    _write_embedded_video(subtitle, tmp_path / "in.mp4", tmp_path / "out.mp4")
+    def create_output(
+        subtitle_path: Path,
+        input_path: Path,
+        output_path: Path,
+        mode: str,
+        language: str,
+    ) -> Path:
+        output_path.write_text("video")
+        return output_path
 
+    mocker.patch.object(
+        api_module,
+        "embed_subtitles",
+        side_effect=create_output,
+    )
+
+    result = _write_embedded_video(
+        subtitle,
+        tmp_path / "in.mp4",
+        output,
+    )
+
+    assert result == output
+    assert output.read_text() == "video"
     assert not subtitle.exists()
 
 
@@ -577,3 +599,29 @@ def test_run_forwards_source_language_to_asr(
     )
 
     assert mock_transcribe.call_args.kwargs["language"] == expected_language
+
+
+def test_write_embedded_video_preserves_output_on_failure(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Tests that failed work cannot replace existing output."""
+    subtitle = tmp_path / "sub.srt"
+    subtitle.touch()
+    output = tmp_path / "out.mp4"
+    output.write_text("existing")
+    mocker.patch.object(
+        api_module,
+        "embed_subtitles",
+        side_effect=SubtitleEmbedError("failed"),
+    )
+
+    with pytest.raises(SubtitleEmbedError, match="failed"):
+        _write_embedded_video(
+            subtitle,
+            tmp_path / "in.mp4",
+            output,
+        )
+
+    assert output.read_text() == "existing"
+    assert subtitle.exists()
