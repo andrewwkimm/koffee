@@ -7,9 +7,8 @@ from pathlib import Path
 import pytest
 from pytest_mock import MockerFixture
 
+from koffee.cli.batch import _resolve_paths
 from koffee.cli.commands import (
-    _find_config_path,
-    _resolve_paths,
     cli,
     convert,
     embed,
@@ -22,6 +21,7 @@ from koffee.cli.embedded import (
     _handle_embedded_subtitles,
     _select_subtitle_track,
 )
+from koffee.cli.info import _find_config_path
 from koffee.exceptions import IncompatibleOptionsError, KoffeeError, TranslationError
 from koffee.schemas.config import LANGUAGE_CODES, KoffeeConfig
 from koffee.schemas.domain import Segment, SubtitleTrack, Transcript
@@ -34,7 +34,7 @@ output_file_name = "cli_output_video_file"
 
 def test_cli(mocker: MockerFixture) -> None:
     """Tests that CLI processes a valid video file."""
-    mock_translate = mocker.patch("koffee.cli.commands.run")
+    mock_translate = mocker.patch("koffee.cli.batch.run")
 
     cli(
         korean_video_path,
@@ -53,7 +53,7 @@ def test_cli(mocker: MockerFixture) -> None:
 
 def test_embed_soft(mocker: MockerFixture) -> None:
     """Tests that embed flag is passed through to config."""
-    mock_translate = mocker.patch("koffee.cli.commands.run")
+    mock_translate = mocker.patch("koffee.cli.batch.run")
 
     cli(
         korean_video_path,
@@ -71,7 +71,7 @@ def test_embed_soft(mocker: MockerFixture) -> None:
 
 def test_embed_defaults_to_none(mocker: MockerFixture) -> None:
     """Tests that embed defaults to none."""
-    mock_translate = mocker.patch("koffee.cli.commands.run")
+    mock_translate = mocker.patch("koffee.cli.batch.run")
 
     cli(
         korean_video_path,
@@ -88,7 +88,7 @@ def test_embed_defaults_to_none(mocker: MockerFixture) -> None:
 
 def test_verbose(mocker: MockerFixture) -> None:
     """Tests that the verbose flag sets log level to DEBUG."""
-    mocker.patch("koffee.cli.commands.run")
+    mocker.patch("koffee.cli.batch.run")
     mock_logger = mocker.patch("logging.getLogger")
     logger_instance = mock_logger.return_value
 
@@ -144,7 +144,7 @@ def test_resolve_paths_glob_no_match(
 
 def test_dry_run(mocker: MockerFixture) -> None:
     """Tests that dry-run previews actions without translating."""
-    mock_translate = mocker.patch("koffee.cli.commands.run")
+    mock_translate = mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
 
     cli(
@@ -158,7 +158,7 @@ def test_dry_run(mocker: MockerFixture) -> None:
 
 def test_dry_run_subtitle_file(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that dry-run shows subtitle translation mode for .srt files."""
-    mock_translate = mocker.patch("koffee.cli.commands.run")
+    mock_translate = mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
     srt = tmp_path / "test.srt"
     srt.touch()
@@ -170,9 +170,9 @@ def test_dry_run_subtitle_file(mocker: MockerFixture, tmp_path: Path) -> None:
 
 def test_dry_run_with_embed(mocker: MockerFixture) -> None:
     """Tests that dry-run reports embed info when the flag is set."""
-    mock_translate = mocker.patch("koffee.cli.commands.run")
+    mock_translate = mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
-    mock_log = mocker.patch("koffee.cli.commands.log")
+    mock_log = mocker.patch("koffee.cli.batch.log")
 
     cli(
         korean_video_path,
@@ -246,7 +246,7 @@ def test_translate_with_progress_subtitle_file(
     mocker: MockerFixture, tmp_path: Path
 ) -> None:
     """Tests that subtitle files skip the ASR progress bar."""
-    mock_translate = mocker.patch("koffee.cli.commands.run")
+    mock_translate = mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
     srt = tmp_path / "test.srt"
     srt.touch()
@@ -261,9 +261,9 @@ def test_translate_with_progress_subtitle_file(
 
 def test_batch_progress_logging(mocker: MockerFixture) -> None:
     """Tests that batch processing logs progress for multiple files."""
-    mock_translate = mocker.patch("koffee.cli.commands.run")
+    mock_translate = mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
-    mock_log = mocker.patch("koffee.cli.commands.log")
+    mock_log = mocker.patch("koffee.cli.batch.log")
 
     cli(
         korean_video_path,
@@ -280,9 +280,9 @@ def test_batch_progress_logging(mocker: MockerFixture) -> None:
 
 def test_batch_summary_on_success(mocker: MockerFixture) -> None:
     """Tests that batch processing logs a summary when all files succeed."""
-    mocker.patch("koffee.cli.commands.run")
+    mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
-    mock_log = mocker.patch("koffee.cli.commands.log")
+    mock_log = mocker.patch("koffee.cli.batch.log")
 
     cli(
         korean_video_path,
@@ -296,9 +296,9 @@ def test_batch_summary_on_success(mocker: MockerFixture) -> None:
 
 def test_batch_summary_on_partial_failure(mocker: MockerFixture) -> None:
     """Tests that batch processing logs failed files in the summary."""
-    mocker.patch("koffee.cli.commands.run", side_effect=[None, KoffeeError("boom")])
+    mocker.patch("koffee.cli.batch.run", side_effect=[None, KoffeeError("boom")])
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
-    mock_log = mocker.patch("koffee.cli.commands.log")
+    mock_log = mocker.patch("koffee.cli.batch.log")
 
     cli(
         korean_video_path,
@@ -316,12 +316,12 @@ def test_batch_summary_on_partial_failure(mocker: MockerFixture) -> None:
 def test_translation_failure_prompt_yes_saves(mocker: MockerFixture) -> None:
     """Tests that answering yes at the prompt triggers a transcription save."""
     mocker.patch(
-        "koffee.cli.commands.run", side_effect=TranslationError("boom", segments=[])
+        "koffee.cli.batch.run", side_effect=TranslationError("boom", segments=[])
     )
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
-    mock_save = mocker.patch("koffee.cli.commands._save_raw_transcription")
-    mocker.patch("koffee.cli.commands.Confirm.ask", return_value=True)
-    mocker.patch("koffee.cli.commands.sys.stdin.isatty", return_value=True)
+    mock_save = mocker.patch("koffee.cli.batch._save_raw_transcription")
+    mocker.patch("koffee.cli.batch.Confirm.ask", return_value=True)
+    mocker.patch("koffee.cli.batch.sys.stdin.isatty", return_value=True)
 
     cli(korean_video_path, output_dir=output_directory_path)
 
@@ -331,12 +331,12 @@ def test_translation_failure_prompt_yes_saves(mocker: MockerFixture) -> None:
 def test_translation_failure_prompt_no_does_not_save(mocker: MockerFixture) -> None:
     """Tests that answering no at the prompt skips the save."""
     mocker.patch(
-        "koffee.cli.commands.run", side_effect=TranslationError("boom", segments=[])
+        "koffee.cli.batch.run", side_effect=TranslationError("boom", segments=[])
     )
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
-    mock_save = mocker.patch("koffee.cli.commands._save_raw_transcription")
-    mocker.patch("koffee.cli.commands.Confirm.ask", return_value=False)
-    mocker.patch("koffee.cli.commands.sys.stdin.isatty", return_value=True)
+    mock_save = mocker.patch("koffee.cli.batch._save_raw_transcription")
+    mocker.patch("koffee.cli.batch.Confirm.ask", return_value=False)
+    mocker.patch("koffee.cli.batch.sys.stdin.isatty", return_value=True)
 
     cli(
         korean_video_path,
@@ -350,11 +350,11 @@ def test_translation_failure_prompt_no_does_not_save(mocker: MockerFixture) -> N
 def test_translation_failure_save_skips_prompt(mocker: MockerFixture) -> None:
     """Tests that --on-translation-failure=save bypasses the prompt entirely."""
     mocker.patch(
-        "koffee.cli.commands.run", side_effect=TranslationError("boom", segments=[])
+        "koffee.cli.batch.run", side_effect=TranslationError("boom", segments=[])
     )
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
-    mock_save = mocker.patch("koffee.cli.commands._save_raw_transcription")
-    mock_confirm = mocker.patch("koffee.cli.commands.Confirm.ask")
+    mock_save = mocker.patch("koffee.cli.batch._save_raw_transcription")
+    mock_confirm = mocker.patch("koffee.cli.batch.Confirm.ask")
 
     cli(
         korean_video_path,
@@ -369,11 +369,11 @@ def test_translation_failure_save_skips_prompt(mocker: MockerFixture) -> None:
 def test_translation_failure_abort_skips_prompt_and_save(mocker: MockerFixture) -> None:
     """Tests that --on-translation-failure=abort skips both the prompt and the save."""
     mocker.patch(
-        "koffee.cli.commands.run", side_effect=TranslationError("boom", segments=[])
+        "koffee.cli.batch.run", side_effect=TranslationError("boom", segments=[])
     )
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
-    mock_save = mocker.patch("koffee.cli.commands._save_raw_transcription")
-    mock_confirm = mocker.patch("koffee.cli.commands.Confirm.ask")
+    mock_save = mocker.patch("koffee.cli.batch._save_raw_transcription")
+    mock_confirm = mocker.patch("koffee.cli.batch.Confirm.ask")
 
     cli(
         korean_video_path,
@@ -388,12 +388,12 @@ def test_translation_failure_abort_skips_prompt_and_save(mocker: MockerFixture) 
 def test_translation_failure_non_tty_falls_back_to_save(mocker: MockerFixture) -> None:
     """Tests that a non-TTY stdin auto-saves instead of attempting a prompt."""
     mocker.patch(
-        "koffee.cli.commands.run", side_effect=TranslationError("boom", segments=[])
+        "koffee.cli.batch.run", side_effect=TranslationError("boom", segments=[])
     )
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
-    mock_save = mocker.patch("koffee.cli.commands._save_raw_transcription")
-    mock_confirm = mocker.patch("koffee.cli.commands.Confirm.ask")
-    mocker.patch("koffee.cli.commands.sys.stdin.isatty", return_value=False)
+    mock_save = mocker.patch("koffee.cli.batch._save_raw_transcription")
+    mock_confirm = mocker.patch("koffee.cli.batch.Confirm.ask")
+    mocker.patch("koffee.cli.batch.sys.stdin.isatty", return_value=False)
 
     cli(korean_video_path, output_dir=output_directory_path)
 
@@ -404,13 +404,13 @@ def test_translation_failure_non_tty_falls_back_to_save(mocker: MockerFixture) -
 def test_batch_continues_after_translation_failure(mocker: MockerFixture) -> None:
     """Tests that a translation failure on one file does not stop later files."""
     mock_run = mocker.patch(
-        "koffee.cli.commands.run",
+        "koffee.cli.batch.run",
         side_effect=[TranslationError("boom", segments=[]), None, None],
     )
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
-    mocker.patch("koffee.cli.commands._save_raw_transcription")
-    mocker.patch("koffee.cli.commands.Confirm.ask", return_value=True)
-    mocker.patch("koffee.cli.commands.sys.stdin.isatty", return_value=True)
+    mocker.patch("koffee.cli.batch._save_raw_transcription")
+    mocker.patch("koffee.cli.batch.Confirm.ask", return_value=True)
+    mocker.patch("koffee.cli.batch.sys.stdin.isatty", return_value=True)
 
     cli(
         korean_video_path,
@@ -425,7 +425,7 @@ def test_batch_continues_after_translation_failure(mocker: MockerFixture) -> Non
 
 def test_prompt_flag(mocker: MockerFixture) -> None:
     """Tests that --prompt is passed through to config."""
-    mock_translate = mocker.patch("koffee.cli.commands.run")
+    mock_translate = mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
 
     cli(
@@ -444,7 +444,7 @@ def test_config_flag_loads_file(mocker: MockerFixture, tmp_path: Path) -> None:
     config_file = tmp_path / "custom.toml"
     config_file.write_text('target_language = "fr"\n')
 
-    mock_translate = mocker.patch("koffee.cli.commands.run")
+    mock_translate = mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
 
     cli(
@@ -508,14 +508,14 @@ def test_select_subtitle_track_missing_language_tag() -> None:
 
 def test_info_command(mocker: MockerFixture) -> None:
     """Tests that info command reports the ffmpeg version when present."""
-    mocker.patch("koffee.cli.commands.shutil.which", return_value="/usr/bin/ffmpeg")
+    mocker.patch("koffee.cli.info.shutil.which", return_value="/usr/bin/ffmpeg")
     mocker.patch(
-        "koffee.cli.commands.subprocess.run",
+        "koffee.cli.info.subprocess.run",
         return_value=subprocess.CompletedProcess(
             args=[], returncode=0, stdout="ffmpeg version 7.0\n"
         ),
     )
-    mock_log = mocker.patch("koffee.cli.commands.log")
+    mock_log = mocker.patch("koffee.cli.info.log")
 
     info()
 
@@ -525,8 +525,8 @@ def test_info_command(mocker: MockerFixture) -> None:
 
 def test_info_command_no_ffmpeg(mocker: MockerFixture) -> None:
     """Tests that info command reports ffmpeg as not found when missing."""
-    mocker.patch("koffee.cli.commands.shutil.which", return_value=None)
-    mock_log = mocker.patch("koffee.cli.commands.log")
+    mocker.patch("koffee.cli.info.shutil.which", return_value=None)
+    mock_log = mocker.patch("koffee.cli.info.log")
 
     info()
 
@@ -537,13 +537,13 @@ def test_info_command_no_ffmpeg(mocker: MockerFixture) -> None:
 def test_tracks_command(mocker: MockerFixture) -> None:
     """Tests that tracks command lists each subtitle track."""
     mocker.patch(
-        "koffee.cli.commands.get_subtitle_tracks",
+        "koffee.cli.subtitles.get_subtitle_tracks",
         return_value=[
             SubtitleTrack(index=0, language="ja", title="Japanese"),
             SubtitleTrack(index=1, language="en", title=None),
         ],
     )
-    mock_log = mocker.patch("koffee.cli.commands.log")
+    mock_log = mocker.patch("koffee.cli.subtitles.log")
 
     tracks(korean_video_path)
 
@@ -554,8 +554,8 @@ def test_tracks_command(mocker: MockerFixture) -> None:
 
 def test_tracks_command_no_tracks(mocker: MockerFixture) -> None:
     """Tests that tracks command reports when no subtitle tracks are found."""
-    mocker.patch("koffee.cli.commands.get_subtitle_tracks", return_value=[])
-    mock_log = mocker.patch("koffee.cli.commands.log")
+    mocker.patch("koffee.cli.subtitles.get_subtitle_tracks", return_value=[])
+    mock_log = mocker.patch("koffee.cli.subtitles.log")
 
     tracks(korean_video_path)
 
@@ -566,7 +566,7 @@ def test_tracks_command_no_tracks(mocker: MockerFixture) -> None:
 def test_find_config_path_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tests that _find_config_path returns None when no config exists."""
     monkeypatch.setattr(
-        "koffee.cli.commands.CONFIG_SEARCH_PATHS",
+        "koffee.cli.info.CONFIG_SEARCH_PATHS",
         [Path("/nonexistent/koffee.toml")],
     )
 
@@ -582,7 +582,7 @@ def test_embed_command(mocker: MockerFixture, tmp_path: Path) -> None:
     output = tmp_path / "out.mp4"
 
     mock_embed = mocker.patch(
-        "koffee.cli.commands.embed_subtitles", return_value=output
+        "koffee.cli.subtitles.embed_subtitles", return_value=output
     )
 
     embed(video, sub, output_path=output)
@@ -599,7 +599,7 @@ def test_embed_command_hard_mode(mocker: MockerFixture, tmp_path: Path) -> None:
     output = tmp_path / "out.mp4"
 
     mock_embed = mocker.patch(
-        "koffee.cli.commands.embed_subtitles", return_value=output
+        "koffee.cli.subtitles.embed_subtitles", return_value=output
     )
 
     embed(video, sub, output_path=output, mode="hard")
@@ -616,7 +616,7 @@ def test_embed_command_default_output(mocker: MockerFixture, tmp_path: Path) -> 
     expected_output = tmp_path / "video_embed.mp4"
 
     mock_embed = mocker.patch(
-        "koffee.cli.commands.embed_subtitles", return_value=expected_output
+        "koffee.cli.subtitles.embed_subtitles", return_value=expected_output
     )
 
     embed(video, sub)
@@ -645,13 +645,13 @@ def test_transcribe_command(mocker: MockerFixture, tmp_path: Path) -> None:
     subtitle_file.touch()
 
     mocker.patch(
-        "koffee.cli.commands.asr.transcribe",
+        "koffee.cli.transcribe.asr.transcribe",
         return_value=Transcript(
             segments=[Segment(start=0.0, end=1.0, text="Hello.")], language="en"
         ),
     )
     mocker.patch(
-        "koffee.cli.commands.generate_subtitles",
+        "koffee.cli.transcribe.generate_subtitles",
         return_value=subtitle_file,
     )
     mocker.patch("pathlib.Path.replace")
@@ -669,13 +669,13 @@ def test_transcribe_command_collision(mocker: MockerFixture, tmp_path: Path) -> 
     subtitle_file.touch()
 
     mocker.patch(
-        "koffee.cli.commands.asr.transcribe",
+        "koffee.cli.transcribe.asr.transcribe",
         return_value=Transcript(
             segments=[Segment(start=0.0, end=1.0, text="Hello.")], language="en"
         ),
     )
     mocker.patch(
-        "koffee.cli.commands.generate_subtitles",
+        "koffee.cli.transcribe.generate_subtitles",
         return_value=subtitle_file,
     )
 
@@ -691,11 +691,11 @@ def test_convert_command(mocker: MockerFixture, tmp_path: Path) -> None:
     subtitle_file.touch()
 
     mock_parse = mocker.patch(
-        "koffee.cli.commands.parse_subtitle_file",
+        "koffee.cli.subtitles.parse_subtitle_file",
         return_value=[Segment(start=0.0, end=1.0, text="Hello.")],
     )
     mocker.patch(
-        "koffee.cli.commands.generate_subtitles",
+        "koffee.cli.subtitles.generate_subtitles",
         return_value=subtitle_file,
     )
     mocker.patch("pathlib.Path.replace")
@@ -713,11 +713,11 @@ def test_convert_command_default_output(mocker: MockerFixture, tmp_path: Path) -
     subtitle_file.touch()
 
     mocker.patch(
-        "koffee.cli.commands.parse_subtitle_file",
+        "koffee.cli.subtitles.parse_subtitle_file",
         return_value=[Segment(start=0.0, end=1.0, text="Hello.")],
     )
     mocker.patch(
-        "koffee.cli.commands.generate_subtitles",
+        "koffee.cli.subtitles.generate_subtitles",
         return_value=subtitle_file,
     )
     mocker.patch("pathlib.Path.replace")
@@ -735,11 +735,11 @@ def test_convert_command_collision(mocker: MockerFixture, tmp_path: Path) -> Non
     subtitle_file.touch()
 
     mocker.patch(
-        "koffee.cli.commands.parse_subtitle_file",
+        "koffee.cli.subtitles.parse_subtitle_file",
         return_value=[Segment(start=0.0, end=1.0, text="Hello.")],
     )
     mocker.patch(
-        "koffee.cli.commands.generate_subtitles",
+        "koffee.cli.subtitles.generate_subtitles",
         return_value=subtitle_file,
     )
 
@@ -799,10 +799,10 @@ def test_batch_keeps_per_file_embedded_configuration(
     )
     asr_config = KoffeeConfig()
     mocker.patch(
-        "koffee.cli.commands._handle_embedded_subtitles",
+        "koffee.cli.main._handle_embedded_subtitles",
         side_effect=[embedded_config, asr_config],
     )
-    mock_run = mocker.patch("koffee.cli.commands.run")
+    mock_run = mocker.patch("koffee.cli.batch.run")
 
     cli(first, second)
 
@@ -817,7 +817,7 @@ def test_cli_explicit_default_overrides_config_file(
     """Tests explicit defaults overriding TOML values."""
     config_file = tmp_path / "custom.toml"
     config_file.write_text('target_language = "fr"\n')
-    mock_run = mocker.patch("koffee.cli.commands.run")
+    mock_run = mocker.patch("koffee.cli.batch.run")
     mocker.patch(
         "koffee.cli.embedded.get_subtitle_tracks",
         return_value=[],
@@ -840,7 +840,7 @@ def test_cli_explicit_true_overrides_false_config_value(
     """Tests explicit true overriding false TOML."""
     config_file = tmp_path / "custom.toml"
     config_file.write_text("vad_filter = false\n")
-    mock_run = mocker.patch("koffee.cli.commands.run")
+    mock_run = mocker.patch("koffee.cli.batch.run")
     mocker.patch(
         "koffee.cli.embedded.get_subtitle_tracks",
         return_value=[],
@@ -882,7 +882,7 @@ def test_cli_rejects_output_name_for_multiple_inputs(
     second = tmp_path / "second.mp4"
     first.touch()
     second.touch()
-    mock_run = mocker.patch("koffee.cli.commands.run")
+    mock_run = mocker.patch("koffee.cli.batch.run")
 
     with pytest.raises(
         IncompatibleOptionsError,
