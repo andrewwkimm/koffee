@@ -2,10 +2,18 @@ name: CI
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
 
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
 
     strategy:
       fail-fast: false
@@ -28,21 +36,21 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
 
       - name: Build
-        uses: nick-fields/retry@v4
-        with:
-          timeout_minutes: 30
-          max_attempts: 2
-          retry_wait_seconds: 10
-          shell: bash
-          command: |
-            make build
+        shell: bash
+        run: make build
+
+      - name: Run integration tests
+        shell: bash
+        run: make integration-test
 
       - name: Generate coverage report
         shell: bash
         run: |
-          pip install pytest-cov
           coverage report
           coverage xml
 

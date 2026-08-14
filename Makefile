@@ -21,7 +21,10 @@ setup:
 	uv run pre-commit install --install-hooks
 
 test:
-	uv run pytest -x --cov
+	uv run pytest --cov -m "not integration"
+
+integration-test:
+	uv run pytest -m integration
 
 type_check:
 	uv run ty check tests
@@ -69,6 +72,7 @@ ship:
 	docs \
 	dist \
 	help \
+	integration-test \
 	lint \
 	reformat \
 	serve \
