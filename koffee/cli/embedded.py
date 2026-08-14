@@ -2,11 +2,13 @@
 
 from pathlib import Path
 
-from koffee.api import SUBTITLE_EXTENSIONS
 from koffee.cli.app import log
 from koffee.schemas.config import KoffeeConfig
 from koffee.schemas.domain import SubtitleTrack
-from koffee.subtitle import get_subtitle_tracks
+from koffee.subtitle import (
+    SUBTITLE_EXTENSIONS,
+    get_subtitle_tracks,
+)
 
 
 def _handle_embedded_subtitles(video_path: Path, config: KoffeeConfig) -> KoffeeConfig:

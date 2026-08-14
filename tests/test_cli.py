@@ -7,11 +7,9 @@ from pathlib import Path
 import pytest
 from pytest_mock import MockerFixture
 
-from koffee.cli import (
+from koffee.cli.commands import (
     _find_config_path,
-    _handle_embedded_subtitles,
     _resolve_paths,
-    _select_subtitle_track,
     cli,
     convert,
     embed,
@@ -19,6 +17,10 @@ from koffee.cli import (
     languages,
     tracks,
     transcribe,
+)
+from koffee.cli.embedded import (
+    _handle_embedded_subtitles,
+    _select_subtitle_track,
 )
 from koffee.exceptions import IncompatibleOptionsError, KoffeeError, TranslationError
 from koffee.schemas.config import LANGUAGE_CODES, KoffeeConfig

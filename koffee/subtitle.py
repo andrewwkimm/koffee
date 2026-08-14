@@ -14,6 +14,8 @@ from koffee.schemas.domain import Segment, SubtitleTrack
 
 log = logging.getLogger(__name__)
 
+SUBTITLE_EXTENSIONS = frozenset({".ass", ".srt", ".ssa", ".vtt"})
+
 _STYLE_FORMAT = (
     "Format: Name, Fontname, Fontsize, PrimaryColour, "
     "SecondaryColour, OutlineColour, BackColour, Bold, "

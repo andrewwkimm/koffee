@@ -16,8 +16,17 @@ from rich.prompt import Confirm
 from rich.table import Table
 
 from koffee import asr
-from koffee.api import SUBTITLE_EXTENSIONS, SUPPORTED_EXTENSIONS, _write_output, run
-from koffee.cli.app import app, defaults, log, options_group
+from koffee.api import (
+    SUPPORTED_EXTENSIONS,
+    _write_output,
+    run,
+)
+from koffee.cli.app import (
+    _configure_logging,
+    app,
+    log,
+    options_group,
+)
 from koffee.cli.embedded import _handle_embedded_subtitles
 from koffee.cli.progress import _create_progress_bar, _make_progress_callback
 from koffee.embed import embed_subtitles
@@ -29,7 +38,12 @@ from koffee.schemas.config import (
     KoffeeConfig,
     load_config_file,
 )
-from koffee.subtitle import generate_subtitles, get_subtitle_tracks, parse_subtitle_file
+from koffee.subtitle import (
+    SUBTITLE_EXTENSIONS,
+    generate_subtitles,
+    get_subtitle_tracks,
+    parse_subtitle_file,
+)
 
 
 class _BatchItem(BaseModel):
@@ -579,74 +593,97 @@ def tracks(
 
 @app.command()
 def transcribe(
-    file_path: Annotated[Path, Parameter(validator=validators.Path(exists=True))],
+    file_path: Annotated[
+        Path,
+        Parameter(validator=validators.Path(exists=True)),
+    ],
     compute_type: Annotated[
-        str, Parameter(name=("--compute-type", "-c"))
-    ] = defaults.compute_type,
-    device: Annotated[str, Parameter(name=("--device", "-d"))] = defaults.device,
+        str | None,
+        Parameter(name=("--compute-type", "-c")),
+    ] = None,
+    device: Annotated[
+        str | None,
+        Parameter(name=("--device", "-d")),
+    ] = None,
     whisper_model: Annotated[
-        str, Parameter(name=("--whisper-model", "-m"))
-    ] = defaults.whisper_model,
-    output_dir: Annotated[Path, Parameter(name=("--output-dir", "-o"))] | None = None,
-    output_name: Annotated[str, Parameter(name=("--output-name", "-n"))] | None = None,
+        str | None,
+        Parameter(name=("--whisper-model", "-m")),
+    ] = None,
+    output_dir: Annotated[
+        Path,
+        Parameter(name=("--output-dir", "-o")),
+    ]
+    | None = None,
+    output_name: Annotated[
+        str,
+        Parameter(name=("--output-name", "-n")),
+    ]
+    | None = None,
     subtitle_format: Annotated[
-        str, Parameter(name=("--subtitle-format", "-f"))
-    ] = defaults.subtitle_format,
+        str | None,
+        Parameter(name=("--subtitle-format", "-f")),
+    ] = None,
     vad_filter: Annotated[
-        bool, Parameter(negative="--no-vad-filter", group=options_group)
-    ] = True,
+        bool | None,
+        Parameter(
+            negative="--no-vad-filter",
+            group=options_group,
+        ),
+    ] = None,
     overwrite: Annotated[
-        bool, Parameter(name=("--overwrite",), group=options_group)
-    ] = False,
+        bool | None,
+        Parameter(
+            name=("--overwrite",),
+            group=options_group,
+        ),
+    ] = None,
 ) -> None:
-    """Transcribe audio to subtitles without translation.
+    """Transcribes audio to subtitles without translation."""
+    config = _resolve_config(
+        None,
+        {
+            "compute_type": compute_type,
+            "device": device,
+            "whisper_model": whisper_model,
+            "output_dir": output_dir,
+            "output_name": output_name,
+            "subtitle_format": subtitle_format,
+            "vad_filter": vad_filter,
+            "overwrite": overwrite,
+        },
+    )
 
-    Parameters
-    ----------
-    file_path: Path
-        Path to the video or audio file
-    compute_type: str
-        Type to use for computation
-    device: str
-        Device to use for computation
-    whisper_model: str
-        The Whisper model instance to use
-    output_dir: Path
-        Directory for the output file
-    output_name: str
-        Name of the output file
-    subtitle_format: str
-        Format to use for the subtitles
-    vad_filter: bool
-        Voice activity detection filtering during transcription (enabled by default;
-        pass `--no-vad-filter` to disable)
-    overwrite: bool
-        Overwrite existing output files instead of raising an error
-    """
     with _create_progress_bar() as progress:
-        asr_task = progress.add_task("Transcribing", total=100)
-
+        asr_task = progress.add_task(
+            "Transcribing",
+            total=100,
+        )
         transcript = asr.transcribe(
             str(file_path),
-            compute_type,
-            device,
-            whisper_model,
+            config.compute_type,
+            config.device,
+            config.whisper_model,
             "transcribe",
-            on_progress=_make_progress_callback(progress, asr_task),
-            vad_filter=vad_filter,
+            on_progress=_make_progress_callback(
+                progress,
+                asr_task,
+            ),
+            vad_filter=config.vad_filter,
         )
 
-    segments = transcript.segments
-    out_dir = output_dir if output_dir is not None else file_path.parent
-    subtitle_path = generate_subtitles(subtitle_format, segments, out_dir)
-
+    output_directory = config.output_dir or file_path.parent
+    subtitle_path = generate_subtitles(
+        config.subtitle_format,
+        transcript.segments,
+        output_directory,
+    )
     target_path = _write_output(
         subtitle_path,
         file_path,
-        subtitle_format,
-        output_dir,
-        output_name,
-        overwrite,
+        config.subtitle_format,
+        config.output_dir,
+        config.output_name,
+        config.overwrite,
     )
     log.info(f"Output saved to {target_path}")
 
@@ -660,5 +697,6 @@ app["embed"].sort_key = 5
 
 
 def main() -> None:
-    """Wraps app() so that it is accessible to poetry."""
+    """Configures and runs the command-line application."""
+    _configure_logging()
     app()

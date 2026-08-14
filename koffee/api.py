@@ -27,6 +27,7 @@ from koffee.exceptions import (
 from koffee.schemas.config import KoffeeConfig
 from koffee.schemas.domain import Transcript
 from koffee.subtitle import (
+    SUBTITLE_EXTENSIONS,
     extract_subtitle_track,
     generate_subtitles,
     get_subtitle_tracks,
@@ -37,7 +38,6 @@ from koffee.translator import translate
 log = logging.getLogger(__name__)
 
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a"}
-SUBTITLE_EXTENSIONS = {".srt", ".vtt", ".ass", ".ssa"}
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".flv", ".wmv"}
 SUPPORTED_EXTENSIONS = AUDIO_EXTENSIONS | VIDEO_EXTENSIONS
 
