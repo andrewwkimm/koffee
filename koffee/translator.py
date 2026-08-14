@@ -9,7 +9,9 @@ from types import ModuleType
 from koffee._retry import with_retries
 from koffee.exceptions import TranslationIntegrityError
 from koffee.llm._protocol import TranslationProvider
-from koffee.schemas.types import Chunk, Segment, Transcript
+from koffee.schemas.domain import Transcript as DomainTranscript
+from koffee.schemas.domain import TranslationChunk
+from koffee.schemas.types import Segment, Transcript
 from koffee.subtitle import segments_to_srt
 
 log = logging.getLogger(__name__)
@@ -114,22 +116,30 @@ def translate(
 
 
 def _chunk_segments(
-    transcript: Transcript, target_language: str, chunk_size: int = CHUNK_SIZE
-) -> list[Chunk]:
-    """Splits transcript segments into prompt-ready chunks."""
-    segments = transcript["segments"]
-    source_language = transcript["language"]
+    transcript: Transcript | DomainTranscript,
+    target_language: str,
+    chunk_size: int = CHUNK_SIZE,
+) -> list[TranslationChunk]:
+    """Validates and splits a transcript into immutable chunks."""
+    validated_transcript = (
+        transcript
+        if isinstance(transcript, DomainTranscript)
+        else DomainTranscript.model_validate(transcript)
+    )
 
     chunks = [
-        {
-            "chunk": segments[i : i + chunk_size],
-            "source_language": source_language,
-            "target_language": target_language,
-            "start_entry": i + 1,
-        }
-        for i in range(0, len(segments), chunk_size)
+        TranslationChunk(
+            segments=validated_transcript.segments[index : index + chunk_size],
+            source_language=validated_transcript.language,
+            target_language=target_language,
+            start_entry=index + 1,
+        )
+        for index in range(
+            0,
+            len(validated_transcript.segments),
+            chunk_size,
+        )
     ]
-
     return chunks
 
 
@@ -151,40 +161,42 @@ def _load_backend(backend_name: str) -> TranslationProvider:
 def _translate_chunks(
     backend: ModuleType,
     client,
-    chunks: list[Chunk],
+    chunks: list[TranslationChunk],
     on_progress: Callable[[float], None] | None,
     llm_model: str,
     system_prompt: str,
     context_size: int = CONTEXT_SIZE,
     sleep_requests: int = SLEEP_REQUESTS,
 ) -> list[Segment]:
-    """Iterates chunks, translating each and reporting progress."""
+    """Translates validated chunks and reports progress."""
     log.info(f"Translating in {len(chunks)} chunks.")
 
     translated_segments = []
-    for i, chunk_data in enumerate(chunks):
+    for chunk_index, chunk_data in enumerate(chunks):
+        chunk = [segment.model_dump() for segment in chunk_data.segments]
         prompt = _build_prompt(
-            chunk=chunk_data["chunk"],
-            source_language=chunk_data["source_language"],
-            target_language=chunk_data["target_language"],
-            start_entry=chunk_data["start_entry"],
+            chunk=chunk,
+            source_language=chunk_data.source_language,
+            target_language=chunk_data.target_language,
+            start_entry=chunk_data.start_entry,
             context_segments=translated_segments[-context_size:],
         )
         translated_chunk = _translate_chunk(
             backend,
             client,
             prompt,
-            chunk_data["chunk"],
+            chunk,
             llm_model,
             system_prompt,
-            start_entry=chunk_data["start_entry"],
+            start_entry=chunk_data.start_entry,
         )
         translated_segments.extend(translated_chunk)
 
         if on_progress:
-            on_progress((i + 1) / len(chunks))
+            on_progress((chunk_index + 1) / len(chunks))
 
-        if i < len(chunks) - 1 and sleep_requests > 0:
+        has_next_chunk = chunk_index < len(chunks) - 1
+        if has_next_chunk and sleep_requests > 0:
             time.sleep(sleep_requests)
 
     return translated_segments

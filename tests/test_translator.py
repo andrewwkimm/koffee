@@ -913,8 +913,8 @@ def test_chunk_segments_default_chunk_size() -> None:
 
     expected_chunk_count = 2
     assert len(chunks) == expected_chunk_count
-    assert len(chunks[0]["chunk"]) == default_chunk_size
-    assert len(chunks[1]["chunk"]) == 1
+    assert len(chunks[0].segments) == default_chunk_size
+    assert len(chunks[1].segments) == 1
 
 
 def test_chunk_segments_explicit_chunk_size() -> None:
@@ -929,8 +929,8 @@ def test_chunk_segments_explicit_chunk_size() -> None:
 
     expected_chunk_count = 4
     assert len(chunks) == expected_chunk_count
-    assert len(chunks[0]["chunk"]) == chunk_size
-    assert len(chunks[-1]["chunk"]) == 1
+    assert len(chunks[0].segments) == chunk_size
+    assert len(chunks[-1].segments) == 1
 
 
 def test_translate_uses_model_chunk_size(mocker: MockerFixture) -> None:

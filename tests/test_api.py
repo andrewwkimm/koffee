@@ -31,7 +31,7 @@ from koffee.exceptions import (
     UnsupportedFileError,
 )
 from koffee.schemas.config import KoffeeConfig
-from koffee.schemas.types import Transcript
+from koffee.schemas.types import Segment, Transcript
 
 
 @pytest.mark.integration
@@ -278,31 +278,57 @@ def test_route_output_with_embed(mocker: MockerFixture, tmp_path: Path) -> None:
     mock_finalize.assert_called_once()
 
 
-def test_run_subtitle_file_input(mocker: MockerFixture, tmp_path: Path) -> None:
-    """Tests that a subtitle file input skips ASR and translates directly."""
-    srt = tmp_path / "test.srt"
-    srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello.\n")
+def test_run_subtitle_file_input(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Tests that subtitle input skips ASR and publishes output."""
+    subtitle = tmp_path / "test.srt"
+    subtitle.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello.\n")
+    generated = tmp_path / "generated.vtt"
+
+    def generate_subtitles(
+        subtitle_format: str,
+        segments: list[Segment],
+        output_dir: Path | None = None,
+    ) -> Path:
+        generated.write_text("WEBVTT\n")
+        return generated
 
     mock_parse = mocker.patch.object(
         api_module,
         "parse_subtitle_file",
-        return_value=[{"start": 0.0, "end": 1.0, "text": "Hello."}],
+        return_value=[
+            {
+                "start": 0.0,
+                "end": 1.0,
+                "text": "Hello.",
+            }
+        ],
     )
     mock_translate = mocker.patch.object(
         api_module,
         "translate",
-        return_value=[{"start": 0.0, "end": 1.0, "text": "Translated."}],
+        return_value=[
+            {
+                "start": 0.0,
+                "end": 1.0,
+                "text": "Translated.",
+            }
+        ],
     )
     mock_generate = mocker.patch.object(
         api_module,
         "generate_subtitles",
-        return_value=tmp_path / "out.vtt",
+        side_effect=generate_subtitles,
     )
-    mocker.patch("pathlib.Path.replace", return_value=tmp_path / "test.vtt")
-    mocker.patch.object(api_module, "_check_output_collision")
+    mocker.patch.object(
+        api_module,
+        "_check_output_collision",
+    )
 
-    run(
-        str(srt),
+    result = run(
+        subtitle,
         config=KoffeeConfig(
             output_dir=tmp_path,
             provider="gemini",
@@ -311,6 +337,9 @@ def test_run_subtitle_file_input(mocker: MockerFixture, tmp_path: Path) -> None:
         ),
     )
 
+    assert result == tmp_path / "test.vtt"
+    assert result.read_text() == "WEBVTT\n"
+    assert not generated.exists()
     mock_parse.assert_called_once()
     mock_translate.assert_called_once()
     mock_generate.assert_called_once()
