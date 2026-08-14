@@ -3,7 +3,7 @@
 from typing import Any, Protocol
 
 
-class TranslationProvider(Protocol):
+class Translator(Protocol):
     """Behavior required by a translation provider."""
 
     name: str

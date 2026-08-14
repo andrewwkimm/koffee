@@ -62,8 +62,8 @@ def cli(
         str | None, Parameter(name=("--compute-type", "-c"))
     ] = None,
     device: Annotated[str | None, Parameter(name=("--device", "-d"))] = None,
-    whisper_model: Annotated[
-        str | None, Parameter(name=("--whisper-model", "-m"))
+    transcription_model: Annotated[
+        str | None, Parameter(name=("--transcription-model", "-m"))
     ] = None,
     output_dir: Annotated[Path, Parameter(name=("--output-dir", "-o"))] | None = None,
     output_name: Annotated[str, Parameter(name=("--output-name", "-n"))] | None = None,
@@ -77,11 +77,12 @@ def cli(
         str | None, Parameter(name=("--subtitle-format", "-f"))
     ] = None,
     embed: Annotated[str | None, Parameter(name=("--embed",))] = None,
-    provider: Annotated[str | None, Parameter(name=("--provider",))] = None,
-    llm_model: Annotated[str, Parameter(name=("--llm-model",))] | None = None,
+    translator: Annotated[str | None, Parameter(name=("--translator",))] = None,
+    translation_model: Annotated[str, Parameter(name=("--translation-model",))]
+    | None = None,
     chunk_size: Annotated[int, Parameter(name=("--chunk-size",))] | None = None,
     context_size: Annotated[int, Parameter(name=("--context-size",))] | None = None,
-    sleep_requests: Annotated[int, Parameter(name=("--sleep-requests",))] | None = None,
+    sleep_seconds: Annotated[int, Parameter(name=("--sleep",))] | None = None,
     prompt: Annotated[str, Parameter(name=("--prompt",))] | None = None,
     api_key: Annotated[str, Parameter(name=("--api-key",))] | None = None,
     on_translation_failure: Annotated[
@@ -159,11 +160,11 @@ def cli(
         "compute_type": compute_type,
         "device": device,
         "dry_run": dry_run,
-        "whisper_model": whisper_model,
-        "llm_model": llm_model,
+        "whisper_model": transcription_model,
+        "llm_model": translation_model,
         "chunk_size": chunk_size,
         "context_size": context_size,
-        "sleep_requests": sleep_requests,
+        "sleep_requests": sleep_seconds,
         "overwrite": overwrite,
         "output_dir": output_dir,
         "output_name": output_name,
@@ -171,7 +172,7 @@ def cli(
         "source_language": source_language,
         "subtitle_format": subtitle_format,
         "target_language": target_language,
-        "provider": provider,
+        "provider": translator,
         "prompt": prompt,
         "on_translation_failure": on_translation_failure,
         "vad_filter": vad_filter,
@@ -228,7 +229,10 @@ def _print_dry_run(batch_items: list[_BatchItem]) -> None:
         elif config.use_embedded_subtitles:
             mode = "embedded subtitle extraction + translation"
         else:
-            mode = f"ASR ({config.whisper_model}) + translation ({config.provider})"
+            mode = (
+                f"ASR ({config.transcription_model}) "
+                f"+ translation ({config.translator})"
+            )
         if config.embed != "none":
             mode = f"{mode} + subtitles embedded into video ({config.embed})"
         log.info(f"  {path.name} -> {mode}")
@@ -381,7 +385,7 @@ def _translate_with_progress(
             on_translate_progress=_make_progress_callback(progress, translate_task),
         )
     else:
-        has_translate_step = config.provider != "whisper"
+        has_translate_step = config.translator != "whisper"
         asr_task = progress.add_task("Transcribing", total=100)
         translate_task = None
         translate_callback = None
@@ -537,8 +541,8 @@ def info() -> None:
         log.info("  faster-whisper: not installed")
 
     config = KoffeeConfig(**load_config_file())
-    log.info(f"  default whisper model: {config.whisper_model}")
-    log.info(f"  default backend: {config.provider}")
+    log.info(f"  default whisper model: {config.transcription_model}")
+    log.info(f"  default backend: {config.translator}")
     log.info(f"  config file: {_find_config_path() or 'none'}")
 
 
@@ -605,9 +609,9 @@ def transcribe(
         str | None,
         Parameter(name=("--device", "-d")),
     ] = None,
-    whisper_model: Annotated[
+    transcription_model: Annotated[
         str | None,
-        Parameter(name=("--whisper-model", "-m")),
+        Parameter(name=("--transcription-model", "-m")),
     ] = None,
     output_dir: Annotated[
         Path,
@@ -644,7 +648,7 @@ def transcribe(
         {
             "compute_type": compute_type,
             "device": device,
-            "whisper_model": whisper_model,
+            "whisper_model": transcription_model,
             "output_dir": output_dir,
             "output_name": output_name,
             "subtitle_format": subtitle_format,
@@ -662,7 +666,7 @@ def transcribe(
             str(file_path),
             config.compute_type,
             config.device,
-            config.whisper_model,
+            config.transcription_model,
             "transcribe",
             on_progress=_make_progress_callback(
                 progress,

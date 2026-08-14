@@ -7,8 +7,8 @@ from collections.abc import Callable
 
 from koffee._retry import with_retries
 from koffee.exceptions import TranslationIntegrityError
-from koffee.llm import chatgpt, claude, gemini, ollama
-from koffee.llm._protocol import TranslationProvider
+from koffee.llm import anthropic, google, ollama, openai
+from koffee.llm._protocol import Translator
 from koffee.schemas.domain import Segment, Transcript, TranslationChunk
 from koffee.subtitle import segments_to_srt
 
@@ -16,9 +16,9 @@ log = logging.getLogger(__name__)
 
 CHUNK_SIZE = 200
 CONTEXT_SIZE = 20
-SLEEP_REQUESTS = 4
+DEFAULT_SLEEP_SECONDS = 4
 
-SLEEP_REQUESTS_BY_PROVIDER: dict[str, int] = {
+SLEEP_SECONDS_BY_TRANSLATOR: dict[str, int] = {
     "ollama": 0,
 }
 
@@ -57,11 +57,11 @@ should feel natural in the target language
 - Preserve all subtitle entry numbers and timing markers exactly as given
 - Translate only the text content, never the timestamps or entry numbers"""
 
-PROVIDERS: dict[str, TranslationProvider] = {
-    "gemini": gemini.PROVIDER,
-    "chatgpt": chatgpt.PROVIDER,
-    "claude": claude.PROVIDER,
-    "ollama": ollama.PROVIDER,
+TRANSLATORS: dict[str, Translator] = {
+    "google": google.TRANSLATOR,
+    "openai": openai.TRANSLATOR,
+    "anthropic": anthropic.TRANSLATOR,
+    "ollama": ollama.TRANSLATOR,
 }
 
 
@@ -70,19 +70,19 @@ def translate(
     target_language: str,
     api_key: str | None,
     on_progress: Callable[[float], None] | None = None,
-    llm_model: str | None = None,
+    translation_model: str | None = None,
     prompt: str | None = None,
-    provider: str = "gemini",
+    translator: str = "google",
     chunk_size: int | None = None,
     context_size: int | None = None,
-    sleep_requests: int | None = None,
+    sleep_seconds: int | None = None,
 ) -> list[Segment]:
     """Translates a transcript using an LLM backend, preserving timing information."""
-    log.info(f"Translating transcript with {provider}.")
+    log.info(f"Translating transcript with {translator}.")
 
     system_prompt = prompt if prompt else SYSTEM_PROMPT
-    backend = _load_backend(provider)
-    model = llm_model or backend.default_model
+    backend = _load_backend(translator)
+    model = translation_model or backend.default_model
     resolved_chunk_size = (
         chunk_size
         if chunk_size is not None
@@ -94,9 +94,9 @@ def translate(
         else CONTEXT_SIZE_BY_MODEL.get(model, CONTEXT_SIZE)
     )
     resolved_sleep_requests = (
-        sleep_requests
-        if sleep_requests is not None
-        else SLEEP_REQUESTS_BY_PROVIDER.get(provider, SLEEP_REQUESTS)
+        sleep_seconds
+        if sleep_seconds is not None
+        else SLEEP_SECONDS_BY_TRANSLATOR.get(translator, DEFAULT_SLEEP_SECONDS)
     )
     client = backend.create_client(api_key)
     chunks = _chunk_segments(transcript, target_language, resolved_chunk_size)
@@ -105,10 +105,10 @@ def translate(
         client=client,
         chunks=chunks,
         on_progress=on_progress,
-        llm_model=model,
+        translation_model=model,
         system_prompt=system_prompt,
         context_size=resolved_context_size,
-        sleep_requests=resolved_sleep_requests,
+        sleep_seconds=resolved_sleep_requests,
     )
     return translated_segments
 
@@ -143,13 +143,13 @@ def _chunk_segments(
 
 def _load_backend(
     backend_name: str,
-) -> TranslationProvider:
+) -> Translator:
     """Returns the explicitly registered provider."""
-    backend = PROVIDERS.get(backend_name)
+    backend = TRANSLATORS.get(backend_name)
     if backend is not None:
         return backend
 
-    available = ", ".join(sorted(PROVIDERS))
+    available = ", ".join(sorted(TRANSLATORS))
     error_message = (
         f"Unknown translation backend: {backend_name!r}. Available LLM: {available}"
     )
@@ -157,14 +157,14 @@ def _load_backend(
 
 
 def _translate_chunks(
-    backend: TranslationProvider,
+    backend: Translator,
     client,
     chunks: list[TranslationChunk],
     on_progress: Callable[[float], None] | None,
-    llm_model: str,
+    translation_model: str,
     system_prompt: str,
     context_size: int = CONTEXT_SIZE,
-    sleep_requests: int = SLEEP_REQUESTS,
+    sleep_seconds: int = DEFAULT_SLEEP_SECONDS,
 ) -> list[Segment]:
     """Translates validated chunks and reports progress."""
     log.info(f"Translating in {len(chunks)} chunks.")
@@ -184,7 +184,7 @@ def _translate_chunks(
             client,
             prompt,
             chunk,
-            llm_model,
+            translation_model,
             system_prompt,
             start_entry=chunk_data.start_entry,
         )
@@ -194,8 +194,8 @@ def _translate_chunks(
             on_progress((chunk_index + 1) / len(chunks))
 
         has_next_chunk = chunk_index < len(chunks) - 1
-        if has_next_chunk and sleep_requests > 0:
-            time.sleep(sleep_requests)
+        if has_next_chunk and sleep_seconds > 0:
+            time.sleep(sleep_seconds)
 
     return translated_segments
 
@@ -248,17 +248,19 @@ def _build_prompt(
 
 
 def _translate_chunk(
-    backend: TranslationProvider,
+    backend: Translator,
     client,
     prompt: str,
     chunk: list[Segment],
-    llm_model: str,
+    translation_model: str,
     system_prompt: str,
     start_entry: int,
 ) -> list[Segment]:
     """Calls the LLM with a prompt and parses the response."""
     response = with_retries(
-        lambda: backend.attempt_generate(client, prompt, llm_model, system_prompt),
+        lambda: backend.attempt_generate(
+            client, prompt, translation_model, system_prompt
+        ),
         backend.retryable_errors,
         backend.is_retryable,
         max_retries=3,

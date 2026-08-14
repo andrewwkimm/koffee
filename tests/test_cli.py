@@ -795,7 +795,7 @@ def test_batch_keeps_per_file_embedded_configuration(
     second.touch()
     embedded_config = KoffeeConfig(
         use_embedded_subtitles=True,
-        subtitle_track_index=2,
+        subtitle_track=2,
     )
     asr_config = KoffeeConfig()
     mocker.patch(

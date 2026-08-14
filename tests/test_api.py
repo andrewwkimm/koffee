@@ -98,7 +98,7 @@ def test_translate_whisper_returns_raw_segments(mocker: MockerFixture) -> None:
     mock_translate = mocker.patch.object(api_module, "translate")
     mocker.patch.object(api_module, "generate_subtitles", return_value=MagicMock())
     config = MagicMock(spec=KoffeeConfig)
-    config.provider = "whisper"
+    config.translator = "whisper"
     config.subtitle_format = "srt"
     transcript: Transcript = Transcript(
         segments=[Segment(start=0.0, end=1.0, text="hi")], language="en"
@@ -116,13 +116,13 @@ def test_translate_non_whisper_calls_translate(mocker: MockerFixture) -> None:
     )
     mocker.patch.object(api_module, "generate_subtitles", return_value=MagicMock())
     config = MagicMock(spec=KoffeeConfig)
-    config.provider = "gemini"
+    config.translator = "google"
     config.target_language = "en"
     config.api_key = None
-    config.llm_model = "gemini-2.5-flash"
+    config.translation_model = "gemini-2.5-flash"
     config.chunk_size = None
     config.context_size = None
-    config.sleep_requests = None
+    config.sleep_seconds = None
     config.prompt = None
     config.subtitle_format = "srt"
     transcript: Transcript = Transcript(segments=[], language="ko")
@@ -134,12 +134,12 @@ def test_translate_non_whisper_calls_translate(mocker: MockerFixture) -> None:
         config.target_language,
         config.api_key,
         None,
-        llm_model=config.llm_model,
+        translation_model=config.translation_model,
         prompt=config.prompt,
-        provider=config.provider,
+        translator=config.translator,
         chunk_size=config.chunk_size,
         context_size=config.context_size,
-        sleep_requests=config.sleep_requests,
+        sleep_seconds=config.sleep_seconds,
     )
 
 
@@ -228,7 +228,7 @@ def test_validate_api_key_raises_without_key() -> None:
     with pytest.raises(MissingApiKeyError, match="API key is required"):
         koffee.run(
             "examples/videos/sample_korean_video.mp4",
-            provider="gemini",
+            translator="google",
         )
 
 
@@ -236,7 +236,7 @@ def test_validate_api_key_ollama_does_not_require_key(tmp_path: Path) -> None:
     """Tests that the ollama backend does not require an API key."""
     video = tmp_path / "video.mp4"
     video.touch()
-    config = KoffeeConfig(provider="ollama", whisper_model="large-v3")
+    config = KoffeeConfig(translator="ollama", transcription_model="large-v3")
 
     _check_preconditions(str(video), config)
 
@@ -318,7 +318,7 @@ def test_run_subtitle_file_input(
         subtitle,
         config=KoffeeConfig(
             output_dir=tmp_path,
-            provider="gemini",
+            translator="google",
             api_key="test-key",
             overwrite=True,
         ),
@@ -566,7 +566,7 @@ def test_check_preconditions_rejects_whisper_for_subtitle_file(
     ):
         _check_preconditions(
             subtitle,
-            KoffeeConfig(provider="whisper"),
+            KoffeeConfig(translator="whisper"),
         )
 
 

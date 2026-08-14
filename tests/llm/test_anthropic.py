@@ -4,20 +4,20 @@ import pytest
 from pytest_mock import MockerFixture
 
 from koffee.exceptions import TranslationIntegrityError
-from koffee.llm import claude
+from koffee.llm import anthropic
 
 
 def test_create_client_owns_retry_policy(
     mocker: MockerFixture,
 ) -> None:
     """Tests timeout and disabled SDK retries."""
-    client = mocker.patch("koffee.llm.claude.Anthropic")
+    client = mocker.patch("koffee.llm.anthropic.Anthropic")
 
-    claude.create_client("key")
+    anthropic.create_client("key")
 
     client.assert_called_once_with(
         api_key="key",
-        timeout=claude.REQUEST_TIMEOUT_SECONDS,
+        timeout=anthropic.REQUEST_TIMEOUT_SECONDS,
         max_retries=0,
     )
 
@@ -33,7 +33,7 @@ def test_extract_text_combines_text_blocks(
         mocker.MagicMock(text="second"),
     ]
 
-    assert claude.extract_text(response) == ("first\nsecond")
+    assert anthropic.extract_text(response) == ("first\nsecond")
 
 
 def test_extract_text_rejects_missing_text(
@@ -46,4 +46,4 @@ def test_extract_text_rejects_missing_text(
         TranslationIntegrityError,
         match="no text blocks",
     ):
-        claude.extract_text(response)
+        anthropic.extract_text(response)

@@ -11,7 +11,7 @@ from koffee.exceptions import TranslationIntegrityError
 
 log = logging.getLogger(__name__)
 
-NAME = "gemini"
+NAME = "google"
 DEFAULT_MODEL = "gemini-2.5-flash"
 REQUEST_TIMEOUT_MILLISECONDS = 120_000
 RETRYABLE_ERRORS = (APIError,)
@@ -96,7 +96,7 @@ def is_retryable(error: Exception) -> bool:
     return isinstance(error, APIError)
 
 
-class GeminiProvider:
+class GoogleTranslator:
     """Concrete translation provider backed by this module."""
 
     name = NAME
@@ -131,4 +131,4 @@ class GeminiProvider:
         return is_retryable(error)
 
 
-PROVIDER = GeminiProvider()
+TRANSLATOR = GoogleTranslator()

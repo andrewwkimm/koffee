@@ -74,7 +74,7 @@ def is_retryable(error: Exception) -> bool:
     return False
 
 
-class OllamaProvider:
+class OllamaTranslator:
     """Concrete translation provider backed by this module."""
 
     name = NAME
@@ -109,4 +109,4 @@ class OllamaProvider:
         return is_retryable(error)
 
 
-PROVIDER = OllamaProvider()
+TRANSLATOR = OllamaTranslator()

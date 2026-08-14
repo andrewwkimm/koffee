@@ -8,7 +8,7 @@ from typing import Literal
 
 from faster_whisper import available_models
 from faster_whisper.tokenizer import _LANGUAGE_CODES
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, SecretStr, field_validator, model_validator
 
 log = logging.getLogger(__name__)
 
@@ -129,26 +129,28 @@ class KoffeeConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    api_key: str | None = None
+    api_key: SecretStr | None = None
     compute_type: str = "default"
     device: str = "auto"
-    whisper_model: str = "large-v3"
+    transcription_model: str = "large-v3"
     output_dir: Path | None = None
     output_name: str | None = None
     embed: Literal["none", "soft", "hard"] = "none"
     source_language: str = "auto"
     subtitle_format: Literal["srt", "vtt", "ass"] = "vtt"
     target_language: str = "en"
-    provider: Literal["whisper", "gemini", "chatgpt", "claude", "ollama"] = "whisper"
-    llm_model: str | None = None
+    translator: Literal["whisper", "google", "openai", "anthropic", "ollama"] = (
+        "whisper"
+    )
+    translation_model: str | None = None
     chunk_size: int | None = None
     context_size: int | None = None
-    sleep_requests: int | None = None
+    sleep_seconds: int | None = None
     prompt: str | None = None
     dry_run: bool = False
     overwrite: bool = False
     vad_filter: bool = True
-    subtitle_track_index: int = 0
+    subtitle_track: int = 0
     use_embedded_subtitles: bool = False
     on_translation_failure: Literal["prompt", "save", "abort"] = "prompt"
 
@@ -160,11 +162,11 @@ class KoffeeConfig(BaseModel):
             return values
 
         env_vars = {
-            "gemini": "GOOGLE_API_KEY",
-            "chatgpt": "OPENAI_API_KEY",
-            "claude": "ANTHROPIC_API_KEY",
+            "google": "GOOGLE_API_KEY",
+            "openai": "OPENAI_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
         }
-        backend = values.get("provider", "whisper")
+        backend = values.get("translator", "whisper")
         env_var = env_vars.get(backend)
         if env_var:
             values["api_key"] = os.environ.get(env_var)
@@ -195,9 +197,9 @@ class KoffeeConfig(BaseModel):
             allow_auto=False,
         )
 
-    @field_validator("whisper_model")
+    @field_validator("transcription_model")
     @classmethod
-    def _validate_whisper_model(cls, value: str) -> str:
+    def _validate_transcription_model(cls, value: str) -> str:
         """Validates that the model name is a known Whisper model."""
         if value not in WHISPER_MODELS:
             error_message = (
@@ -216,24 +218,24 @@ class KoffeeConfig(BaseModel):
             raise ValueError(error_message)
         return value
 
-    @field_validator("sleep_requests")
+    @field_validator("sleep_seconds")
     @classmethod
-    def _validate_sleep_requests(cls, value: int | None) -> int | None:
+    def _validate_sleep_seconds(cls, value: int | None) -> int | None:
         """Rejects negative sleep durations; zero is valid for no delay."""
         if value is not None and value < 0:
-            error_message = f"sleep_requests must be non-negative, got {value}."
+            error_message = f"sleep_seconds must be non-negative, got {value}."
             raise ValueError(error_message)
         return value
 
-    @field_validator("subtitle_track_index")
+    @field_validator("subtitle_track")
     @classmethod
-    def _validate_subtitle_track_index(
+    def _validate_subtitle_track(
         cls,
         value: int,
     ) -> int:
         """Rejects negative subtitle-track indexes."""
         if value < 0:
-            error_message = f"subtitle_track_index must be non-negative, got {value}."
+            error_message = f"subtitle_track must be non-negative, got {value}."
             raise ValueError(error_message)
         return value
 

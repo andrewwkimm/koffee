@@ -41,11 +41,13 @@ def test_load_config_file_searches_default_paths(
     assert result["target_language"] == "fr"
 
 
-def test_config_file_values_apply_to_koffee_config(tmp_path: Path) -> None:
-    """Tests that config file values override KoffeeConfig defaults."""
+def test_config_file_values_apply_to_koffee_config(
+    tmp_path: Path,
+) -> None:
+    """Tests that config-file values override defaults."""
     config_path = tmp_path / "koffee.toml"
     config_path.write_text(
-        'source_language = "ko"\nsubtitle_format = "srt"\nprovider = "gemini"\n'
+        'source_language = "ko"\nsubtitle_format = "srt"\ntranslator = "google"\n'
     )
 
     file_config = load_config_file(config_path)
@@ -53,8 +55,7 @@ def test_config_file_values_apply_to_koffee_config(tmp_path: Path) -> None:
 
     assert config.source_language == "ko"
     assert config.subtitle_format == "srt"
-    assert config.provider == "gemini"
-    # Defaults should still apply for unset fields
+    assert config.translator == "google"
     assert config.target_language == "en"
     assert config.device == "auto"
 
@@ -80,13 +81,13 @@ def test_auto_source_language_is_accepted() -> None:
 def test_invalid_model_raises() -> None:
     """Tests that an unknown Whisper model raises a validation error."""
     with pytest.raises(ValueError, match="Unknown Whisper model"):
-        KoffeeConfig(whisper_model="nonexistent-model")
+        KoffeeConfig(transcription_model="nonexistent-model")
 
 
 def test_valid_whisper_model_is_accepted() -> None:
     """Tests that a known Whisper model is accepted."""
-    config = KoffeeConfig(whisper_model="tiny")
-    assert config.whisper_model == "tiny"
+    config = KoffeeConfig(transcription_model="tiny")
+    assert config.transcription_model == "tiny"
 
 
 def test_non_positive_chunk_size_raises() -> None:
@@ -107,28 +108,37 @@ def test_non_positive_context_size_raises() -> None:
 
 def test_zero_sleep_requests_is_accepted() -> None:
     """Tests that sleep_requests=0 is a valid no-delay setting."""
-    config = KoffeeConfig(sleep_requests=0)
-    assert config.sleep_requests == 0
+    config = KoffeeConfig(sleep_seconds=0)
+    assert config.sleep_seconds == 0
 
 
-def test_negative_sleep_requests_raises() -> None:
-    """Tests that a negative sleep_requests raises a validation error."""
-    with pytest.raises(ValueError, match="sleep_requests must be non-negative"):
-        KoffeeConfig(sleep_requests=-1)
+def test_negative_sleep_seconds_raises() -> None:
+    """Tests that negative sleep seconds are rejected."""
+    with pytest.raises(
+        ValueError,
+        match="sleep_seconds must be non-negative",
+    ):
+        KoffeeConfig(sleep_seconds=-1)
 
 
 def test_api_key_falls_back_to_google_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tests that api_key falls back to GOOGLE_API_KEY for gemini backend."""
     monkeypatch.setenv("GOOGLE_API_KEY", "env-key-123")
-    config = KoffeeConfig(provider="gemini")
-    assert config.api_key == "env-key-123"
+    config = KoffeeConfig(translator="google")
+    assert (
+        config.api_key is not None
+        and config.api_key.get_secret_value() == "env-key-123"
+    )
 
 
 def test_api_key_falls_back_to_openai_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tests that api_key falls back to OPENAI_API_KEY for chatgpt backend."""
     monkeypatch.setenv("OPENAI_API_KEY", "openai-key-123")
-    config = KoffeeConfig(provider="chatgpt")
-    assert config.api_key == "openai-key-123"
+    config = KoffeeConfig(translator="openai")
+    assert (
+        config.api_key is not None
+        and config.api_key.get_secret_value() == "openai-key-123"
+    )
 
 
 def test_api_key_falls_back_to_anthropic_env_var(
@@ -136,27 +146,33 @@ def test_api_key_falls_back_to_anthropic_env_var(
 ) -> None:
     """Tests that api_key falls back to ANTHROPIC_API_KEY for claude backend."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key-123")
-    config = KoffeeConfig(provider="claude")
-    assert config.api_key == "anthropic-key-123"
+    config = KoffeeConfig(translator="anthropic")
+    assert (
+        config.api_key is not None
+        and config.api_key.get_secret_value() == "anthropic-key-123"
+    )
 
 
 def test_api_key_not_resolved_for_whisper() -> None:
     """Tests that no env var is checked for the whisper backend."""
-    config = KoffeeConfig(provider="whisper")
+    config = KoffeeConfig(translator="whisper")
     assert config.api_key is None
 
 
 def test_api_key_prefers_explicit_value(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tests that an explicit api_key takes precedence over the env var."""
     monkeypatch.setenv("GOOGLE_API_KEY", "env-key-123")
-    config = KoffeeConfig(api_key="explicit-key", provider="gemini")
-    assert config.api_key == "explicit-key"
+    config = KoffeeConfig(api_key="explicit-key", translator="google")
+    assert (
+        config.api_key is not None
+        and config.api_key.get_secret_value() == "explicit-key"
+    )
 
 
 def test_api_key_is_none_without_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tests that api_key is None when neither flag nor env var is set."""
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-    config = KoffeeConfig(provider="gemini")
+    config = KoffeeConfig(translator="google")
     assert config.api_key is None
 
 
@@ -225,4 +241,4 @@ def test_negative_subtitle_track_index_raises() -> None:
         ValueError,
         match="must be non-negative",
     ):
-        KoffeeConfig(subtitle_track_index=-1)
+        KoffeeConfig(subtitle_track=-1)

@@ -5,7 +5,7 @@ from google.genai.errors import APIError, ClientError
 from pytest_mock import MockerFixture
 
 from koffee.exceptions import TranslationIntegrityError
-from koffee.llm import chatgpt, claude, gemini, ollama
+from koffee.llm import anthropic, google, ollama, openai
 from koffee.schemas.domain import Segment, Transcript
 from koffee.translator import (
     SYSTEM_PROMPT,
@@ -209,7 +209,7 @@ def test_parse_srt_response_rejects_unexpected_entry_id() -> None:
 def test_translate_single_chunk(mocker: MockerFixture) -> None:
     """Tests translate with a transcript that fits in one chunk."""
     mock_client = mocker.MagicMock()
-    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mocker.patch.object(google, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
 
     mock_client.models.generate_content.return_value.text = (
@@ -217,7 +217,7 @@ def test_translate_single_chunk(mocker: MockerFixture) -> None:
         "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
     )
 
-    result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
+    result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="google")
 
     assert len(result) == len(SAMPLE_SEGMENTS)
     assert result[0].text == "Hello."
@@ -228,13 +228,13 @@ def test_translate_single_chunk(mocker: MockerFixture) -> None:
 def test_translate_sleeps_between_chunks(mocker: MockerFixture) -> None:
     """Tests that translate sleeps between chunks and stops at last entry."""
     mock_client = mocker.MagicMock()
-    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mocker.patch.object(google, "create_client", return_value=mock_client)
     mock_sleep = mocker.patch("koffee.translator.time.sleep")
     mocker.patch("koffee.translator.CHUNK_SIZE", 1)
 
     _configure_gemini_chunk_responses(mocker, mock_client)
 
-    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="google")
 
     # 2 segments with chunk size 1 = 2 chunks, sleep called once (not after last chunk)
     expected_sleep_seconds = 4
@@ -245,13 +245,13 @@ def test_translate_sleeps_between_chunks(mocker: MockerFixture) -> None:
 def test_translate_skips_sleep_when_zero(mocker: MockerFixture) -> None:
     """Tests that sleep_requests=0 skips time.sleep between chunks entirely."""
     mock_client = mocker.MagicMock()
-    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mocker.patch.object(google, "create_client", return_value=mock_client)
     mock_sleep = mocker.patch("koffee.translator.time.sleep")
     mocker.patch("koffee.translator.CHUNK_SIZE", 1)
     _configure_gemini_chunk_responses(mocker, mock_client)
 
     translate(
-        SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini", sleep_requests=0
+        SAMPLE_TRANSCRIPT, "en", api_key=None, translator="google", sleep_seconds=0
     )
 
     assert mock_sleep.call_count == 0
@@ -273,7 +273,7 @@ def test_translate_ollama_defaults_to_no_sleep(
     )
     mock_client.chat.completions.create.return_value = response
 
-    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="ollama")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="ollama")
 
     mock_sleep.assert_not_called()
 
@@ -281,7 +281,7 @@ def test_translate_ollama_defaults_to_no_sleep(
 def test_translate_explicit_sleep_overrides_default(mocker: MockerFixture) -> None:
     """Tests that an explicit sleep_requests value overrides the provider default."""
     mock_client = mocker.MagicMock()
-    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mocker.patch.object(google, "create_client", return_value=mock_client)
     mock_sleep = mocker.patch("koffee.translator.time.sleep")
     mocker.patch("koffee.translator.CHUNK_SIZE", 1)
     _configure_gemini_chunk_responses(mocker, mock_client)
@@ -291,8 +291,8 @@ def test_translate_explicit_sleep_overrides_default(mocker: MockerFixture) -> No
         SAMPLE_TRANSCRIPT,
         "en",
         api_key=None,
-        provider="gemini",
-        sleep_requests=sleep_seconds,
+        translator="google",
+        sleep_seconds=sleep_seconds,
     )
 
     assert mock_sleep.call_args.args[0] == sleep_seconds
@@ -300,14 +300,14 @@ def test_translate_explicit_sleep_overrides_default(mocker: MockerFixture) -> No
 
 def test_translate_passes_api_key(mocker: MockerFixture) -> None:
     """Tests that the API key is passed through to the backend client."""
-    mock_create = mocker.patch.object(gemini, "create_client")
+    mock_create = mocker.patch.object(google, "create_client")
     mock_create.return_value.models.generate_content.return_value.text = (
         "1\n00:00:00,000 --> 00:00:06,360\nHello.\n\n"
         "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
     )
     mocker.patch("koffee.translator.time.sleep")
 
-    translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", provider="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="google")
 
     mock_create.assert_called_once_with("test-key")
 
@@ -387,7 +387,7 @@ def test_parse_srt_response_markdown_fenced() -> None:
 def test_translate_reports_progress(mocker: MockerFixture) -> None:
     """Tests that on_progress is called once per chunk with correct ratio."""
     mock_client = mocker.MagicMock()
-    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mocker.patch.object(google, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
     mocker.patch("koffee.translator.CHUNK_SIZE", 1)
 
@@ -399,7 +399,7 @@ def test_translate_reports_progress(mocker: MockerFixture) -> None:
         "en",
         api_key=None,
         on_progress=progress_calls.append,
-        provider="gemini",
+        translator="google",
     )
 
     assert progress_calls == [0.5, 1.0]
@@ -413,36 +413,36 @@ def test_gemini_attempt_generate_raises_on_error(mocker: MockerFixture) -> None:
     )
 
     with pytest.raises(ClientError):
-        gemini.attempt_generate(mock_client, "prompt", "model", SYSTEM_PROMPT)
+        google.attempt_generate(mock_client, "prompt", "model", SYSTEM_PROMPT)
 
 
 def test_gemini_is_retryable_429() -> None:
     """Tests that a 429 ClientError is classified as retryable."""
     exc = ClientError(code=429, response_json={"error": "rate limited"})
-    assert gemini.is_retryable(exc) is True
+    assert google.is_retryable(exc) is True
 
 
 def test_gemini_is_retryable_non_429_client_error() -> None:
     """Tests that a non-429 ClientError is classified as non-retryable."""
     exc = ClientError(code=400, response_json={"error": "bad request"})
-    assert gemini.is_retryable(exc) is False
+    assert google.is_retryable(exc) is False
 
 
 def test_gemini_is_retryable_api_error() -> None:
     """Tests that a generic APIError is classified as retryable."""
     exc = APIError(code=500, response_json={"error": "server error"})
-    assert gemini.is_retryable(exc) is True
+    assert google.is_retryable(exc) is True
 
 
 def test_gemini_is_retryable_unrelated_exception() -> None:
     """Tests that an unrelated exception is classified as non-retryable."""
-    assert gemini.is_retryable(ValueError("nope")) is False
+    assert google.is_retryable(ValueError("nope")) is False
 
 
 def test_translate_uses_custom_prompt(mocker: MockerFixture) -> None:
     """Tests that a custom translation prompt is passed to the LLM backend."""
     mock_client = mocker.MagicMock()
-    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mocker.patch.object(google, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
 
     mock_client.models.generate_content.return_value.text = (
@@ -456,7 +456,7 @@ def test_translate_uses_custom_prompt(mocker: MockerFixture) -> None:
         "en",
         api_key=None,
         prompt=custom_prompt,
-        provider="gemini",
+        translator="google",
     )
 
     call_kwargs = mock_client.models.generate_content.call_args.kwargs
@@ -469,7 +469,7 @@ def test_translate_falls_back_to_default_prompt(
 ) -> None:
     """Tests that the default system prompt is used when no custom prompt is given."""
     mock_client = mocker.MagicMock()
-    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mocker.patch.object(google, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
 
     mock_client.models.generate_content.return_value.text = (
@@ -477,7 +477,7 @@ def test_translate_falls_back_to_default_prompt(
         "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
     )
 
-    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="google")
 
     call_kwargs = mock_client.models.generate_content.call_args.kwargs
     assert call_kwargs["config"]["system_instruction"] == SYSTEM_PROMPT
@@ -491,11 +491,11 @@ def test_load_backend_unknown_raises() -> None:
 
 def test_load_backend_gemini() -> None:
     """Tests that the Gemini provider object is registered."""
-    backend = _load_backend("gemini")
+    backend = _load_backend("google")
 
-    assert backend is gemini.PROVIDER
-    assert backend.name == "gemini"
-    assert backend.default_model == gemini.DEFAULT_MODEL
+    assert backend is google.TRANSLATOR
+    assert backend.name == "google"
+    assert backend.default_model == google.DEFAULT_MODEL
 
 
 def test_gemini_extract_text() -> None:
@@ -504,7 +504,7 @@ def test_gemini_extract_text() -> None:
 
     response = MagicMock()
     response.text = "Hello."
-    assert gemini.extract_text(response) == "Hello."
+    assert google.extract_text(response) == "Hello."
 
 
 def test_chatgpt_extract_text() -> None:
@@ -514,7 +514,7 @@ def test_chatgpt_extract_text() -> None:
     response = MagicMock()
     response.choices = [MagicMock()]
     response.choices[0].message.content = "Hello."
-    assert chatgpt.extract_text(response) == "Hello."
+    assert openai.extract_text(response) == "Hello."
 
 
 def test_claude_extract_text() -> None:
@@ -524,13 +524,13 @@ def test_claude_extract_text() -> None:
     response = MagicMock()
     response.content = [MagicMock()]
     response.content[0].text = "Hello."
-    assert claude.extract_text(response) == "Hello."
+    assert anthropic.extract_text(response) == "Hello."
 
 
 def test_translate_uses_default_model(mocker: MockerFixture) -> None:
     """Tests that the default model is used when none is specified."""
     mock_client = mocker.MagicMock()
-    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mocker.patch.object(google, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
 
     mock_client.models.generate_content.return_value.text = (
@@ -538,7 +538,7 @@ def test_translate_uses_default_model(mocker: MockerFixture) -> None:
         "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
     )
 
-    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="google")
 
     call_kwargs = mock_client.models.generate_content.call_args.kwargs
     assert call_kwargs["model"] == "gemini-2.5-flash"
@@ -553,7 +553,7 @@ def test_chatgpt_attempt_generate_success(mocker: MockerFixture) -> None:
     mock_response = mocker.MagicMock()
     mock_client.chat.completions.create.return_value = mock_response
 
-    result = chatgpt.attempt_generate(mock_client, "prompt", "gpt-4o", SYSTEM_PROMPT)
+    result = openai.attempt_generate(mock_client, "prompt", "gpt-4o", SYSTEM_PROMPT)
 
     assert result is mock_response
 
@@ -571,7 +571,7 @@ def test_chatgpt_attempt_generate_raises_on_error(mocker: MockerFixture) -> None
     mock_client.chat.completions.create.side_effect = exc
 
     with pytest.raises(APIStatusError):
-        chatgpt.attempt_generate(mock_client, "prompt", "gpt-4o", SYSTEM_PROMPT)
+        openai.attempt_generate(mock_client, "prompt", "gpt-4o", SYSTEM_PROMPT)
 
 
 def test_chatgpt_is_retryable_rate_limit(mocker: MockerFixture) -> None:
@@ -585,7 +585,7 @@ def test_chatgpt_is_retryable_rate_limit(mocker: MockerFixture) -> None:
     exc = OpenAIRateLimitError(
         message="rate limited", response=mock_response, body=None
     )
-    assert chatgpt.is_retryable(exc) is True
+    assert openai.is_retryable(exc) is True
 
 
 def test_chatgpt_is_retryable_connection_error(mocker: MockerFixture) -> None:
@@ -593,7 +593,7 @@ def test_chatgpt_is_retryable_connection_error(mocker: MockerFixture) -> None:
     from openai import APIConnectionError as OpenAIConnectionError  # noqa: PLC0415
 
     exc = OpenAIConnectionError(request=mocker.MagicMock())
-    assert chatgpt.is_retryable(exc) is True
+    assert openai.is_retryable(exc) is True
 
 
 def test_chatgpt_is_retryable_5xx(mocker: MockerFixture) -> None:
@@ -605,7 +605,7 @@ def test_chatgpt_is_retryable_5xx(mocker: MockerFixture) -> None:
     mock_response.headers = {}
     mock_response.json.return_value = {"error": {"message": "unavailable"}}
     exc = APIStatusError(message="unavailable", response=mock_response, body=None)
-    assert chatgpt.is_retryable(exc) is True
+    assert openai.is_retryable(exc) is True
 
 
 def test_chatgpt_is_retryable_4xx_not_retryable(mocker: MockerFixture) -> None:
@@ -617,13 +617,13 @@ def test_chatgpt_is_retryable_4xx_not_retryable(mocker: MockerFixture) -> None:
     mock_response.headers = {}
     mock_response.json.return_value = {"error": {"message": "bad request"}}
     exc = APIStatusError(message="bad request", response=mock_response, body=None)
-    assert chatgpt.is_retryable(exc) is False
+    assert openai.is_retryable(exc) is False
 
 
 def test_chatgpt_translate(mocker: MockerFixture) -> None:
     """Tests that translate works with the chatgpt backend."""
     mock_client = mocker.MagicMock()
-    mocker.patch.object(chatgpt, "create_client", return_value=mock_client)
+    mocker.patch.object(openai, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
 
     mock_response = mocker.MagicMock()
@@ -634,7 +634,7 @@ def test_chatgpt_translate(mocker: MockerFixture) -> None:
     )
     mock_client.chat.completions.create.return_value = mock_response
 
-    result = translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", provider="chatgpt")
+    result = translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="openai")
 
     assert len(result) == len(SAMPLE_SEGMENTS)
     assert result[0].text == "Hello."
@@ -650,7 +650,7 @@ def test_claude_attempt_generate_success(mocker: MockerFixture) -> None:
     mock_response = mocker.MagicMock()
     mock_client.messages.create.return_value = mock_response
 
-    result = claude.attempt_generate(
+    result = anthropic.attempt_generate(
         mock_client, "prompt", "claude-sonnet-4-20250514", SYSTEM_PROMPT
     )
 
@@ -670,7 +670,7 @@ def test_claude_attempt_generate_raises_on_error(mocker: MockerFixture) -> None:
     mock_client.messages.create.side_effect = exc
 
     with pytest.raises(APIStatusError):
-        claude.attempt_generate(
+        anthropic.attempt_generate(
             mock_client, "prompt", "claude-sonnet-4-20250514", SYSTEM_PROMPT
         )
 
@@ -686,7 +686,7 @@ def test_claude_is_retryable_rate_limit(mocker: MockerFixture) -> None:
     exc = AnthropicRateLimitError(
         message="rate limited", response=mock_response, body=None
     )
-    assert claude.is_retryable(exc) is True
+    assert anthropic.is_retryable(exc) is True
 
 
 def test_claude_is_retryable_connection_error(mocker: MockerFixture) -> None:
@@ -696,7 +696,7 @@ def test_claude_is_retryable_connection_error(mocker: MockerFixture) -> None:
     )
 
     exc = AnthropicConnectionError(request=mocker.MagicMock())
-    assert claude.is_retryable(exc) is True
+    assert anthropic.is_retryable(exc) is True
 
 
 def test_claude_is_retryable_5xx(mocker: MockerFixture) -> None:
@@ -708,7 +708,7 @@ def test_claude_is_retryable_5xx(mocker: MockerFixture) -> None:
     mock_response.headers = {}
     mock_response.json.return_value = {"error": {"message": "unavailable"}}
     exc = APIStatusError(message="unavailable", response=mock_response, body=None)
-    assert claude.is_retryable(exc) is True
+    assert anthropic.is_retryable(exc) is True
 
 
 def test_claude_is_retryable_4xx_not_retryable(mocker: MockerFixture) -> None:
@@ -720,7 +720,7 @@ def test_claude_is_retryable_4xx_not_retryable(mocker: MockerFixture) -> None:
     mock_response.headers = {}
     mock_response.json.return_value = {"error": {"message": "bad request"}}
     exc = APIStatusError(message="bad request", response=mock_response, body=None)
-    assert claude.is_retryable(exc) is False
+    assert anthropic.is_retryable(exc) is False
 
 
 def test_load_backend_ollama() -> None:
@@ -743,7 +743,7 @@ def test_ollama_extract_text() -> None:
 def test_claude_translate(mocker: MockerFixture) -> None:
     """Tests that translate works with the claude backend."""
     mock_client = mocker.MagicMock()
-    mocker.patch.object(claude, "create_client", return_value=mock_client)
+    mocker.patch.object(anthropic, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
 
     mock_response = mocker.MagicMock()
@@ -754,7 +754,9 @@ def test_claude_translate(mocker: MockerFixture) -> None:
     )
     mock_client.messages.create.return_value = mock_response
 
-    result = translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", provider="claude")
+    result = translate(
+        SAMPLE_TRANSCRIPT, "en", api_key="test-key", translator="anthropic"
+    )
 
     assert len(result) == len(SAMPLE_SEGMENTS)
     assert result[0].text == "Hello."
@@ -867,7 +869,7 @@ def test_ollama_translate(mocker: MockerFixture) -> None:
     )
     mock_client.chat.completions.create.return_value = mock_response
 
-    result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="ollama")
+    result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="ollama")
 
     assert len(result) == len(SAMPLE_SEGMENTS)
     assert result[0].text == "Hello."
@@ -888,7 +890,7 @@ def test_ollama_translate_uses_default_model(mocker: MockerFixture) -> None:
     )
     mock_client.chat.completions.create.return_value = mock_response
 
-    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="ollama")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="ollama")
 
     call_kwargs = mock_client.chat.completions.create.call_args.kwargs
     assert call_kwargs["model"] == "qwen3:14b"
@@ -963,8 +965,8 @@ def test_translate_uses_model_chunk_size(mocker: MockerFixture) -> None:
         Transcript(segments=many_segments, language="ja"),
         "ko",
         api_key=None,
-        provider="ollama",
-        llm_model=model,
+        translator="ollama",
+        translation_model=model,
     )
 
     expected_request_count = 2
@@ -998,8 +1000,8 @@ def test_translate_explicit_chunk_size_overrides_model_default(
         Transcript(segments=segments, language="ja"),
         "ko",
         api_key=None,
-        provider="ollama",
-        llm_model="qwen3:14b",
+        translator="ollama",
+        translation_model="qwen3:14b",
         chunk_size=2,
     )
 
@@ -1034,8 +1036,8 @@ def test_translate_uses_model_context_size(mocker: MockerFixture) -> None:
         Transcript(segments=segments, language="ja"),
         "ko",
         api_key=None,
-        provider="ollama",
-        llm_model=model,
+        translator="ollama",
+        translation_model=model,
         chunk_size=3,
     )
 
@@ -1049,7 +1051,7 @@ def test_translate_explicit_context_size_overrides_model_default(
 ) -> None:
     """Tests that an explicit context_size overrides the per-model default."""
     mock_client = mocker.MagicMock()
-    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mocker.patch.object(google, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
     mocker.patch("koffee.translator.CHUNK_SIZE", 1)
 
@@ -1065,7 +1067,7 @@ def test_translate_explicit_context_size_overrides_model_default(
         SAMPLE_TRANSCRIPT,
         "en",
         api_key=None,
-        provider="gemini",
+        translator="google",
         context_size=context_size,
     )
 
@@ -1079,7 +1081,7 @@ def test_translate_uses_default_context_size_for_unknown_model(
 ) -> None:
     """Tests that the default context size is used for unknown models."""
     mock_client = mocker.MagicMock()
-    mocker.patch.object(gemini, "create_client", return_value=mock_client)
+    mocker.patch.object(google, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
 
     mock_client.models.generate_content.return_value.text = (
@@ -1089,7 +1091,7 @@ def test_translate_uses_default_context_size_for_unknown_model(
 
     mock_build = mocker.patch("koffee.translator._build_prompt", return_value="prompt")
 
-    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
+    translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="google")
 
     default_context_size = 20
     _, kwargs = mock_build.call_args

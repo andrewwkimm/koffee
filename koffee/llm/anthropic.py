@@ -11,7 +11,7 @@ from anthropic import (
 
 from koffee.exceptions import TranslationIntegrityError
 
-NAME = "claude"
+NAME = "anthropic"
 DEFAULT_MODEL = "claude-sonnet-4-6"
 REQUEST_TIMEOUT_SECONDS = 120.0
 RETRYABLE_ERRORS = (
@@ -71,7 +71,7 @@ def is_retryable(error: Exception) -> bool:
     return False
 
 
-class ClaudeProvider:
+class AnthropicTranslator:
     """Concrete translation provider backed by this module."""
 
     name = NAME
@@ -106,4 +106,4 @@ class ClaudeProvider:
         return is_retryable(error)
 
 
-PROVIDER = ClaudeProvider()
+TRANSLATOR = AnthropicTranslator()

@@ -11,7 +11,7 @@ from openai import (
 
 from koffee.exceptions import TranslationIntegrityError
 
-NAME = "chatgpt"
+NAME = "openai"
 DEFAULT_MODEL = "gpt-4o"
 REQUEST_TIMEOUT_SECONDS = 120.0
 RETRYABLE_ERRORS = (
@@ -71,7 +71,7 @@ def is_retryable(error: Exception) -> bool:
     return False
 
 
-class ChatGPTProvider:
+class OpenAITranslator:
     """Concrete translation provider backed by this module."""
 
     name = NAME
@@ -106,4 +106,4 @@ class ChatGPTProvider:
         return is_retryable(error)
 
 
-PROVIDER = ChatGPTProvider()
+TRANSLATOR = OpenAITranslator()

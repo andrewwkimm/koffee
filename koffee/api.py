@@ -74,12 +74,12 @@ def run(
             on_translate_progress,
         )
 
-    task = "translate" if config.provider == "whisper" else "transcribe"
+    task = "translate" if config.translator == "whisper" else "transcribe"
     transcript = transcribe(
         str(input_path),
         config.compute_type,
         config.device,
-        config.whisper_model,
+        config.transcription_model,
         task,
         on_progress=on_asr_progress,
         vad_filter=config.vad_filter,
@@ -264,20 +264,20 @@ def _translate(
     output_dir: Path | None = None,
 ) -> Path:
     """Translates segments and writes an intermediate subtitle."""
-    if config.provider == "whisper":
+    if config.translator == "whisper":
         segments = transcript.segments
     else:
         segments = translate(
             transcript,
             config.target_language,
-            config.api_key,
+            config.api_key.get_secret_value() if config.api_key is not None else None,
             on_progress,
-            llm_model=config.llm_model,
+            translation_model=config.translation_model,
             prompt=config.prompt,
-            provider=config.provider,
+            translator=config.translator,
             chunk_size=config.chunk_size,
             context_size=config.context_size,
-            sleep_requests=config.sleep_requests,
+            sleep_seconds=config.sleep_seconds,
         )
 
     return generate_subtitles(config.subtitle_format, segments, output_dir)
@@ -295,7 +295,7 @@ def _translate_embedded_subtitles(
         working_directory = Path(temporary_directory)
         extracted_path = extract_subtitle_track(
             input_path,
-            config.subtitle_track_index,
+            config.subtitle_track,
             output_dir=working_directory,
         )
         subtitle_path = _translate_subtitle_file(
@@ -399,9 +399,9 @@ def _check_preconditions(input_path: Path | str, config: KoffeeConfig) -> None:
             raise IncompatibleOptionsError(error_message)
 
     # LLM Backends Require an API Key
-    if config.provider not in ("whisper", "ollama") and not config.api_key:
+    if config.translator not in ("whisper", "ollama") and not config.api_key:
         error_message = (
-            f"An API key is required when using the {config.provider} "
+            f"An API key is required when using the {config.translator} "
             "translation backend. Provide one with --api_key or set the appropriate "
             "environment variable."
         )
@@ -423,7 +423,7 @@ def _check_subtitle_provider(
     config: KoffeeConfig,
 ) -> None:
     """Rejects Whisper for direct subtitle translation."""
-    if suffix in SUBTITLE_EXTENSIONS and config.provider == "whisper":
+    if suffix in SUBTITLE_EXTENSIONS and config.translator == "whisper":
         error_message = (
             "The whisper provider cannot translate "
             "subtitle files. Choose an LLM provider."

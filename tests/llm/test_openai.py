@@ -4,20 +4,20 @@ import pytest
 from pytest_mock import MockerFixture
 
 from koffee.exceptions import TranslationIntegrityError
-from koffee.llm import chatgpt
+from koffee.llm import openai
 
 
 def test_create_client_owns_retry_policy(
     mocker: MockerFixture,
 ) -> None:
     """Tests timeout and disabled SDK retries."""
-    client = mocker.patch("koffee.llm.chatgpt.OpenAI")
+    client = mocker.patch("koffee.llm.openai.OpenAI")
 
-    chatgpt.create_client("key")
+    openai.create_client("key")
 
     client.assert_called_once_with(
         api_key="key",
-        timeout=chatgpt.REQUEST_TIMEOUT_SECONDS,
+        timeout=openai.REQUEST_TIMEOUT_SECONDS,
         max_retries=0,
     )
 
@@ -32,7 +32,7 @@ def test_extract_text_rejects_missing_choices(
         TranslationIntegrityError,
         match="no choices",
     ):
-        chatgpt.extract_text(response)
+        openai.extract_text(response)
 
 
 def test_extract_text_rejects_empty_content(
@@ -47,4 +47,4 @@ def test_extract_text_rejects_empty_content(
         TranslationIntegrityError,
         match="empty text",
     ):
-        chatgpt.extract_text(response)
+        openai.extract_text(response)
