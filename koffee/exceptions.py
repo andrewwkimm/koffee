@@ -33,6 +33,10 @@ class SubtitleEmbedError(KoffeeError):
     """Subtitle embedding not possible for the given file."""
 
 
+class TranslationPausedError(KoffeeError):
+    """Translation paused after durable progress was saved."""
+
+
 class TranslationIntegrityError(KoffeeError):
     """LLM response does not satisfy the subtitle translation contract."""
 

@@ -57,50 +57,56 @@ def run(
     if config is None:
         config = KoffeeConfig(**kwargs)
     else:
-        config = KoffeeConfig(**{**config.model_dump(), **kwargs})
+        config = KoffeeConfig(
+            **{
+                **config.model_dump(),
+                **kwargs,
+            }
+        )
 
     _check_preconditions(input_path, config)
+    current_job = job or JobStore.open(input_path, config)
 
-    if Path(input_path).suffix.lower() in SUBTITLE_EXTENSIONS:
+    suffix = Path(input_path).suffix.lower()
+    if suffix in SUBTITLE_EXTENSIONS:
         subtitle_path = _translate_subtitle_file(
             input_path,
             config,
             on_translate_progress,
+            job=current_job,
         )
-        return _route_output(input_path, subtitle_path, config)
-
-    if config.use_embedded_subtitles:
-        return _translate_embedded_subtitles(
+    elif config.use_embedded_subtitles:
+        output_path = _translate_embedded_subtitles(
             input_path,
             config,
             on_translate_progress,
+            job=current_job,
+        )
+        current_job.delete()
+        return output_path
+    else:
+        transcript = current_job.load_transcript()
+        if transcript is None:
+            task = "translate" if config.translator == "whisper" else "transcribe"
+            transcript = transcribe(
+                str(input_path),
+                config.compute_type,
+                config.device,
+                config.transcription_model,
+                task,
+                on_progress=on_asr_progress,
+                vad_filter=config.vad_filter,
+                language=_resolve_asr_language(config.source_language),
+            )
+            current_job.save_transcript(transcript)
+
+        subtitle_path = _translate_with_failure_context(
+            transcript,
+            config,
+            on_translate_progress,
+            job=current_job,
         )
 
-    current_job = job or JobStore.open(
-        input_path,
-        config,
-    )
-    transcript = current_job.load_transcript()
-
-    if transcript is None:
-        task = "translate" if config.translator == "whisper" else "transcribe"
-        transcript = transcribe(
-            str(input_path),
-            config.compute_type,
-            config.device,
-            config.transcription_model,
-            task,
-            on_progress=on_asr_progress,
-            vad_filter=config.vad_filter,
-            language=_resolve_asr_language(config.source_language),
-        )
-        current_job.save_transcript(transcript)
-
-    subtitle_path = _translate_with_failure_context(
-        transcript,
-        config,
-        on_translate_progress,
-    )
     output_path = _route_output(
         input_path,
         subtitle_path,
@@ -279,33 +285,44 @@ def _translate(
     config: KoffeeConfig,
     on_progress: Callable[[float], None] | None,
     output_dir: Path | None = None,
+    job: JobStore | None = None,
 ) -> Path:
     """Translates segments and writes an intermediate subtitle."""
     if config.translator == "whisper":
         segments = transcript.segments
     else:
+        api_key = (
+            config.api_key.get_secret_value() if config.api_key is not None else None
+        )
         segments = translate(
             transcript,
             config.target_language,
-            config.api_key.get_secret_value() if config.api_key is not None else None,
+            api_key,
             on_progress,
-            translation_model=config.translation_model,
+            translation_model=(config.translation_model),
             prompt=config.prompt,
             translator=config.translator,
             chunk_size=config.chunk_size,
             context_size=config.context_size,
             sleep_seconds=config.sleep_seconds,
+            job=job,
+            allow_mixed_translation=(config.allow_mixed_translation),
         )
 
-    return generate_subtitles(config.subtitle_format, segments, output_dir)
+    return generate_subtitles(
+        config.subtitle_format,
+        segments,
+        output_dir,
+    )
 
 
 def _translate_embedded_subtitles(
     input_path: Path | str,
     config: KoffeeConfig,
     on_progress: Callable[[float], None] | None,
+    job: JobStore | None = None,
 ) -> Path:
-    """Extracts, translates, and routes one embedded subtitle track."""
+    """Extracts, translates, and routes one embedded track."""
     log.info("Extracting embedded subtitles from video.")
 
     with TemporaryDirectory(prefix="koffee-") as temporary_directory:
@@ -320,8 +337,13 @@ def _translate_embedded_subtitles(
             config,
             on_progress,
             output_dir=working_directory,
+            job=job,
         )
-        return _route_output(input_path, subtitle_path, config)
+        return _route_output(
+            input_path,
+            subtitle_path,
+            config,
+        )
 
 
 def _translate_subtitle_file(
@@ -329,18 +351,20 @@ def _translate_subtitle_file(
     config: KoffeeConfig,
     on_progress: Callable[[float], None] | None,
     output_dir: Path | None = None,
+    job: JobStore | None = None,
 ) -> Path:
     """Translates an existing subtitle file without ASR."""
     log.info("Detected subtitle file input, skipping transcription.")
-
-    transcript: Transcript = Transcript(
-        segments=parse_subtitle_file(file_path), language=config.source_language
+    transcript = Transcript(
+        segments=parse_subtitle_file(file_path),
+        language=config.source_language,
     )
     return _translate_with_failure_context(
         transcript,
         config,
         on_progress,
         output_dir=output_dir,
+        job=job,
     )
 
 
@@ -349,8 +373,9 @@ def _translate_with_failure_context(
     config: KoffeeConfig,
     on_progress: Callable[[float], None] | None,
     output_dir: Path | None = None,
+    job: JobStore | None = None,
 ) -> Path:
-    """Wraps recognized translation failures with source segments."""
+    """Wraps recognized failures with source segments."""
     provider_errors = (
         AnthropicAPIError,
         GeminiAPIError,
@@ -358,9 +383,18 @@ def _translate_with_failure_context(
         TranslationIntegrityError,
     )
     try:
-        return _translate(transcript, config, on_progress, output_dir)
-    except provider_errors as exc:
-        raise TranslationError(str(exc), transcript.segments) from exc
+        return _translate(
+            transcript,
+            config,
+            on_progress,
+            output_dir,
+            job,
+        )
+    except provider_errors as error:
+        raise TranslationError(
+            str(error),
+            transcript.segments,
+        ) from error
 
 
 def _check_preconditions(input_path: Path | str, config: KoffeeConfig) -> None:

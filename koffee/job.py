@@ -12,7 +12,10 @@ from platformdirs import user_state_path
 from pydantic import BaseModel, ConfigDict
 
 from koffee.schemas.config import KoffeeConfig
-from koffee.schemas.domain import Transcript
+from koffee.schemas.domain import (
+    Segment,
+    Transcript,
+)
 
 _SAMPLE_BYTES = 1_048_576
 _JOB_ID_LENGTH = 24
@@ -39,6 +42,37 @@ class TranscriptionSettings(BaseModel):
     device: str
     source_language: str
     vad_filter: bool
+
+
+class TranslationSettings(BaseModel):
+    """Settings that determine translated chunk content."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source_language: str
+    target_language: str
+    instructions_digest: str
+    chunk_size: int
+    context_size: int
+
+
+class SavedChunk(BaseModel):
+    """One validated translated chunk."""
+
+    model_config = ConfigDict(frozen=True)
+
+    start_entry: int
+    source_segments: tuple[Segment, ...]
+    translated_segments: tuple[Segment, ...]
+    translator: str
+    translation_model: str
+
+
+def translation_instructions_digest(
+    instructions: str,
+) -> str:
+    """Returns a stable translation-instructions digest."""
+    return hashlib.sha256(instructions.encode()).hexdigest()
 
 
 class JobManifest(BaseModel):
@@ -78,15 +112,13 @@ class JobStore:
         if manifest_path.is_file():
             manifest = JobManifest.model_validate_json(manifest_path.read_text())
             if manifest.fingerprint != fingerprint:
-                error_message = (
+                raise ValueError(
                     "The input file changed after its checkpoint was created."
                 )
-                raise ValueError(error_message)
             if manifest.transcription != expected_settings:
-                error_message = (
+                raise ValueError(
                     "The transcription settings do not match the existing checkpoint."
                 )
-                raise ValueError(error_message)
             return cls(directory, manifest)
 
         manifest = JobManifest(
@@ -97,7 +129,10 @@ class JobStore:
                 exclude={"api_key"},
             ),
         )
-        directory.mkdir(parents=True, exist_ok=True)
+        directory.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
         _write_json_atomic(
             manifest_path,
             manifest.model_dump(mode="json"),
@@ -113,17 +148,18 @@ class JobStore:
         fingerprint = fingerprint_input(input_path)
         directory = _job_root() / _job_id(fingerprint.path)
         manifest_path = directory / "manifest.json"
+
         if not manifest_path.is_file():
-            error_message = f"No checkpoint exists for {fingerprint.path}."
-            raise FileNotFoundError(error_message)
+            raise FileNotFoundError(f"No checkpoint exists for {fingerprint.path}.")
 
         manifest = JobManifest.model_validate_json(manifest_path.read_text())
         if manifest.fingerprint != fingerprint:
-            error_message = "The input file changed after its checkpoint was created."
-            raise ValueError(error_message)
+            raise ValueError("The input file changed after its checkpoint was created.")
         return cls(directory, manifest)
 
-    def load_transcript(self) -> Transcript | None:
+    def load_transcript(
+        self,
+    ) -> Transcript | None:
         """Loads the validated ASR result when available."""
         path = self.directory / "transcript.json"
         if not path.is_file():
@@ -138,6 +174,82 @@ class JobStore:
         _write_json_atomic(
             self.directory / "transcript.json",
             transcript.model_dump(mode="json"),
+        )
+
+    def prepare_translation(
+        self,
+        settings: TranslationSettings,
+        translator: str,
+        translation_model: str,
+        allow_mixed_translation: bool,
+    ) -> None:
+        """Validates settings and provenance before resuming."""
+        settings_path = self.directory / "translation.json"
+        if settings_path.is_file():
+            saved = TranslationSettings.model_validate_json(settings_path.read_text())
+            if saved != settings:
+                raise ValueError(
+                    "The translation settings do not match the existing checkpoint."
+                )
+        else:
+            _write_json_atomic(
+                settings_path,
+                settings.model_dump(mode="json"),
+            )
+
+        chunks = self.load_chunks()
+        if not chunks:
+            return
+
+        previous = chunks[-1]
+        changed = (
+            previous.translator != translator
+            or previous.translation_model != translation_model
+        )
+        if changed and not allow_mixed_translation:
+            raise ValueError(
+                "This checkpoint contains chunks "
+                "translated by "
+                f"{previous.translator}/"
+                f"{previous.translation_model}. "
+                "Use --allow-mixed-translation to "
+                "continue with another translator "
+                "or model."
+            )
+
+    def load_chunks(
+        self,
+    ) -> list[SavedChunk]:
+        """Loads the contiguous translated-chunk prefix."""
+        directory = self.directory / "chunks"
+        if not directory.is_dir():
+            return []
+
+        chunks = [
+            SavedChunk.model_validate_json(path.read_text())
+            for path in sorted(directory.glob("*.json"))
+        ]
+
+        expected_entry = 1
+        for chunk in chunks:
+            if chunk.start_entry != expected_entry:
+                raise ValueError("Translation checkpoint chunks are not contiguous.")
+            expected_entry += len(chunk.source_segments)
+
+        return chunks
+
+    def save_chunk(
+        self,
+        chunk: SavedChunk,
+    ) -> None:
+        """Atomically saves one validated translated chunk."""
+        if len(chunk.source_segments) != len(chunk.translated_segments):
+            raise ValueError("Cannot save an incomplete translated chunk.")
+
+        destination = self.directory / "chunks" / f"{chunk.start_entry:08d}.json"
+        _write_json_atomic(
+            destination,
+            chunk.model_dump(mode="json"),
         )
 
     def delete(self) -> None:

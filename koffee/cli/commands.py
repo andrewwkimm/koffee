@@ -30,7 +30,12 @@ from koffee.cli.app import (
 from koffee.cli.embedded import _handle_embedded_subtitles
 from koffee.cli.progress import _create_progress_bar, _make_progress_callback
 from koffee.embed import embed_subtitles
-from koffee.exceptions import IncompatibleOptionsError, KoffeeError, TranslationError
+from koffee.exceptions import (
+    IncompatibleOptionsError,
+    KoffeeError,
+    TranslationError,
+    TranslationPausedError,
+)
 from koffee.schemas.config import (
     CONFIG_SEARCH_PATHS,
     LANGUAGE_CODES,
@@ -96,6 +101,13 @@ def cli(
     dry_run: Annotated[
         bool | None, Parameter(name=("--dry-run",), group=options_group)
     ] = None,
+    allow_mixed_translation: Annotated[
+        bool | None,
+        Parameter(
+            name=("--allow-mixed-translation",),
+            group=options_group,
+        ),
+    ] = None,
     overwrite: Annotated[
         bool | None, Parameter(name=("--overwrite",), group=options_group)
     ] = None,
@@ -160,19 +172,20 @@ def cli(
         "compute_type": compute_type,
         "device": device,
         "dry_run": dry_run,
-        "whisper_model": transcription_model,
-        "llm_model": translation_model,
+        "transcription_model": transcription_model,
+        "translation_model": translation_model,
         "chunk_size": chunk_size,
         "context_size": context_size,
-        "sleep_requests": sleep_seconds,
+        "sleep_seconds": sleep_seconds,
         "overwrite": overwrite,
+        "allow_mixed_translation": allow_mixed_translation,
         "output_dir": output_dir,
         "output_name": output_name,
         "embed": embed,
         "source_language": source_language,
         "subtitle_format": subtitle_format,
         "target_language": target_language,
-        "provider": translator,
+        "translator": translator,
         "prompt": prompt,
         "on_translation_failure": on_translation_failure,
         "vad_filter": vad_filter,
@@ -271,21 +284,36 @@ def _resolve_paths(
     return resolved_paths
 
 
-def _run_batch(batch_items: list[_BatchItem]) -> None:
-    """Processes independently configured inputs without aborting."""
+def _run_batch(
+    batch_items: list[_BatchItem],
+) -> None:
+    """Processes configured inputs without aborting."""
     total = len(batch_items)
     failed = []
+
     with _create_progress_bar() as progress:
-        for position, item in enumerate(batch_items, start=1):
+        for position, item in enumerate(
+            batch_items,
+            start=1,
+        ):
             input_path = item.input_path
             config = item.config
+
             if total > 1:
                 log.info(f"[{position}/{total}] Processing {input_path.name}")
+
             try:
-                _translate_with_progress(input_path, config, progress)
-            except TranslationError as exc:
+                _translate_with_progress(
+                    input_path,
+                    config,
+                    progress,
+                )
+            except TranslationPausedError as error:
+                log.error(f"Translation paused for {input_path.name}: {error}")
+                failed.append(input_path)
+            except TranslationError as error:
                 handled = _handle_translation_failure(
-                    exc,
+                    error,
                     input_path,
                     config,
                     progress,
@@ -298,15 +326,15 @@ def _run_batch(batch_items: list[_BatchItem]) -> None:
                 KoffeeError,
                 subprocess.CalledProcessError,
                 subprocess.TimeoutExpired,
-            ) as exc:
-                log.error(f"Failed to process {input_path.name}: {exc}")
+            ) as error:
+                log.error(f"Failed to process {input_path.name}: {error}")
                 failed.append(input_path)
 
     if total > 1:
         succeeded = total - len(failed)
         log.info(f"Batch complete: {succeeded}/{total} succeeded.")
-        for path in failed:
-            log.info(f"  failed: {path.name}")
+        for failed_path in failed:
+            log.info(f"  failed: {failed_path.name}")
 
 
 def _handle_translation_failure(
@@ -648,7 +676,7 @@ def transcribe(
         {
             "compute_type": compute_type,
             "device": device,
-            "whisper_model": transcription_model,
+            "transcription_model": transcription_model,
             "output_dir": output_dir,
             "output_name": output_name,
             "subtitle_format": subtitle_format,

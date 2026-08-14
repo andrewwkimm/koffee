@@ -4,9 +4,19 @@ import logging
 import re
 import time
 from collections.abc import Callable
+from http import HTTPStatus
 
 from koffee._retry import with_retries
-from koffee.exceptions import TranslationIntegrityError
+from koffee.exceptions import (
+    TranslationIntegrityError,
+    TranslationPausedError,
+)
+from koffee.job import (
+    JobStore,
+    SavedChunk,
+    TranslationSettings,
+    translation_instructions_digest,
+)
 from koffee.llm import anthropic, google, ollama, openai
 from koffee.llm._protocol import Translator
 from koffee.schemas.domain import Segment, Transcript, TranslationChunk
@@ -76,31 +86,60 @@ def translate(
     chunk_size: int | None = None,
     context_size: int | None = None,
     sleep_seconds: int | None = None,
+    job: JobStore | None = None,
+    allow_mixed_translation: bool = False,
 ) -> list[Segment]:
-    """Translates a transcript using an LLM backend, preserving timing information."""
+    """Translates a transcript and resumes validated chunks."""
     log.info(f"Translating transcript with {translator}.")
-
-    system_prompt = prompt if prompt else SYSTEM_PROMPT
+    system_prompt = prompt or SYSTEM_PROMPT
     backend = _load_backend(translator)
     model = translation_model or backend.default_model
     resolved_chunk_size = (
         chunk_size
         if chunk_size is not None
-        else CHUNK_SIZE_BY_MODEL.get(model, CHUNK_SIZE)
+        else CHUNK_SIZE_BY_MODEL.get(
+            model,
+            CHUNK_SIZE,
+        )
     )
     resolved_context_size = (
         context_size
         if context_size is not None
-        else CONTEXT_SIZE_BY_MODEL.get(model, CONTEXT_SIZE)
+        else CONTEXT_SIZE_BY_MODEL.get(
+            model,
+            CONTEXT_SIZE,
+        )
     )
-    resolved_sleep_requests = (
+    resolved_sleep_seconds = (
         sleep_seconds
         if sleep_seconds is not None
-        else SLEEP_SECONDS_BY_TRANSLATOR.get(translator, DEFAULT_SLEEP_SECONDS)
+        else SLEEP_SECONDS_BY_TRANSLATOR.get(
+            translator,
+            DEFAULT_SLEEP_SECONDS,
+        )
     )
+
+    if job is not None:
+        job.prepare_translation(
+            TranslationSettings(
+                source_language=transcript.language,
+                target_language=target_language,
+                instructions_digest=(translation_instructions_digest(system_prompt)),
+                chunk_size=resolved_chunk_size,
+                context_size=resolved_context_size,
+            ),
+            translator,
+            model,
+            allow_mixed_translation,
+        )
+
     client = backend.create_client(api_key)
-    chunks = _chunk_segments(transcript, target_language, resolved_chunk_size)
-    translated_segments = _translate_chunks(
+    chunks = _chunk_segments(
+        transcript,
+        target_language,
+        resolved_chunk_size,
+    )
+    return _translate_chunks(
         backend,
         client=client,
         chunks=chunks,
@@ -108,9 +147,10 @@ def translate(
         translation_model=model,
         system_prompt=system_prompt,
         context_size=resolved_context_size,
-        sleep_seconds=resolved_sleep_requests,
+        sleep_seconds=resolved_sleep_seconds,
+        translator_name=translator,
+        job=job,
     )
-    return translated_segments
 
 
 def _chunk_segments(
@@ -165,39 +205,89 @@ def _translate_chunks(
     system_prompt: str,
     context_size: int = CONTEXT_SIZE,
     sleep_seconds: int = DEFAULT_SLEEP_SECONDS,
+    translator_name: str = "google",
+    job: JobStore | None = None,
 ) -> list[Segment]:
-    """Translates validated chunks and reports progress."""
-    log.info(f"Translating in {len(chunks)} chunks.")
-
+    """Translates missing chunks and checkpoints results."""
     translated_segments = []
+    saved_chunks = (
+        {chunk.start_entry: chunk for chunk in job.load_chunks()}
+        if job is not None
+        else {}
+    )
+
     for chunk_index, chunk_data in enumerate(chunks):
-        chunk = list(chunk_data.segments)
-        prompt = _build_prompt(
-            chunk=chunk,
-            source_language=chunk_data.source_language,
-            target_language=chunk_data.target_language,
-            start_entry=chunk_data.start_entry,
-            context_segments=translated_segments[-context_size:],
-        )
-        translated_chunk = _translate_chunk(
-            backend,
-            client,
-            prompt,
-            chunk,
-            translation_model,
-            system_prompt,
-            start_entry=chunk_data.start_entry,
-        )
+        source_segments = tuple(chunk_data.segments)
+        saved = saved_chunks.get(chunk_data.start_entry)
+
+        if saved is not None:
+            if saved.source_segments != source_segments:
+                raise ValueError(
+                    "Saved translation chunk does not match the current source."
+                )
+            translated_chunk = list(saved.translated_segments)
+        else:
+            prompt = _build_prompt(
+                chunk=list(source_segments),
+                source_language=(chunk_data.source_language),
+                target_language=(chunk_data.target_language),
+                start_entry=(chunk_data.start_entry),
+                context_segments=(translated_segments[-context_size:]),
+            )
+            translated_chunk = _translate_chunk(
+                backend,
+                client,
+                prompt,
+                list(source_segments),
+                translation_model,
+                system_prompt,
+                start_entry=(chunk_data.start_entry),
+            )
+
+            if job is not None:
+                job.save_chunk(
+                    SavedChunk(
+                        start_entry=(chunk_data.start_entry),
+                        source_segments=(source_segments),
+                        translated_segments=tuple(translated_chunk),
+                        translator=translator_name,
+                        translation_model=(translation_model),
+                    )
+                )
+
         translated_segments.extend(translated_chunk)
 
         if on_progress:
             on_progress((chunk_index + 1) / len(chunks))
 
         has_next_chunk = chunk_index < len(chunks) - 1
-        if has_next_chunk and sleep_seconds > 0:
+        if saved is None and has_next_chunk and sleep_seconds > 0:
             time.sleep(sleep_seconds)
 
     return translated_segments
+
+
+def _is_quota_exhausted(
+    error: Exception,
+) -> bool:
+    """Returns whether an error indicates exhausted quota."""
+    message = str(error).lower()
+    markers = (
+        "insufficient_quota",
+        "quota exceeded",
+        "quota exhausted",
+        "billing",
+        "resource exhausted",
+        "resource_exhausted",
+    )
+    status = getattr(
+        error,
+        "status_code",
+        getattr(error, "code", None),
+    )
+    return status == HTTPStatus.TOO_MANY_REQUESTS and any(
+        marker in message for marker in markers
+    )
 
 
 def _build_prompt(
@@ -256,19 +346,49 @@ def _translate_chunk(
     system_prompt: str,
     start_entry: int,
 ) -> list[Segment]:
-    """Calls the LLM with a prompt and parses the response."""
-    response = with_retries(
-        lambda: backend.attempt_generate(
-            client, prompt, translation_model, system_prompt
-        ),
-        backend.retryable_errors,
-        backend.is_retryable,
-        max_retries=3,
-    )
-    response_text = backend.extract_text(response)
-    translated_chunk = _parse_srt_response(response_text, chunk, start_entry)
+    """Retries transport and malformed responses."""
 
-    return translated_chunk
+    def attempt() -> list[Segment]:
+        """Makes and validates one translation attempt."""
+        response = backend.attempt_generate(
+            client,
+            prompt,
+            translation_model,
+            system_prompt,
+        )
+        return _parse_srt_response(
+            backend.extract_text(response),
+            chunk,
+            start_entry,
+        )
+
+    retryable_errors = (
+        *backend.retryable_errors,
+        TranslationIntegrityError,
+    )
+
+    def is_retryable(
+        error: Exception,
+    ) -> bool:
+        """Returns whether a chunk error can be retried."""
+        return isinstance(
+            error,
+            TranslationIntegrityError,
+        ) or backend.is_retryable(error)
+
+    try:
+        return with_retries(
+            attempt,
+            retryable_errors,
+            is_retryable,
+            max_retries=3,
+        )
+    except backend.retryable_errors as error:
+        if _is_quota_exhausted(error):
+            raise TranslationPausedError(
+                "Translation quota was exhausted. Completed chunks were saved."
+            ) from error
+        raise
 
 
 def _parse_srt_response(
