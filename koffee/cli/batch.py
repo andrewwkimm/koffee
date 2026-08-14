@@ -203,10 +203,10 @@ def _save_raw_transcription(
     output_path = _write_output(
         raw_path,
         video_path,
-        config.subtitle_format,
-        config.output_dir,
-        config.output_name,
-        config.overwrite,
+        subtitle_format=config.subtitle_format,
+        output_dir=config.output_dir,
+        output_name=config.output_name,
+        overwrite=config.overwrite,
     )
     log.info(
         f"Transcription saved to {output_path}. "

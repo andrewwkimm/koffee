@@ -90,10 +90,10 @@ def run(
             task = "translate" if config.translator == "whisper" else "transcribe"
             transcript = transcribe(
                 str(input_path),
-                config.compute_type,
-                config.device,
-                config.transcription_model,
-                task,
+                compute_type=config.compute_type,
+                device=config.device,
+                model=config.transcription_model,
+                task=task,
                 on_progress=on_asr_progress,
                 vad_filter=config.vad_filter,
                 language=_resolve_asr_language(config.source_language),
@@ -149,10 +149,10 @@ def _route_output(
         result_path = _write_output(
             subtitle_path,
             input_path,
-            config.subtitle_format,
-            config.output_dir,
-            config.output_name,
-            config.overwrite,
+            subtitle_format=config.subtitle_format,
+            output_dir=config.output_dir,
+            output_name=config.output_name,
+            overwrite=config.overwrite,
         )
 
     return result_path
@@ -205,6 +205,7 @@ def _write_embedded_video(
 def _write_output(
     source_path: Path,
     input_path: Path | str,
+    *,
     subtitle_format: str,
     output_dir: Path | None,
     output_name: str | None,
@@ -297,16 +298,16 @@ def _translate(
         segments = translate(
             transcript,
             config.target_language,
-            api_key,
-            on_progress,
-            translation_model=(config.translation_model),
+            api_key=api_key,
+            on_progress=on_progress,
+            translation_model=config.translation_model,
             prompt=config.prompt,
             translator=config.translator,
             chunk_size=config.chunk_size,
             context_size=config.context_size,
             sleep_seconds=config.sleep_seconds,
             job=job,
-            allow_mixed_translation=(config.allow_mixed_translation),
+            allow_mixed_translation=config.allow_mixed_translation,
         )
 
     return generate_subtitles(

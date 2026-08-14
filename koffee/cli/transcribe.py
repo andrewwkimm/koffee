@@ -22,6 +22,7 @@ def transcribe(
         Path,
         Parameter(validator=validators.Path(exists=True)),
     ],
+    *,
     compute_type: Annotated[
         str | None,
         Parameter(name=("--compute-type", "-c")),
@@ -85,14 +86,11 @@ def transcribe(
         )
         transcript = asr.transcribe(
             str(file_path),
-            config.compute_type,
-            config.device,
-            config.transcription_model,
-            "transcribe",
-            on_progress=_make_progress_callback(
-                progress,
-                asr_task,
-            ),
+            compute_type=config.compute_type,
+            device=config.device,
+            model=config.transcription_model,
+            task="transcribe",
+            on_progress=_make_progress_callback(progress, asr_task),
             vad_filter=config.vad_filter,
         )
 
@@ -105,9 +103,9 @@ def transcribe(
     target_path = _write_output(
         subtitle_path,
         file_path,
-        config.subtitle_format,
-        config.output_dir,
-        config.output_name,
-        config.overwrite,
+        subtitle_format=config.subtitle_format,
+        output_dir=config.output_dir,
+        output_name=config.output_name,
+        overwrite=config.overwrite,
     )
     log.info(f"Output saved to {target_path}")
