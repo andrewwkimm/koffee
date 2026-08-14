@@ -490,10 +490,12 @@ def test_load_backend_unknown_raises() -> None:
 
 
 def test_load_backend_gemini() -> None:
-    """Tests that the gemini backend module is loaded correctly."""
+    """Tests that the Gemini provider object is registered."""
     backend = _load_backend("gemini")
-    assert hasattr(backend, "create_client")
-    assert hasattr(backend, "attempt_generate")
+
+    assert backend is gemini.PROVIDER
+    assert backend.name == "gemini"
+    assert backend.default_model == gemini.DEFAULT_MODEL
 
 
 def test_gemini_extract_text() -> None:

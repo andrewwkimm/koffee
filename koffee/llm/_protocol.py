@@ -1,29 +1,42 @@
-"""Structural contract for LLM translation backends."""
+"""Structural contract for translation providers."""
 
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol
 
 
-@runtime_checkable
 class TranslationProvider(Protocol):
-    """Module-level contract for translation backends."""
+    """Behavior required by a translation provider."""
 
-    NAME: str
-    DEFAULT_MODEL: str
-    RETRYABLE_ERRORS: tuple[type[Exception], ...]
+    name: str
+    default_model: str
+    retryable_errors: tuple[type[Exception], ...]
 
-    @staticmethod
-    def create_client(api_key: str | None) -> Any: ...
+    def create_client(
+        self,
+        api_key: str | None,
+    ) -> Any:
+        """Creates a provider SDK client."""
+        ...
 
-    @staticmethod
     def attempt_generate(
+        self,
         client: Any,
         prompt: str,
         model: str,
         system_prompt: str,
-    ) -> Any: ...
+    ) -> Any:
+        """Makes one provider generation request."""
+        ...
 
-    @staticmethod
-    def extract_text(response: Any) -> str: ...
+    def extract_text(
+        self,
+        response: Any,
+    ) -> str:
+        """Extracts translated text from a provider response."""
+        ...
 
-    @staticmethod
-    def is_retryable(error: Exception) -> bool: ...
+    def is_retryable(
+        self,
+        error: Exception,
+    ) -> bool:
+        """Returns whether a provider error is transient."""
+        ...

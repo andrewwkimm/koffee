@@ -4,10 +4,10 @@ import logging
 import re
 import time
 from collections.abc import Callable
-from types import ModuleType
 
 from koffee._retry import with_retries
 from koffee.exceptions import TranslationIntegrityError
+from koffee.llm import chatgpt, claude, gemini, ollama
 from koffee.llm._protocol import TranslationProvider
 from koffee.schemas.domain import Segment, Transcript, TranslationChunk
 from koffee.subtitle import segments_to_srt
@@ -57,11 +57,11 @@ should feel natural in the target language
 - Preserve all subtitle entry numbers and timing markers exactly as given
 - Translate only the text content, never the timestamps or entry numbers"""
 
-LLM = {
-    "gemini": "koffee.llm.gemini",
-    "chatgpt": "koffee.llm.chatgpt",
-    "claude": "koffee.llm.claude",
-    "ollama": "koffee.llm.ollama",
+PROVIDERS: dict[str, TranslationProvider] = {
+    "gemini": gemini.PROVIDER,
+    "chatgpt": chatgpt.PROVIDER,
+    "claude": claude.PROVIDER,
+    "ollama": ollama.PROVIDER,
 }
 
 
@@ -82,7 +82,7 @@ def translate(
 
     system_prompt = prompt if prompt else SYSTEM_PROMPT
     backend = _load_backend(provider)
-    model = llm_model or backend.DEFAULT_MODEL
+    model = llm_model or backend.default_model
     resolved_chunk_size = (
         chunk_size
         if chunk_size is not None
@@ -141,23 +141,23 @@ def _chunk_segments(
     return chunks
 
 
-def _load_backend(backend_name: str) -> TranslationProvider:
-    """Loads a translation backend module by name."""
-    import importlib  # noqa: PLC0415
+def _load_backend(
+    backend_name: str,
+) -> TranslationProvider:
+    """Returns the explicitly registered provider."""
+    backend = PROVIDERS.get(backend_name)
+    if backend is not None:
+        return backend
 
-    module_path = LLM.get(backend_name)
-    if module_path is None:
-        available = ", ".join(sorted(LLM.keys()))
-        error_message = (
-            f"Unknown translation backend: {backend_name!r}. Available LLM: {available}"
-        )
-        raise ValueError(error_message)
-
-    return importlib.import_module(module_path)
+    available = ", ".join(sorted(PROVIDERS))
+    error_message = (
+        f"Unknown translation backend: {backend_name!r}. Available LLM: {available}"
+    )
+    raise ValueError(error_message)
 
 
 def _translate_chunks(
-    backend: ModuleType,
+    backend: TranslationProvider,
     client,
     chunks: list[TranslationChunk],
     on_progress: Callable[[float], None] | None,
@@ -248,7 +248,7 @@ def _build_prompt(
 
 
 def _translate_chunk(
-    backend: ModuleType,
+    backend: TranslationProvider,
     client,
     prompt: str,
     chunk: list[Segment],
@@ -259,7 +259,7 @@ def _translate_chunk(
     """Calls the LLM with a prompt and parses the response."""
     response = with_retries(
         lambda: backend.attempt_generate(client, prompt, llm_model, system_prompt),
-        backend.RETRYABLE_ERRORS,
+        backend.retryable_errors,
         backend.is_retryable,
         max_retries=3,
     )

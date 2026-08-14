@@ -69,3 +69,41 @@ def is_retryable(error: Exception) -> bool:
     if isinstance(error, APIStatusError):
         return error.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR
     return False
+
+
+class ClaudeProvider:
+    """Concrete translation provider backed by this module."""
+
+    name = NAME
+    default_model = DEFAULT_MODEL
+    retryable_errors = RETRYABLE_ERRORS
+
+    def create_client(self, api_key: str | None):
+        """Creates the provider SDK client."""
+        return create_client(api_key)
+
+    def attempt_generate(
+        self,
+        client,
+        prompt: str,
+        model: str,
+        system_prompt: str,
+    ):
+        """Makes one provider generation request."""
+        return attempt_generate(
+            client,
+            prompt,
+            model,
+            system_prompt,
+        )
+
+    def extract_text(self, response) -> str:
+        """Extracts translated text from a provider response."""
+        return extract_text(response)
+
+    def is_retryable(self, error: Exception) -> bool:
+        """Returns whether a provider error is transient."""
+        return is_retryable(error)
+
+
+PROVIDER = ClaudeProvider()
