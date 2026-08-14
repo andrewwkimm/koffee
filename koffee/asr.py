@@ -8,7 +8,7 @@ from pathlib import Path
 
 from faster_whisper import WhisperModel
 
-from koffee.schemas.types import Transcript
+from koffee.schemas.domain import Transcript
 
 log = logging.getLogger(__name__)
 
@@ -50,10 +50,7 @@ def transcribe(
     if on_progress:
         on_progress(1.0)
 
-    transcript = {
-        "segments": result,
-        "language": info.language,
-    }
+    transcript = Transcript(segments=result, language=info.language)
     return transcript
 
 

@@ -9,9 +9,7 @@ from types import ModuleType
 from koffee._retry import with_retries
 from koffee.exceptions import TranslationIntegrityError
 from koffee.llm._protocol import TranslationProvider
-from koffee.schemas.domain import Transcript as DomainTranscript
-from koffee.schemas.domain import TranslationChunk
-from koffee.schemas.types import Segment, Transcript
+from koffee.schemas.domain import Segment, Transcript, TranslationChunk
 from koffee.subtitle import segments_to_srt
 
 log = logging.getLogger(__name__)
@@ -116,15 +114,15 @@ def translate(
 
 
 def _chunk_segments(
-    transcript: Transcript | DomainTranscript,
+    transcript: Transcript,
     target_language: str,
     chunk_size: int = CHUNK_SIZE,
 ) -> list[TranslationChunk]:
     """Validates and splits a transcript into immutable chunks."""
     validated_transcript = (
         transcript
-        if isinstance(transcript, DomainTranscript)
-        else DomainTranscript.model_validate(transcript)
+        if isinstance(transcript, Transcript)
+        else Transcript.model_validate(transcript)
     )
 
     chunks = [
@@ -173,7 +171,7 @@ def _translate_chunks(
 
     translated_segments = []
     for chunk_index, chunk_data in enumerate(chunks):
-        chunk = [segment.model_dump() for segment in chunk_data.segments]
+        chunk = list(chunk_data.segments)
         prompt = _build_prompt(
             chunk=chunk,
             source_language=chunk_data.source_language,
@@ -408,10 +406,10 @@ def _merge_translated_segments(
     merged_segments = []
     for entry_number, original in enumerate(original_segments, start=start_entry):
         merged_segments.append(
-            {
-                "start": original["start"],
-                "end": original["end"],
-                "text": translation_map[entry_number],
-            }
+            Segment(
+                start=original.start,
+                end=original.end,
+                text=translation_map[entry_number],
+            )
         )
     return merged_segments

@@ -569,13 +569,11 @@ def tracks(
         return
 
     log.info(f"Subtitle tracks in {file_path.name}:")
-    for i, track in enumerate(track_list):
-        tags = track.get("tags", {})
-        language = tags.get("language", "unknown")
-        title = tags.get("title", "")
-        label = f"  [{i}] {language}"
-        if title:
-            label += f" — {title}"
+    for position, track in enumerate(track_list):
+        language = track.language or "unknown"
+        label = f"  [{position}] {language}"
+        if track.title:
+            label += f" — {track.title}"
         log.info(label)
 
 
@@ -638,7 +636,7 @@ def transcribe(
             vad_filter=vad_filter,
         )
 
-    segments = transcript["segments"]
+    segments = transcript.segments
     out_dir = output_dir if output_dir is not None else file_path.parent
     subtitle_path = generate_subtitles(subtitle_format, segments, out_dir)
 

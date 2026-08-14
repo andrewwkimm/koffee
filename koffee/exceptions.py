@@ -1,5 +1,9 @@
 """Exceptions for koffee."""
 
+from collections.abc import Sequence
+
+from koffee.schemas.domain import Segment
+
 
 class KoffeeError(Exception):
     """Base class for all koffee-specific errors."""
@@ -36,10 +40,10 @@ class TranslationIntegrityError(KoffeeError):
 class TranslationError(KoffeeError):
     """Translation step failed after successful transcription."""
 
-    def __init__(self, message: str, segments: list) -> None:
+    def __init__(self, message: str, segments: Sequence[Segment]) -> None:
         """Stores the raw transcript segments alongside the error."""
         super().__init__(message)
-        self.segments = segments
+        self.segments = tuple(segments)
 
 
 class UnsupportedFileError(KoffeeError):

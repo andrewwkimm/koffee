@@ -10,7 +10,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from koffee.exceptions import InvalidSubtitleFormatError
-from koffee.schemas.types import Segment
+from koffee.schemas.domain import Segment, SubtitleTrack
 
 log = logging.getLogger(__name__)
 
@@ -91,9 +91,9 @@ def convert_segments_to_ass(segments: list[Segment], output_dir: Path) -> Path:
         file.write(ASS_HEADER)
 
         for subtitle in segments:
-            start = convert_to_timestamp(subtitle["start"], "ass")
-            end = convert_to_timestamp(subtitle["end"], "ass")
-            text = subtitle["text"].strip().replace("\n", "\\N")
+            start = convert_to_timestamp(subtitle.start, "ass")
+            end = convert_to_timestamp(subtitle.end, "ass")
+            text = subtitle.text.strip().replace("\n", "\\N")
             file.write(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{text}\n")
 
     return output_path
@@ -108,9 +108,9 @@ def convert_segments_to_srt(segments: list[Segment], output_dir: Path) -> Path:
 
     blocks = []
     for idx, subtitle in enumerate(segments, 1):
-        start = convert_to_timestamp(subtitle["start"], "srt")
-        end = convert_to_timestamp(subtitle["end"], "srt")
-        text = subtitle["text"].strip()
+        start = convert_to_timestamp(subtitle.start, "srt")
+        end = convert_to_timestamp(subtitle.end, "srt")
+        text = subtitle.text.strip()
         blocks.append(f"{idx}\n{start} --> {end}\n{text}")
 
     with Path.open(output_path, "w", encoding="utf-8") as file:
@@ -128,9 +128,9 @@ def convert_segments_to_vtt(segments: list[Segment], output_dir: Path) -> Path:
 
     blocks = []
     for subtitle in segments:
-        start = convert_to_timestamp(subtitle["start"], "vtt")
-        end = convert_to_timestamp(subtitle["end"], "vtt")
-        text = subtitle["text"].strip()
+        start = convert_to_timestamp(subtitle.start, "vtt")
+        end = convert_to_timestamp(subtitle.end, "vtt")
+        text = subtitle.text.strip()
         blocks.append(f"{start} --> {end}\n{text}")
 
     with Path.open(output_path, "w", encoding="utf-8") as file:
@@ -204,8 +204,10 @@ def extract_subtitle_track(
     return output_path
 
 
-def get_subtitle_tracks(video_path: Path | str) -> list[dict]:
-    """Returns a list of subtitle track metadata from a video file."""
+def get_subtitle_tracks(
+    video_path: Path | str,
+) -> list[SubtitleTrack]:
+    """Returns validated subtitle-track metadata."""
     try:
         result = subprocess.run(
             [
@@ -232,8 +234,15 @@ def get_subtitle_tracks(video_path: Path | str) -> list[dict]:
         log.error("ffprobe timed out while reading subtitle tracks.")
         raise
 
-    data = json.loads(result.stdout)
-    return data.get("streams", [])
+    streams = json.loads(result.stdout).get("streams", [])
+    return [
+        SubtitleTrack(
+            index=stream["index"],
+            language=stream.get("tags", {}).get("language"),
+            title=stream.get("tags", {}).get("title"),
+        )
+        for stream in streams
+    ]
 
 
 def parse_subtitle_file(
@@ -275,11 +284,11 @@ def _parse_srt_or_vtt(text: str) -> list[Segment]:
             continue
 
         segments.append(
-            {
-                "start": _timestamp_to_seconds(start_timestamp),
-                "end": _timestamp_to_seconds(end_timestamp),
-                "text": " ".join(text_lines),
-            }
+            Segment(
+                start=_timestamp_to_seconds(start_timestamp),
+                end=_timestamp_to_seconds(end_timestamp),
+                text=" ".join(text_lines),
+            )
         )
 
     return segments
@@ -297,11 +306,11 @@ def _parse_ass(text: str, file_path: Path) -> list[Segment]:
         if not clean_text:
             continue
         segments.append(
-            {
-                "start": _ass_timestamp_to_seconds(start_ts),
-                "end": _ass_timestamp_to_seconds(end_ts),
-                "text": clean_text.replace("\\N", " "),
-            }
+            Segment(
+                start=_ass_timestamp_to_seconds(start_ts),
+                end=_ass_timestamp_to_seconds(end_ts),
+                text=clean_text.replace("\\N", " "),
+            )
         )
 
     log.debug(f"Parsed {len(segments)} segments from {file_path.name}")
@@ -348,9 +357,9 @@ def segments_to_srt(segments: list[Segment], start_entry: int = 1) -> str:
     """Converts segments to SRT text beginning at the requested entry number."""
     lines = []
     for entry_number, segment in enumerate(segments, start_entry):
-        start = convert_to_timestamp(segment["start"], "srt")
-        end = convert_to_timestamp(segment["end"], "srt")
-        text = segment["text"].strip()
+        start = convert_to_timestamp(segment.start, "srt")
+        end = convert_to_timestamp(segment.end, "srt")
+        text = segment.text.strip()
         lines.append(f"{entry_number}\n{start} --> {end}\n{text}\n")
 
     srt_text = "\n".join(lines)

@@ -22,6 +22,7 @@ from koffee.cli import (
 )
 from koffee.exceptions import IncompatibleOptionsError, KoffeeError, TranslationError
 from koffee.schemas.config import LANGUAGE_CODES, KoffeeConfig
+from koffee.schemas.domain import Segment, SubtitleTrack, Transcript
 
 korean_video_path = Path("examples/videos/sample_korean_video.mp4")
 
@@ -212,7 +213,7 @@ def test_handle_embedded_subtitles_user_accepts(
     mocker: MockerFixture,
 ) -> None:
     """Tests that accepting embedded subtitles updates config."""
-    track_list = [{"index": 0, "codec": "srt", "tags": {"language": "ko"}}]
+    track_list = [SubtitleTrack(index=0, language="ko", title=None)]
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=track_list)
     mocker.patch("builtins.input", return_value="y")
     config = KoffeeConfig()
@@ -457,7 +458,7 @@ def test_config_flag_loads_file(mocker: MockerFixture, tmp_path: Path) -> None:
 
 def test_select_subtitle_track_single() -> None:
     """Tests that a single track is selected automatically."""
-    track_list = [{"index": 0, "tags": {"language": "ja"}}]
+    track_list = [SubtitleTrack(index=0, language="ja", title=None)]
 
     index, lang = _select_subtitle_track(track_list)
 
@@ -468,8 +469,8 @@ def test_select_subtitle_track_single() -> None:
 def test_select_subtitle_track_multiple(mocker: MockerFixture) -> None:
     """Tests that user can select from multiple tracks."""
     track_list = [
-        {"index": 0, "tags": {"language": "ja", "title": "Japanese"}},
-        {"index": 1, "tags": {"language": "ko", "title": "Korean"}},
+        SubtitleTrack(index=0, language="ja", title="Japanese"),
+        SubtitleTrack(index=1, language="ko", title="Korean"),
     ]
     mocker.patch("builtins.input", return_value="1")
 
@@ -482,8 +483,8 @@ def test_select_subtitle_track_multiple(mocker: MockerFixture) -> None:
 def test_select_subtitle_track_default_on_empty_input(mocker: MockerFixture) -> None:
     """Tests that empty input defaults to track 0."""
     track_list = [
-        {"index": 0, "tags": {"language": "ja"}},
-        {"index": 1, "tags": {"language": "ko"}},
+        SubtitleTrack(index=0, language="ja", title=None),
+        SubtitleTrack(index=1, language="ko", title=None),
     ]
     mocker.patch("builtins.input", return_value="")
 
@@ -495,7 +496,7 @@ def test_select_subtitle_track_default_on_empty_input(mocker: MockerFixture) -> 
 
 def test_select_subtitle_track_missing_language_tag() -> None:
     """Tests that a track without language tag returns None."""
-    track_list = [{"index": 0, "tags": {}}]
+    track_list = [SubtitleTrack(index=0, language=None, title=None)]
 
     index, lang = _select_subtitle_track(track_list)
 
@@ -536,8 +537,8 @@ def test_tracks_command(mocker: MockerFixture) -> None:
     mocker.patch(
         "koffee.cli.commands.get_subtitle_tracks",
         return_value=[
-            {"index": 0, "tags": {"language": "ja", "title": "Japanese"}},
-            {"index": 1, "tags": {"language": "en"}},
+            SubtitleTrack(index=0, language="ja", title="Japanese"),
+            SubtitleTrack(index=1, language="en", title=None),
         ],
     )
     mock_log = mocker.patch("koffee.cli.commands.log")
@@ -643,10 +644,9 @@ def test_transcribe_command(mocker: MockerFixture, tmp_path: Path) -> None:
 
     mocker.patch(
         "koffee.cli.commands.asr.transcribe",
-        return_value={
-            "segments": [{"start": 0.0, "end": 1.0, "text": "Hello."}],
-            "language": "en",
-        },
+        return_value=Transcript(
+            segments=[Segment(start=0.0, end=1.0, text="Hello.")], language="en"
+        ),
     )
     mocker.patch(
         "koffee.cli.commands.generate_subtitles",
@@ -668,10 +668,9 @@ def test_transcribe_command_collision(mocker: MockerFixture, tmp_path: Path) -> 
 
     mocker.patch(
         "koffee.cli.commands.asr.transcribe",
-        return_value={
-            "segments": [{"start": 0.0, "end": 1.0, "text": "Hello."}],
-            "language": "en",
-        },
+        return_value=Transcript(
+            segments=[Segment(start=0.0, end=1.0, text="Hello.")], language="en"
+        ),
     )
     mocker.patch(
         "koffee.cli.commands.generate_subtitles",
@@ -691,7 +690,7 @@ def test_convert_command(mocker: MockerFixture, tmp_path: Path) -> None:
 
     mock_parse = mocker.patch(
         "koffee.cli.commands.parse_subtitle_file",
-        return_value=[{"start": 0.0, "end": 1.0, "text": "Hello."}],
+        return_value=[Segment(start=0.0, end=1.0, text="Hello.")],
     )
     mocker.patch(
         "koffee.cli.commands.generate_subtitles",
@@ -713,7 +712,7 @@ def test_convert_command_default_output(mocker: MockerFixture, tmp_path: Path) -
 
     mocker.patch(
         "koffee.cli.commands.parse_subtitle_file",
-        return_value=[{"start": 0.0, "end": 1.0, "text": "Hello."}],
+        return_value=[Segment(start=0.0, end=1.0, text="Hello.")],
     )
     mocker.patch(
         "koffee.cli.commands.generate_subtitles",
@@ -735,7 +734,7 @@ def test_convert_command_collision(mocker: MockerFixture, tmp_path: Path) -> Non
 
     mocker.patch(
         "koffee.cli.commands.parse_subtitle_file",
-        return_value=[{"start": 0.0, "end": 1.0, "text": "Hello."}],
+        return_value=[Segment(start=0.0, end=1.0, text="Hello.")],
     )
     mocker.patch(
         "koffee.cli.commands.generate_subtitles",

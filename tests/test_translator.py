@@ -6,7 +6,7 @@ from pytest_mock import MockerFixture
 
 from koffee.exceptions import TranslationIntegrityError
 from koffee.llm import chatgpt, claude, gemini, ollama
-from koffee.schemas.types import Segment, Transcript
+from koffee.schemas.domain import Segment, Transcript
 from koffee.translator import (
     SYSTEM_PROMPT,
     _build_prompt,
@@ -18,8 +18,8 @@ from koffee.translator import (
 )
 
 SAMPLE_SEGMENTS: list[Segment] = [
-    {"start": 0.0, "end": 6.36, "text": "안녕하세요."},
-    {"start": 7.8, "end": 10.74, "text": "잘 지내셨어요?"},
+    Segment(start=0.0, end=6.36, text="안녕하세요."),
+    Segment(start=7.8, end=10.74, text="잘 지내셨어요?"),
 ]
 
 SAMPLE_SRT_RESPONSE = (
@@ -27,10 +27,7 @@ SAMPLE_SRT_RESPONSE = (
     "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
 )
 
-SAMPLE_TRANSCRIPT: Transcript = {
-    "segments": SAMPLE_SEGMENTS,
-    "language": "ko",
-}
+SAMPLE_TRANSCRIPT: Transcript = Transcript(segments=SAMPLE_SEGMENTS, language="ko")
 
 
 def _configure_gemini_chunk_responses(
@@ -62,9 +59,7 @@ def _configure_ollama_chunk_responses(
 
 def test_build_prompt_with_context() -> None:
     """Tests that the prompt includes context section when they are provided."""
-    context: list[Segment] = [
-        {"start": 0.0, "end": 1.0, "text": "시대를 초월하는 마음."}
-    ]
+    context: list[Segment] = [Segment(start=0.0, end=1.0, text="시대를 초월하는 마음.")]
 
     result = _build_prompt(
         chunk=SAMPLE_SEGMENTS,
@@ -115,18 +110,18 @@ def test_parse_srt_response() -> None:
     result = _parse_srt_response(SAMPLE_SRT_RESPONSE, SAMPLE_SEGMENTS)
 
     assert len(result) == len(SAMPLE_SEGMENTS)
-    assert result[0]["text"] == "Hello."
-    assert result[1]["text"] == "How have you been?"
+    assert result[0].text == "Hello."
+    assert result[1].text == "How have you been?"
 
 
 def test_parse_srt_response_preserves_original_timestamps() -> None:
     """Tests that original segment timestamps are preserved."""
     result = _parse_srt_response(SAMPLE_SRT_RESPONSE, SAMPLE_SEGMENTS)
 
-    assert result[0]["start"] == SAMPLE_SEGMENTS[0]["start"]
-    assert result[0]["end"] == SAMPLE_SEGMENTS[0]["end"]
-    assert result[1]["start"] == SAMPLE_SEGMENTS[1]["start"]
-    assert result[1]["end"] == SAMPLE_SEGMENTS[1]["end"]
+    assert result[0].start == SAMPLE_SEGMENTS[0].start
+    assert result[0].end == SAMPLE_SEGMENTS[0].end
+    assert result[1].start == SAMPLE_SEGMENTS[1].start
+    assert result[1].end == SAMPLE_SEGMENTS[1].end
 
 
 def test_parse_srt_response_rejects_malformed_block() -> None:
@@ -164,7 +159,7 @@ def test_parse_srt_response_accepts_global_entry_ids() -> None:
 
     result = _parse_srt_response(response, SAMPLE_SEGMENTS, start_entry=4)
 
-    assert [segment["text"] for segment in result] == [
+    assert [segment.text for segment in result] == [
         "Hello.",
         "How have you been?",
     ]
@@ -225,8 +220,8 @@ def test_translate_single_chunk(mocker: MockerFixture) -> None:
     result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="gemini")
 
     assert len(result) == len(SAMPLE_SEGMENTS)
-    assert result[0]["text"] == "Hello."
-    assert result[1]["text"] == "How have you been?"
+    assert result[0].text == "Hello."
+    assert result[1].text == "How have you been?"
     mock_client.models.generate_content.assert_called_once()
 
 
@@ -377,8 +372,8 @@ def test_parse_srt_response_extra_blank_lines() -> None:
     )
     result = _parse_srt_response(response_with_extra_blanks, SAMPLE_SEGMENTS)
     assert len(result) == len(SAMPLE_SEGMENTS)
-    assert result[0]["text"] == "Hello."
-    assert result[1]["text"] == "How have you been?"
+    assert result[0].text == "Hello."
+    assert result[1].text == "How have you been?"
 
 
 def test_parse_srt_response_markdown_fenced() -> None:
@@ -386,7 +381,7 @@ def test_parse_srt_response_markdown_fenced() -> None:
     fenced = "```srt\n" + SAMPLE_SRT_RESPONSE + "\n```"
     result = _parse_srt_response(fenced, SAMPLE_SEGMENTS)
     assert len(result) == len(SAMPLE_SEGMENTS)
-    assert result[0]["text"] == "Hello."
+    assert result[0].text == "Hello."
 
 
 def test_translate_reports_progress(mocker: MockerFixture) -> None:
@@ -640,8 +635,8 @@ def test_chatgpt_translate(mocker: MockerFixture) -> None:
     result = translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", provider="chatgpt")
 
     assert len(result) == len(SAMPLE_SEGMENTS)
-    assert result[0]["text"] == "Hello."
-    assert result[1]["text"] == "How have you been?"
+    assert result[0].text == "Hello."
+    assert result[1].text == "How have you been?"
 
 
 # --- Claude backend tests ---
@@ -760,8 +755,8 @@ def test_claude_translate(mocker: MockerFixture) -> None:
     result = translate(SAMPLE_TRANSCRIPT, "en", api_key="test-key", provider="claude")
 
     assert len(result) == len(SAMPLE_SEGMENTS)
-    assert result[0]["text"] == "Hello."
-    assert result[1]["text"] == "How have you been?"
+    assert result[0].text == "Hello."
+    assert result[1].text == "How have you been?"
 
 
 # --- Ollama backend tests ---
@@ -873,8 +868,8 @@ def test_ollama_translate(mocker: MockerFixture) -> None:
     result = translate(SAMPLE_TRANSCRIPT, "en", api_key=None, provider="ollama")
 
     assert len(result) == len(SAMPLE_SEGMENTS)
-    assert result[0]["text"] == "Hello."
-    assert result[1]["text"] == "How have you been?"
+    assert result[0].text == "Hello."
+    assert result[1].text == "How have you been?"
 
 
 def test_ollama_translate_uses_default_model(mocker: MockerFixture) -> None:
@@ -904,10 +899,10 @@ def test_chunk_segments_default_chunk_size() -> None:
     """Tests that _chunk_segments uses the default chunk size when none is given."""
     default_chunk_size = 200
     many_segments: list[Segment] = [
-        {"start": float(i), "end": float(i + 1), "text": "x"}
+        Segment(start=float(i), end=float(i + 1), text="x")
         for i in range(default_chunk_size + 1)
     ]
-    transcript: Transcript = {"segments": many_segments, "language": "ja"}
+    transcript: Transcript = Transcript(segments=many_segments, language="ja")
 
     chunks = _chunk_segments(transcript, "ko")
 
@@ -920,9 +915,9 @@ def test_chunk_segments_default_chunk_size() -> None:
 def test_chunk_segments_explicit_chunk_size() -> None:
     """Tests that _chunk_segments respects an explicit chunk_size argument."""
     segments: list[Segment] = [
-        {"start": float(i), "end": float(i + 1), "text": "x"} for i in range(10)
+        Segment(start=float(i), end=float(i + 1), text="x") for i in range(10)
     ]
-    transcript: Transcript = {"segments": segments, "language": "ja"}
+    transcript: Transcript = Transcript(segments=segments, language="ja")
 
     chunk_size = 3
     chunks = _chunk_segments(transcript, "ko", chunk_size=chunk_size)
@@ -942,7 +937,7 @@ def test_translate_uses_model_chunk_size(mocker: MockerFixture) -> None:
     model = "qwen3:14b"
     model_chunk_size = 80
     many_segments: list[Segment] = [
-        {"start": float(i), "end": float(i + 1), "text": "x"}
+        Segment(start=float(i), end=float(i + 1), text="x")
         for i in range(model_chunk_size + 1)
     ]
 
@@ -983,7 +978,7 @@ def test_translate_explicit_chunk_size_overrides_model_default(
     mocker.patch("koffee.translator.time.sleep")
 
     segments: list[Segment] = [
-        {"start": float(i), "end": float(i + 1), "text": "x"} for i in range(5)
+        Segment(start=float(i), end=float(i + 1), text="x") for i in range(5)
     ]
     entries_by_chunk = ((1, 2), (3, 4), (5,))
     responses = []
@@ -1022,7 +1017,7 @@ def test_translate_uses_model_context_size(mocker: MockerFixture) -> None:
     model_context_size = 8
 
     segments: list[Segment] = [
-        {"start": float(i), "end": float(i + 1), "text": "x"} for i in range(3)
+        Segment(start=float(i), end=float(i + 1), text="x") for i in range(3)
     ]
     mock_response = mocker.MagicMock()
     mock_response.choices = [mocker.MagicMock()]

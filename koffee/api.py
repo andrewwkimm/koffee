@@ -25,7 +25,7 @@ from koffee.exceptions import (
     UnsupportedFileError,
 )
 from koffee.schemas.config import KoffeeConfig
-from koffee.schemas.types import Transcript
+from koffee.schemas.domain import Transcript
 from koffee.subtitle import (
     extract_subtitle_track,
     generate_subtitles,
@@ -265,7 +265,7 @@ def _translate(
 ) -> Path:
     """Translates segments and writes an intermediate subtitle."""
     if config.provider == "whisper":
-        segments = transcript["segments"]
+        segments = transcript.segments
     else:
         segments = translate(
             transcript,
@@ -316,10 +316,9 @@ def _translate_subtitle_file(
     """Translates an existing subtitle file without ASR."""
     log.info("Detected subtitle file input, skipping transcription.")
 
-    transcript: Transcript = {
-        "segments": parse_subtitle_file(file_path),
-        "language": config.source_language,
-    }
+    transcript: Transcript = Transcript(
+        segments=parse_subtitle_file(file_path), language=config.source_language
+    )
     return _translate_with_failure_context(
         transcript,
         config,
@@ -344,7 +343,7 @@ def _translate_with_failure_context(
     try:
         return _translate(transcript, config, on_progress, output_dir)
     except provider_errors as exc:
-        raise TranslationError(str(exc), transcript["segments"]) from exc
+        raise TranslationError(str(exc), transcript.segments) from exc
 
 
 def _check_preconditions(input_path: Path | str, config: KoffeeConfig) -> None:

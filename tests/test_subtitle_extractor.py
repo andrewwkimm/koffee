@@ -29,7 +29,7 @@ def test_get_subtitle_tracks_returns_streams(mocker: MockerFixture) -> None:
     result = get_subtitle_tracks("video.mkv")
 
     assert len(result) == 1
-    assert result[0]["tags"]["language"] == "jpn"
+    assert result[0].language == "jpn"
 
 
 def test_get_subtitle_tracks_no_streams(mocker: MockerFixture) -> None:

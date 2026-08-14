@@ -5,33 +5,25 @@ from pathlib import Path
 import pytest
 
 from koffee.exceptions import InvalidSubtitleFormatError
-from koffee.schemas.types import Segment
+from koffee.schemas.domain import Segment
 from koffee.subtitle import generate_subtitles, segments_to_srt
 
 SAMPLE_SEGMENTS: list[Segment] = [
-    {
-        "start": 0.0,
-        "end": 6.28,
-        "text": "When we got out of the long tunnel of the border, it was an eyebled.",
-    },
-    {
-        "start": 7.8,
-        "end": 10.74,
-        "text": "The bottom of the night has been changed.",
-    },
-    {
-        "start": 12.32,
-        "end": 14.94,
-        "text": "The train stopped at the signal station.",
-    },
-    {
-        "start": 16.98,
-        "end": 24.06,
-        "text": (
-            "On the other side, a virgin approached and opened a window "
-            "in front of the Shimmura."
+    Segment(
+        start=0.0,
+        end=6.28,
+        text="When we got out of the long tunnel of the border, it was an eyebled.",
+    ),
+    Segment(start=7.8, end=10.74, text="The bottom of the night has been changed."),
+    Segment(start=12.32, end=14.94, text="The train stopped at the signal station."),
+    Segment(
+        start=16.98,
+        end=24.06,
+        text=(
+            "On the other side, a virgin approached and opened "
+            "a window in front of the Shimmura."
         ),
-    },
+    ),
 ]
 
 
@@ -107,7 +99,7 @@ def test_generate_subtitles_defaults_to_cwd(
 @pytest.mark.parametrize("subtitle_format", ["csv", "pdf", "txt"])
 def test_invalid_format(subtitle_format: str) -> None:
     """Tests that the appropriate error is raised when an invalid format is given."""
-    sample_text: list[Segment] = [{"start": 10.5, "end": 15.0, "text": "Hello, world!"}]
+    sample_text: list[Segment] = [Segment(start=10.5, end=15.0, text="Hello, world!")]
 
     error_message = f"Invalid or unsupported subtitle format: {subtitle_format}"
     with pytest.raises(InvalidSubtitleFormatError, match=error_message):

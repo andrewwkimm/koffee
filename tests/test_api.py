@@ -31,7 +31,7 @@ from koffee.exceptions import (
     UnsupportedFileError,
 )
 from koffee.schemas.config import KoffeeConfig
-from koffee.schemas.types import Segment, Transcript
+from koffee.schemas.domain import Segment, Transcript
 
 
 @pytest.mark.integration
@@ -100,10 +100,9 @@ def test_translate_whisper_returns_raw_segments(mocker: MockerFixture) -> None:
     config = MagicMock(spec=KoffeeConfig)
     config.provider = "whisper"
     config.subtitle_format = "srt"
-    transcript: Transcript = {
-        "segments": [{"start": 0.0, "end": 1.0, "text": "hi"}],
-        "language": "en",
-    }
+    transcript: Transcript = Transcript(
+        segments=[Segment(start=0.0, end=1.0, text="hi")], language="en"
+    )
 
     _translate(transcript, config, None)
 
@@ -126,7 +125,7 @@ def test_translate_non_whisper_calls_translate(mocker: MockerFixture) -> None:
     config.sleep_requests = None
     config.prompt = None
     config.subtitle_format = "srt"
-    transcript: Transcript = {"segments": [], "language": "ko"}
+    transcript: Transcript = Transcript(segments=[], language="ko")
 
     _translate(transcript, config, None)
 
@@ -298,24 +297,12 @@ def test_run_subtitle_file_input(
     mock_parse = mocker.patch.object(
         api_module,
         "parse_subtitle_file",
-        return_value=[
-            {
-                "start": 0.0,
-                "end": 1.0,
-                "text": "Hello.",
-            }
-        ],
+        return_value=[Segment(start=0.0, end=1.0, text="Hello.")],
     )
     mock_translate = mocker.patch.object(
         api_module,
         "translate",
-        return_value=[
-            {
-                "start": 0.0,
-                "end": 1.0,
-                "text": "Translated.",
-            }
-        ],
+        return_value=[Segment(start=0.0, end=1.0, text="Translated.")],
     )
     mock_generate = mocker.patch.object(
         api_module,
@@ -519,10 +506,9 @@ def test_run_wraps_translation_integrity_failure(
     """Tests that integrity failures retain segments for recovery."""
     video = tmp_path / "movie.mp4"
     video.touch()
-    transcript: Transcript = {
-        "segments": [{"start": 0.0, "end": 1.0, "text": "source"}],
-        "language": "ja",
-    }
+    transcript: Transcript = Transcript(
+        segments=[Segment(start=0.0, end=1.0, text="source")], language="ja"
+    )
     mocker.patch.object(api_module, "_check_preconditions")
     mocker.patch.object(
         api_module,
@@ -538,7 +524,7 @@ def test_run_wraps_translation_integrity_failure(
     with pytest.raises(TranslationError) as error:
         run(video, config=KoffeeConfig())
 
-    assert error.value.segments == transcript["segments"]
+    assert error.value.segments == transcript.segments
 
 
 def test_run_does_not_wrap_programming_errors(
@@ -548,10 +534,9 @@ def test_run_does_not_wrap_programming_errors(
     """Tests that unexpected defects bypass translation recovery."""
     video = tmp_path / "movie.mp4"
     video.touch()
-    transcript: Transcript = {
-        "segments": [{"start": 0.0, "end": 1.0, "text": "source"}],
-        "language": "ja",
-    }
+    transcript: Transcript = Transcript(
+        segments=[Segment(start=0.0, end=1.0, text="source")], language="ja"
+    )
     mocker.patch.object(api_module, "_check_preconditions")
     mocker.patch.object(
         api_module,
@@ -598,10 +583,7 @@ def test_run_forwards_source_language_to_asr(
     """Tests API language configuration reaching ASR."""
     video = tmp_path / "input.mp4"
     video.touch()
-    transcript: Transcript = {
-        "segments": [],
-        "language": "ko",
-    }
+    transcript: Transcript = Transcript(segments=[], language="ko")
     mocker.patch.object(
         api_module,
         "_check_preconditions",

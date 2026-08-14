@@ -38,8 +38,8 @@ def test_transcribe(mocker: MockerFixture) -> None:
         language=None,
     )
 
-    assert result["language"] == "ko"
-    assert result["segments"][0]["text"] == "Mock transcription text."
+    assert result.language == "ko"
+    assert result.segments[0].text == "Mock transcription text."
 
 
 def test_transcribe_reports_progress(mocker: MockerFixture) -> None:

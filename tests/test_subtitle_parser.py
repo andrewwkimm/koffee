@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from koffee.exceptions import InvalidSubtitleFormatError
+from koffee.schemas.domain import Segment
 from koffee.subtitle import parse_subtitle_file
 
 _ASS_EVENT_FMT = (
@@ -25,8 +26,8 @@ def test_parse_srt_file(tmp_path: Path) -> None:
 
     expected_segment_count = 2
     assert len(result) == expected_segment_count
-    assert result[0] == {"start": 1.0, "end": 4.5, "text": "Hello world."}
-    assert result[1] == {"start": 5.0, "end": 8.0, "text": "Goodbye world."}
+    assert result[0] == Segment(start=1.0, end=4.5, text="Hello world.")
+    assert result[1] == Segment(start=5.0, end=8.0, text="Goodbye world.")
 
 
 def test_parse_vtt_file(tmp_path: Path) -> None:
@@ -43,8 +44,8 @@ def test_parse_vtt_file(tmp_path: Path) -> None:
 
     expected_segment_count = 2
     assert len(result) == expected_segment_count
-    assert result[0] == {"start": 1.0, "end": 4.5, "text": "Hello world."}
-    assert result[1] == {"start": 5.0, "end": 8.0, "text": "Goodbye world."}
+    assert result[0] == Segment(start=1.0, end=4.5, text="Hello world.")
+    assert result[1] == Segment(start=5.0, end=8.0, text="Goodbye world.")
 
 
 def test_parse_multiline_text(tmp_path: Path) -> None:
@@ -57,7 +58,7 @@ def test_parse_multiline_text(tmp_path: Path) -> None:
 
     result = parse_subtitle_file(srt)
 
-    assert result[0]["text"] == "Line one Line two"
+    assert result[0].text == "Line one Line two"
 
 
 def test_parse_empty_file(tmp_path: Path) -> None:
@@ -86,8 +87,8 @@ def test_parse_ass_file(tmp_path: Path) -> None:
 
     expected_segment_count = 2
     assert len(result) == expected_segment_count
-    assert result[0] == {"start": 1.0, "end": 4.5, "text": "Hello world."}
-    assert result[1] == {"start": 5.0, "end": 8.0, "text": "Goodbye world."}
+    assert result[0] == Segment(start=1.0, end=4.5, text="Hello world.")
+    assert result[1] == Segment(start=5.0, end=8.0, text="Goodbye world.")
 
 
 def test_parse_ass_strips_style_tags(tmp_path: Path) -> None:
@@ -103,7 +104,7 @@ def test_parse_ass_strips_style_tags(tmp_path: Path) -> None:
     result = parse_subtitle_file(ass)
 
     assert len(result) == 1
-    assert result[0]["text"] == "Bold text"
+    assert result[0].text == "Bold text"
 
 
 def test_parse_ass_replaces_newlines(tmp_path: Path) -> None:
@@ -118,7 +119,7 @@ def test_parse_ass_replaces_newlines(tmp_path: Path) -> None:
 
     result = parse_subtitle_file(ass)
 
-    assert result[0]["text"] == "Line one Line two"
+    assert result[0].text == "Line one Line two"
 
 
 def test_parse_srt_skips_empty_text_blocks(tmp_path: Path) -> None:
@@ -133,7 +134,7 @@ def test_parse_srt_skips_empty_text_blocks(tmp_path: Path) -> None:
     result = parse_subtitle_file(srt)
 
     assert len(result) == 1
-    assert result[0]["text"] == "Hello."
+    assert result[0].text == "Hello."
 
 
 def test_parse_ass_skips_empty_dialogue(tmp_path: Path) -> None:
@@ -150,7 +151,7 @@ def test_parse_ass_skips_empty_dialogue(tmp_path: Path) -> None:
     result = parse_subtitle_file(ass)
 
     assert len(result) == 1
-    assert result[0]["text"] == "Hello."
+    assert result[0].text == "Hello."
 
 
 def test_parse_vtt_hourless_timestamps(
@@ -165,13 +166,7 @@ def test_parse_vtt_hourless_timestamps(
 
     result = parse_subtitle_file(subtitle)
 
-    assert result == [
-        {
-            "start": 1.25,
-            "end": 4.5,
-            "text": "Hello.",
-        }
-    ]
+    assert result == [Segment(start=1.25, end=4.5, text="Hello.")]
 
 
 def test_parse_nonempty_malformed_file_raises(

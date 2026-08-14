@@ -5,6 +5,7 @@ from pathlib import Path
 from koffee.api import SUBTITLE_EXTENSIONS
 from koffee.cli.app import log
 from koffee.schemas.config import KoffeeConfig
+from koffee.schemas.domain import SubtitleTrack
 from koffee.subtitle import get_subtitle_tracks
 
 
@@ -21,7 +22,9 @@ def _handle_embedded_subtitles(video_path: Path, config: KoffeeConfig) -> Koffee
     return _apply_subtitle_track(config, tracks)
 
 
-def _apply_subtitle_track(config: KoffeeConfig, tracks: list[dict]) -> KoffeeConfig:
+def _apply_subtitle_track(
+    config: KoffeeConfig, tracks: list[SubtitleTrack]
+) -> KoffeeConfig:
     """Selects a subtitle track and returns an updated config."""
     track_index, source_language = _select_subtitle_track(tracks)
     updates = {"use_embedded_subtitles": True, "subtitle_track_index": track_index}
@@ -31,31 +34,28 @@ def _apply_subtitle_track(config: KoffeeConfig, tracks: list[dict]) -> KoffeeCon
     return config.model_copy(update=updates)
 
 
-def _select_subtitle_track(tracks: list[dict]) -> tuple[int, str | None]:
-    """Prompts user to select a subtitle track if multiple are available."""
+def _select_subtitle_track(
+    tracks: list[SubtitleTrack],
+) -> tuple[int, str | None]:
+    """Returns the selected subtitle-stream ordinal and language."""
     if len(tracks) == 1:
-        language = tracks[0].get("tags", {}).get("language")
-        return 0, language
+        return 0, tracks[0].language
 
     log.info("Available subtitle tracks:")
-    for i, track in enumerate(tracks):
-        tags = track.get("tags", {})
-        language = tags.get("language", "unknown")
-        title = tags.get("title", "")
-        label = f"  [{i}] {language}"
-        if title:
-            label += f" — {title}"
+    for position, track in enumerate(tracks):
+        language = track.language or "unknown"
+        label = f"  [{position}] {language}"
+        if track.title:
+            label += f" — {track.title}"
         log.info(label)
 
     user_input = input(f"Select track [0-{len(tracks) - 1}] (default 0): ")
-    index = int(user_input.strip()) if user_input.strip().isdigit() else 0
-    index = max(0, min(index, len(tracks) - 1))
-
-    language = tracks[index].get("tags", {}).get("language")
-    return index, language
+    position = int(user_input.strip()) if user_input.strip().isdigit() else 0
+    position = max(0, min(position, len(tracks) - 1))
+    return position, tracks[position].language
 
 
-def _detect_embedded_subtitles(video_path: Path) -> list[dict]:
+def _detect_embedded_subtitles(video_path: Path) -> list[SubtitleTrack]:
     """Returns embedded subtitle tracks in the video, or an empty list."""
     if video_path.suffix.lower() in SUBTITLE_EXTENSIONS:
         return []
