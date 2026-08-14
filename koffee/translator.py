@@ -78,6 +78,7 @@ TRANSLATORS: dict[str, Translator] = {
 def translate(
     transcript: Transcript,
     target_language: str,
+    *,
     api_key: str | None,
     on_progress: Callable[[float], None] | None = None,
     translation_model: str | None = None,
@@ -200,6 +201,7 @@ def _translate_chunks(
     backend: Translator,
     client,
     chunks: list[TranslationChunk],
+    *,
     on_progress: Callable[[float], None] | None,
     translation_model: str,
     system_prompt: str,
@@ -239,9 +241,9 @@ def _translate_chunks(
                 client,
                 prompt,
                 list(source_segments),
-                translation_model,
-                system_prompt,
-                start_entry=(chunk_data.start_entry),
+                translation_model=translation_model,
+                system_prompt=system_prompt,
+                start_entry=chunk_data.start_entry,
             )
 
             if job is not None:
@@ -342,6 +344,7 @@ def _translate_chunk(
     client,
     prompt: str,
     chunk: list[Segment],
+    *,
     translation_model: str,
     system_prompt: str,
     start_entry: int,

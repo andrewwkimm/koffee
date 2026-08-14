@@ -47,10 +47,10 @@ def convert(
     target_path = _write_output(
         subtitle_path,
         file_path,
-        subtitle_format,
-        output_dir,
-        output_name,
-        overwrite,
+        subtitle_format=subtitle_format,
+        output_dir=output_dir,
+        output_name=output_name,
+        overwrite=overwrite,
     )
     log.info(f"Converted {file_path.name} to {target_path}")
 

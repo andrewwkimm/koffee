@@ -143,8 +143,8 @@ def test_translate_non_whisper_calls_translate(
     mock_translate.assert_called_once_with(
         transcript,
         config.target_language,
-        None,
-        None,
+        api_key=None,
+        on_progress=None,
         translation_model=config.translation_model,
         prompt=config.prompt,
         translator=config.translator,
@@ -198,7 +198,12 @@ def test_write_output_moves_subtitle_to_target(tmp_path: Path) -> None:
     subtitle.touch()
 
     result = _write_output(
-        subtitle, tmp_path / "track.mp4", "srt", None, None, overwrite=False
+        subtitle,
+        tmp_path / "track.mp4",
+        subtitle_format="srt",
+        output_dir=None,
+        output_name=None,
+        overwrite=False,
     )
 
     assert result == tmp_path / "track.srt"
@@ -215,7 +220,12 @@ def test_write_output_unlinks_source_on_collision(tmp_path: Path) -> None:
 
     with pytest.raises(FileExistsError, match="already exists"):
         _write_output(
-            subtitle, tmp_path / "track.mp4", "srt", None, None, overwrite=False
+            subtitle,
+            tmp_path / "track.mp4",
+            subtitle_format="srt",
+            output_dir=None,
+            output_name=None,
+            overwrite=False,
         )
 
     assert not subtitle.exists()
@@ -230,7 +240,12 @@ def test_write_output_overwrites_when_allowed(tmp_path: Path) -> None:
     existing.write_text("old")
 
     result = _write_output(
-        subtitle, tmp_path / "track.mp4", "srt", None, None, overwrite=True
+        subtitle,
+        tmp_path / "track.mp4",
+        subtitle_format="srt",
+        output_dir=None,
+        output_name=None,
+        overwrite=True,
     )
 
     assert result.read_text() == "new"
@@ -465,7 +480,12 @@ def test_write_output_audio_input_uses_audio_stem(tmp_path: Path) -> None:
     subtitle.touch()
 
     result = _write_output(
-        subtitle, tmp_path / "track.mp3", "srt", None, None, overwrite=False
+        subtitle,
+        tmp_path / "track.mp3",
+        subtitle_format="srt",
+        output_dir=None,
+        output_name=None,
+        overwrite=False,
     )
 
     assert result == tmp_path / "track.srt"

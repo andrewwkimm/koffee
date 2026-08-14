@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 
 def transcribe(
     video_file: str,
+    *,
     compute_type: str,
     device: str,
     model: str,
