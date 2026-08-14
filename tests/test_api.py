@@ -109,30 +109,41 @@ def test_translate_whisper_returns_raw_segments(mocker: MockerFixture) -> None:
     mock_translate.assert_not_called()
 
 
-def test_translate_non_whisper_calls_translate(mocker: MockerFixture) -> None:
-    """Tests that a non-whisper backend calls translate."""
+def test_translate_non_whisper_calls_translate(
+    mocker: MockerFixture,
+) -> None:
+    """Tests that an LLM translator receives resolved configuration."""
     mock_translate = mocker.patch.object(
-        api_module, "translate", return_value=["translated"]
+        api_module,
+        "translate",
+        return_value=[],
     )
-    mocker.patch.object(api_module, "generate_subtitles", return_value=MagicMock())
-    config = MagicMock(spec=KoffeeConfig)
-    config.translator = "google"
-    config.target_language = "en"
-    config.api_key = None
-    config.translation_model = "gemini-2.5-flash"
-    config.chunk_size = None
-    config.context_size = None
-    config.sleep_seconds = None
-    config.prompt = None
-    config.subtitle_format = "srt"
-    transcript: Transcript = Transcript(segments=[], language="ko")
+    mocker.patch.object(
+        api_module,
+        "generate_subtitles",
+        return_value=MagicMock(),
+    )
+    config = KoffeeConfig(
+        translator="google",
+        target_language="en",
+        translation_model="gemini-2.5-flash",
+        subtitle_format="srt",
+    )
+    transcript = Transcript(
+        segments=(),
+        language="ko",
+    )
 
-    _translate(transcript, config, None)
+    _translate(
+        transcript,
+        config,
+        None,
+    )
 
     mock_translate.assert_called_once_with(
         transcript,
         config.target_language,
-        config.api_key,
+        None,
         None,
         translation_model=config.translation_model,
         prompt=config.prompt,
@@ -140,6 +151,8 @@ def test_translate_non_whisper_calls_translate(mocker: MockerFixture) -> None:
         chunk_size=config.chunk_size,
         context_size=config.context_size,
         sleep_seconds=config.sleep_seconds,
+        job=None,
+        allow_mixed_translation=False,
     )
 
 
