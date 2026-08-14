@@ -24,6 +24,7 @@ from koffee.exceptions import (
     TranslationIntegrityError,
     UnsupportedFileError,
 )
+from koffee.job import JobStore
 from koffee.schemas.config import KoffeeConfig
 from koffee.schemas.domain import Transcript
 from koffee.subtitle import (
@@ -47,6 +48,7 @@ def run(
     config: KoffeeConfig | None = None,
     on_asr_progress: Callable[[float], None] | None = None,
     on_translate_progress: Callable[[float], None] | None = None,
+    job: JobStore | None = None,
     **kwargs: Any,
 ) -> Path | str:
     """Processes one media or subtitle file into translated output."""
@@ -74,23 +76,38 @@ def run(
             on_translate_progress,
         )
 
-    task = "translate" if config.translator == "whisper" else "transcribe"
-    transcript = transcribe(
-        str(input_path),
-        config.compute_type,
-        config.device,
-        config.transcription_model,
-        task,
-        on_progress=on_asr_progress,
-        vad_filter=config.vad_filter,
-        language=_resolve_asr_language(config.source_language),
+    current_job = job or JobStore.open(
+        input_path,
+        config,
     )
+    transcript = current_job.load_transcript()
+
+    if transcript is None:
+        task = "translate" if config.translator == "whisper" else "transcribe"
+        transcript = transcribe(
+            str(input_path),
+            config.compute_type,
+            config.device,
+            config.transcription_model,
+            task,
+            on_progress=on_asr_progress,
+            vad_filter=config.vad_filter,
+            language=_resolve_asr_language(config.source_language),
+        )
+        current_job.save_transcript(transcript)
+
     subtitle_path = _translate_with_failure_context(
         transcript,
         config,
         on_translate_progress,
     )
-    return _route_output(input_path, subtitle_path, config)
+    output_path = _route_output(
+        input_path,
+        subtitle_path,
+        config,
+    )
+    current_job.delete()
+    return output_path
 
 
 def _resolve_asr_language(
