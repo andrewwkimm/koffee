@@ -7,7 +7,7 @@ ci:
 	uv sync
 	make reformat
 	make lint
-	make type_check
+	make type-check
 	make test
 
 lint:
@@ -29,7 +29,7 @@ mutate:
 integration-test:
 	uv run pytest -m integration
 
-type_check:
+type-check:
 	uv run ty check tests
 
 ################################################################################
@@ -83,4 +83,4 @@ ship:
 	setup \
 	ship \
 	test \
-	type_check
+	type-check
