@@ -99,6 +99,10 @@ def run(
                 language=_resolve_asr_language(config.source_language),
             )
             current_job.save_transcript(transcript)
+        elif on_asr_progress is not None:
+            # A resumed transcript skips ASR, so the caller's progress
+            # display would otherwise never advance past transcription.
+            on_asr_progress(1.0)
 
         subtitle_path = _translate_with_failure_context(
             transcript,
