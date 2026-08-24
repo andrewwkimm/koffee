@@ -28,18 +28,17 @@ from koffee.schemas.domain import Segment, SubtitleTrack, Transcript
 
 korean_video_path = Path("examples/videos/sample_korean_video.mp4")
 
-output_directory_path = Path("scratch")
 output_file_name = "cli_output_video_file"
 
 
-def test_cli(mocker: MockerFixture) -> None:
+def test_cli(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that CLI processes a valid video file."""
     mock_translate = mocker.patch("koffee.cli.batch.run")
 
     cli(
         korean_video_path,
         compute_type="int8",
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
         output_name=output_file_name,
     )
 
@@ -47,18 +46,18 @@ def test_cli(mocker: MockerFixture) -> None:
     config = mock_translate.call_args.kwargs["config"]
 
     assert config.compute_type == "int8"
-    assert config.output_dir == output_directory_path
+    assert config.output_dir == tmp_path
     assert config.output_name == output_file_name
 
 
-def test_embed_soft(mocker: MockerFixture) -> None:
+def test_embed_soft(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that embed flag is passed through to config."""
     mock_translate = mocker.patch("koffee.cli.batch.run")
 
     cli(
         korean_video_path,
         compute_type="int8",
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
         output_name=output_file_name,
         embed="soft",
     )
@@ -69,14 +68,14 @@ def test_embed_soft(mocker: MockerFixture) -> None:
     assert config.embed == "soft"
 
 
-def test_embed_defaults_to_none(mocker: MockerFixture) -> None:
+def test_embed_defaults_to_none(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that embed defaults to none."""
     mock_translate = mocker.patch("koffee.cli.batch.run")
 
     cli(
         korean_video_path,
         compute_type="int8",
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
         output_name=output_file_name,
     )
 
@@ -86,7 +85,7 @@ def test_embed_defaults_to_none(mocker: MockerFixture) -> None:
     assert config.embed == "none"
 
 
-def test_verbose(mocker: MockerFixture) -> None:
+def test_verbose(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that the verbose flag sets log level to DEBUG."""
     mocker.patch("koffee.cli.batch.run")
     mock_logger = mocker.patch("logging.getLogger")
@@ -95,7 +94,7 @@ def test_verbose(mocker: MockerFixture) -> None:
     cli(
         korean_video_path,
         compute_type="int8",
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
         output_name=output_file_name,
         verbose=True,
     )
@@ -142,14 +141,14 @@ def test_resolve_paths_glob_no_match(
         _resolve_paths((Path("nonexistent*.mp4"),))
 
 
-def test_dry_run(mocker: MockerFixture) -> None:
+def test_dry_run(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that dry-run previews actions without translating."""
     mock_translate = mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
 
     cli(
         korean_video_path,
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
         dry_run=True,
     )
 
@@ -168,7 +167,7 @@ def test_dry_run_subtitle_file(mocker: MockerFixture, tmp_path: Path) -> None:
     mock_translate.assert_not_called()
 
 
-def test_dry_run_with_embed(mocker: MockerFixture) -> None:
+def test_dry_run_with_embed(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that dry-run reports embed info when the flag is set."""
     mock_translate = mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
@@ -176,7 +175,7 @@ def test_dry_run_with_embed(mocker: MockerFixture) -> None:
 
     cli(
         korean_video_path,
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
         dry_run=True,
         embed="soft",
     )
@@ -251,7 +250,7 @@ def test_translate_with_progress_subtitle_file(
     srt = tmp_path / "test.srt"
     srt.touch()
 
-    cli(srt, output_dir=output_directory_path)
+    cli(srt, output_dir=tmp_path)
 
     mock_translate.assert_called_once()
     call_kwargs = mock_translate.call_args.kwargs
@@ -259,7 +258,7 @@ def test_translate_with_progress_subtitle_file(
     assert call_kwargs["on_translate_progress"] is not None
 
 
-def test_batch_progress_logging(mocker: MockerFixture) -> None:
+def test_batch_progress_logging(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that batch processing logs progress for multiple files."""
     mock_translate = mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
@@ -268,7 +267,7 @@ def test_batch_progress_logging(mocker: MockerFixture) -> None:
     cli(
         korean_video_path,
         korean_video_path,
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
     )
 
     expected_file_count = 2
@@ -278,7 +277,7 @@ def test_batch_progress_logging(mocker: MockerFixture) -> None:
     assert any("[2/2]" in msg for msg in log_messages)
 
 
-def test_batch_summary_on_success(mocker: MockerFixture) -> None:
+def test_batch_summary_on_success(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that batch processing logs a summary when all files succeed."""
     mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
@@ -287,14 +286,16 @@ def test_batch_summary_on_success(mocker: MockerFixture) -> None:
     cli(
         korean_video_path,
         korean_video_path,
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
     )
 
     log_messages = [call.args[0] for call in mock_log.info.call_args_list]
     assert any("2/2 succeeded" in msg for msg in log_messages)
 
 
-def test_batch_summary_on_partial_failure(mocker: MockerFixture) -> None:
+def test_batch_summary_on_partial_failure(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
     """Tests that batch processing logs failed files in the summary."""
     mocker.patch("koffee.cli.batch.run", side_effect=[None, KoffeeError("boom")])
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
@@ -303,7 +304,7 @@ def test_batch_summary_on_partial_failure(mocker: MockerFixture) -> None:
     cli(
         korean_video_path,
         korean_video_path,
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
     )
 
     info_messages = [call.args[0] for call in mock_log.info.call_args_list]
@@ -313,7 +314,9 @@ def test_batch_summary_on_partial_failure(mocker: MockerFixture) -> None:
     assert any("boom" in msg for msg in error_messages)
 
 
-def test_translation_failure_prompt_yes_saves(mocker: MockerFixture) -> None:
+def test_translation_failure_prompt_yes_saves(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
     """Tests that answering yes at the prompt triggers a transcription save."""
     mocker.patch(
         "koffee.cli.batch.run", side_effect=TranslationError("boom", segments=[])
@@ -323,12 +326,14 @@ def test_translation_failure_prompt_yes_saves(mocker: MockerFixture) -> None:
     mocker.patch("koffee.cli.batch.Confirm.ask", return_value=True)
     mocker.patch("koffee.cli.batch.sys.stdin.isatty", return_value=True)
 
-    cli(korean_video_path, output_dir=output_directory_path)
+    cli(korean_video_path, output_dir=tmp_path)
 
     mock_save.assert_called_once()
 
 
-def test_translation_failure_prompt_no_does_not_save(mocker: MockerFixture) -> None:
+def test_translation_failure_prompt_no_does_not_save(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
     """Tests that answering no at the prompt skips the save."""
     mocker.patch(
         "koffee.cli.batch.run", side_effect=TranslationError("boom", segments=[])
@@ -341,13 +346,15 @@ def test_translation_failure_prompt_no_does_not_save(mocker: MockerFixture) -> N
     cli(
         korean_video_path,
         korean_video_path,
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
     )
 
     mock_save.assert_not_called()
 
 
-def test_translation_failure_save_skips_prompt(mocker: MockerFixture) -> None:
+def test_translation_failure_save_skips_prompt(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
     """Tests that --on-translation-failure=save bypasses the prompt entirely."""
     mocker.patch(
         "koffee.cli.batch.run", side_effect=TranslationError("boom", segments=[])
@@ -358,7 +365,7 @@ def test_translation_failure_save_skips_prompt(mocker: MockerFixture) -> None:
 
     cli(
         korean_video_path,
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
         on_translation_failure="save",
     )
 
@@ -366,7 +373,9 @@ def test_translation_failure_save_skips_prompt(mocker: MockerFixture) -> None:
     mock_save.assert_called_once()
 
 
-def test_translation_failure_abort_skips_prompt_and_save(mocker: MockerFixture) -> None:
+def test_translation_failure_abort_skips_prompt_and_save(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
     """Tests that --on-translation-failure=abort skips both the prompt and the save."""
     mocker.patch(
         "koffee.cli.batch.run", side_effect=TranslationError("boom", segments=[])
@@ -377,7 +386,7 @@ def test_translation_failure_abort_skips_prompt_and_save(mocker: MockerFixture) 
 
     cli(
         korean_video_path,
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
         on_translation_failure="abort",
     )
 
@@ -385,7 +394,9 @@ def test_translation_failure_abort_skips_prompt_and_save(mocker: MockerFixture) 
     mock_save.assert_not_called()
 
 
-def test_translation_failure_non_tty_falls_back_to_save(mocker: MockerFixture) -> None:
+def test_translation_failure_non_tty_falls_back_to_save(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
     """Tests that a non-TTY stdin auto-saves instead of attempting a prompt."""
     mocker.patch(
         "koffee.cli.batch.run", side_effect=TranslationError("boom", segments=[])
@@ -395,13 +406,15 @@ def test_translation_failure_non_tty_falls_back_to_save(mocker: MockerFixture) -
     mock_confirm = mocker.patch("koffee.cli.batch.Confirm.ask")
     mocker.patch("koffee.cli.batch.sys.stdin.isatty", return_value=False)
 
-    cli(korean_video_path, output_dir=output_directory_path)
+    cli(korean_video_path, output_dir=tmp_path)
 
     mock_confirm.assert_not_called()
     mock_save.assert_called_once()
 
 
-def test_batch_continues_after_translation_failure(mocker: MockerFixture) -> None:
+def test_batch_continues_after_translation_failure(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
     """Tests that a translation failure on one file does not stop later files."""
     mock_run = mocker.patch(
         "koffee.cli.batch.run",
@@ -416,21 +429,21 @@ def test_batch_continues_after_translation_failure(mocker: MockerFixture) -> Non
         korean_video_path,
         korean_video_path,
         korean_video_path,
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
     )
 
     expected_file_count = 3
     assert mock_run.call_count == expected_file_count
 
 
-def test_prompt_flag(mocker: MockerFixture) -> None:
+def test_prompt_flag(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that --prompt is passed through to config."""
     mock_translate = mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
 
     cli(
         korean_video_path,
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
         prompt="You are a medical translator.",
     )
 
@@ -450,7 +463,7 @@ def test_config_flag_loads_file(mocker: MockerFixture, tmp_path: Path) -> None:
     cli(
         korean_video_path,
         config=config_file,
-        output_dir=output_directory_path,
+        output_dir=tmp_path,
     )
 
     mock_translate.assert_called_once()
