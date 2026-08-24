@@ -4,7 +4,7 @@ import pytest
 from google.genai.errors import APIError, ClientError
 from pytest_mock import MockerFixture
 
-from koffee.exceptions import TranslationIntegrityError
+from koffee.exceptions import TranslationIntegrityError, TranslationRefusedError
 from koffee.llm import anthropic, google, ollama, openai
 from koffee.schemas.domain import Segment, Transcript
 from koffee.translator import (
@@ -138,7 +138,7 @@ def test_parse_srt_response_reports_response_without_entries() -> None:
     refusal = "I can't help with translating this content."
 
     with pytest.raises(
-        TranslationIntegrityError,
+        TranslationRefusedError,
         match=r"no SRT entries.*I can't help",
     ):
         _parse_srt_response(refusal, SAMPLE_SEGMENTS)
@@ -272,6 +272,23 @@ def test_translate_single_chunk(mocker: MockerFixture) -> None:
     assert result[0].text == "Hello."
     assert result[1].text == "How have you been?"
     mock_client.models.generate_content.assert_called_once()
+
+
+def test_translate_does_not_retry_refusals(mocker: MockerFixture) -> None:
+    """Tests that a refusal-shaped response fails after a single attempt."""
+    mock_client = mocker.MagicMock()
+    mocker.patch.object(google, "create_client", return_value=mock_client)
+    mocker.patch("koffee.translator.time.sleep")
+    mock_retry_sleep = mocker.patch("koffee._retry.time.sleep")
+    mock_client.models.generate_content.return_value.text = (
+        "I can't help with translating this content."
+    )
+
+    with pytest.raises(TranslationRefusedError):
+        translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="google")
+
+    mock_client.models.generate_content.assert_called_once()
+    mock_retry_sleep.assert_not_called()
 
 
 def test_translate_sleeps_between_chunks(mocker: MockerFixture) -> None:

@@ -9,7 +9,7 @@ from anthropic import (
     RateLimitError,
 )
 
-from koffee.exceptions import TranslationIntegrityError
+from koffee.exceptions import TranslationIntegrityError, TranslationRefusedError
 
 NAME = "anthropic"
 DEFAULT_MODEL = "claude-sonnet-4-6"
@@ -40,12 +40,16 @@ def attempt_generate(
     system_prompt: str,
 ):
     """Makes one Anthropic API call."""
-    return client.messages.create(
+    response = client.messages.create(
         model=model,
         max_tokens=MAX_OUTPUT_TOKENS,
         system=system_prompt,
         messages=[{"role": "user", "content": prompt}],
     )
+    if response.stop_reason == "refusal":
+        error_message = "Claude declined to translate this content."
+        raise TranslationRefusedError(error_message)
+    return response
 
 
 def extract_text(response) -> str:

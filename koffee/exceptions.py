@@ -41,6 +41,10 @@ class TranslationIntegrityError(KoffeeError):
     """LLM response does not satisfy the subtitle translation contract."""
 
 
+class TranslationRefusedError(TranslationIntegrityError):
+    """LLM declined to translate, so retrying cannot change the outcome."""
+
+
 class TranslationError(KoffeeError):
     """Translation step failed after successful transcription."""
 

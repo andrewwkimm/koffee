@@ -10,6 +10,7 @@ from koffee._retry import with_retries
 from koffee.exceptions import (
     TranslationIntegrityError,
     TranslationPausedError,
+    TranslationRefusedError,
 )
 from koffee.job import (
     JobStore,
@@ -380,6 +381,8 @@ def _translate_chunk(
         error: Exception,
     ) -> bool:
         """Returns whether a chunk error can be retried."""
+        if isinstance(error, TranslationRefusedError):
+            return False
         return isinstance(
             error,
             TranslationIntegrityError,
@@ -417,10 +420,10 @@ def _parse_srt_response(
     translation_map = _blocks_to_translation_map(blocks)
     if not translation_map:
         error_message = (
-            "Translation response contains no SRT entries. "
-            f"Response begins: {sanitized[:200]!r}"
+            "Translation response contains no SRT entries; the model may have "
+            f"declined to translate. Response begins: {sanitized[:200]!r}"
         )
-        raise TranslationIntegrityError(error_message)
+        raise TranslationRefusedError(error_message)
     _validate_translation_entries(
         translation_map,
         start_entry=start_entry,

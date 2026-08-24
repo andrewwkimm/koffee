@@ -3,7 +3,7 @@
 import pytest
 from pytest_mock import MockerFixture
 
-from koffee.exceptions import TranslationIntegrityError
+from koffee.exceptions import TranslationIntegrityError, TranslationRefusedError
 from koffee.llm import anthropic
 
 
@@ -20,6 +20,17 @@ def test_create_client_owns_retry_policy(
         timeout=anthropic.REQUEST_TIMEOUT_SECONDS,
         max_retries=0,
     )
+
+
+def test_attempt_generate_rejects_refusal_stop_reason(
+    mocker: MockerFixture,
+) -> None:
+    """Tests that a refusal stop reason raises a non-retryable error."""
+    client = mocker.MagicMock()
+    client.messages.create.return_value = mocker.MagicMock(stop_reason="refusal")
+
+    with pytest.raises(TranslationRefusedError, match="declined to translate"):
+        anthropic.attempt_generate(client, "prompt", "model", "system")
 
 
 def test_extract_text_combines_text_blocks(

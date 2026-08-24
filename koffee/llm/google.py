@@ -7,7 +7,7 @@ from google import genai
 from google.genai import types
 from google.genai.errors import APIError, ClientError
 
-from koffee.exceptions import TranslationIntegrityError
+from koffee.exceptions import TranslationIntegrityError, TranslationRefusedError
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ def attempt_generate(
             "unknown",
         )
         error_message = f"Gemini returned no candidates (block_reason={block_reason})."
-        raise TranslationIntegrityError(error_message)
+        raise TranslationRefusedError(error_message)
 
     usage = getattr(response, "usage_metadata", None)
     if usage is not None:
