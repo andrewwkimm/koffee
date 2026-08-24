@@ -24,14 +24,14 @@ The translation method defaults to Whisper; for more accurate translations, koff
 Set your API key as an environment variable to use but it also passable as an argument.
 
 ```console
-export GEMINI_API_KEY=<your-api-key>
-koffee audio_file.mp3 --provider=gemini
+export GOOGLE_API_KEY=<your-api-key>
+koffee audio_file.mp3 --translator=google
 ```
 
 or
 
 ```
-koffee audio_file.mp3 --provider=gemini --api-key=<your-api-key>
+koffee audio_file.mp3 --translator=google --api-key=<your-api-key>
 ```
 
 There is full feature parity between the CLI and the Python library. See the example below for basic usage:

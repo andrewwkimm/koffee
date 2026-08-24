@@ -87,7 +87,7 @@ def cli(
         Type to use for computation
     device: str
         Device to use for computation
-    whisper_model: str
+    transcription_model: str
         The Whisper model instance to use
     output_dir: Path
         Directory for the output file
@@ -102,10 +102,17 @@ def cli(
         Source language of the subtitle file (default: auto)
     target_language: str
         Language to which the file should be translated
-    provider: str
-        The backend service to use for the translation
-    llm_model: str
+    translator: str
+        The translation backend to use (whisper, google, openai, anthropic, ollama)
+    translation_model: str
         The LLM model to use for translation
+    chunk_size: int
+        Number of subtitle entries per LLM request (auto-selected per model if unset)
+    context_size: int
+        Number of preceding entries passed as context per request (auto-selected
+        per model if unset)
+    sleep_seconds: int
+        Seconds to wait between LLM requests (auto-selected per backend if unset)
     prompt: str
         Custom system prompt for the LLM translation model
     config: Path
@@ -121,6 +128,8 @@ def cli(
         pass `--no-vad-filter` to disable)
     dry_run: bool
         Preview what would be done without running transcription or translation
+    allow_mixed_translation: bool
+        Allow resuming a job whose saved chunks used a different translator or model
     overwrite: bool
         Overwrite existing output files instead of raising an error
     verbose: bool

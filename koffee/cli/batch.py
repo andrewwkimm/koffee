@@ -1,5 +1,6 @@
 """Batch planning, execution, and failure recovery."""
 
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -210,7 +211,8 @@ def _save_raw_transcription(
     )
     log.info(
         f"Transcription saved to {output_path}. "
-        f"Retry: koffee {output_path} --provider=<provider>"
+        f"Retry: koffee {shlex.quote(str(output_path))} "
+        f"--translator={config.translator}"
     )
 
 

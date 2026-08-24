@@ -88,15 +88,15 @@ Refer below for a list of all arguments, commands, parameters, and options.
 
     --compute-type          -c  Type to use for computation
     --device                -d  Device to use for computation
-    --whisper-model         -m  The Whisper model instance to use
+    --transcription-model   -m  The Whisper model instance to use
     --output-dir            -o  Directory for the output file
     --output-name           -n  Name of the output file
     --source-language       -s  Source language of the subtitle file (default: auto)
     --target-language       -t  Language to which the file should be translated
     --subtitle-format       -f  Format to use for the subtitles
     --embed                     Subtitle embed mode: none, soft, or hard
-    --provider                  The backend service to use for the translation (whisper, gemini, chatgpt, claude, ollama)
-    --llm-model                 The LLM model to use for translation
+    --translator                The translation backend to use (whisper, google, openai, anthropic, ollama)
+    --translation-model         The LLM model to use for translation
     --chunk-size                Number of subtitle entries per LLM request (auto-selected per model if unset)
     --context-size              Number of preceding entries passed as context per request (auto-selected per model if unset)
     --prompt                    Custom system prompt for the LLM translation model
@@ -124,16 +124,16 @@ Settings follow this precedence: **defaults < config file < CLI arguments**.
 Example `koffee.toml`:
 
 ```toml
-compute-type = "float16"
+compute_type = "float16"
 device = "cuda"
-whisper-model = "large-v3"
-source-language = "ko"
-target-language = "en"
-subtitle-format = "srt"
-provider = "gemini"
-llm-model = "gemini-2.5-flash"
-chunk-size = 400
-context-size = 20
+transcription_model = "large-v3"
+source_language = "ko"
+target_language = "en"
+subtitle_format = "srt"
+translator = "google"
+translation_model = "gemini-2.5-flash"
+chunk_size = 400
+context_size = 20
 ```
 
 ## Contributing
