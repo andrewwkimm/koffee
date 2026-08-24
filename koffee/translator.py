@@ -32,6 +32,12 @@ SLEEP_SECONDS_BY_TRANSLATOR: dict[str, int] = {
     "ollama": 0,
 }
 
+# Anthropic responses are non-streaming, so one chunk's SRT output must fit
+# within the backend's max output tokens; 100 entries stay well inside it.
+CHUNK_SIZE_BY_TRANSLATOR: dict[str, int] = {
+    "anthropic": 100,
+}
+
 CHUNK_SIZE_BY_MODEL: dict[str, int] = {
     "qwen3:8b": 40,
     "qwen3:14b": 80,
@@ -100,7 +106,7 @@ def translate(
         if chunk_size is not None
         else CHUNK_SIZE_BY_MODEL.get(
             model,
-            CHUNK_SIZE,
+            CHUNK_SIZE_BY_TRANSLATOR.get(translator, CHUNK_SIZE),
         )
     )
     resolved_context_size = (

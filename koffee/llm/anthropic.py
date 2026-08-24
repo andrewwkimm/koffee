@@ -13,7 +13,10 @@ from koffee.exceptions import TranslationIntegrityError
 
 NAME = "anthropic"
 DEFAULT_MODEL = "claude-sonnet-4-6"
-REQUEST_TIMEOUT_SECONDS = 120.0
+# Claude models allow far larger caps, but non-streaming responses must finish
+# within the request timeout, which bounds how much output one call can carry.
+MAX_OUTPUT_TOKENS = 16_384
+REQUEST_TIMEOUT_SECONDS = 300.0
 RETRYABLE_ERRORS = (
     RateLimitError,
     APIConnectionError,
@@ -39,7 +42,7 @@ def attempt_generate(
     """Makes one Anthropic API call."""
     return client.messages.create(
         model=model,
-        max_tokens=8192,
+        max_tokens=MAX_OUTPUT_TOKENS,
         system=system_prompt,
         messages=[{"role": "user", "content": prompt}],
     )
