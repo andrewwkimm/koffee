@@ -1,4 +1,4 @@
 # CLI Reference
 
 ::: cyclopts
-    module: koffee.cli:app
+    module: koffee.cli.app:app
