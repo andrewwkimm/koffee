@@ -14,6 +14,7 @@ from koffee.translator import (
     _load_backend,
     _parse_srt_response,
     _sanitize_response,
+    _validate_translation_entries,
     translate,
 )
 
@@ -126,13 +127,21 @@ def test_parse_srt_response_preserves_original_timestamps() -> None:
 
 def test_parse_srt_response_reports_block_without_timestamp_as_missing() -> None:
     """Tests that a block without a timestamp is skipped and reported missing."""
-    block_with_missing_timestamp = "1\nHello."
+    response = "1\nHello.\n\n2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
 
-    with pytest.raises(TranslationIntegrityError, match=r"missing entry IDs \[1\]"):
-        _parse_srt_response(
-            block_with_missing_timestamp,
-            SAMPLE_SEGMENTS[:1],
-        )
+    with pytest.raises(TranslationIntegrityError, match="missing entry IDs 1"):
+        _parse_srt_response(response, SAMPLE_SEGMENTS)
+
+
+def test_parse_srt_response_reports_response_without_entries() -> None:
+    """Tests that a response with no SRT entries surfaces a response snippet."""
+    refusal = "I can't help with translating this content."
+
+    with pytest.raises(
+        TranslationIntegrityError,
+        match=r"no SRT entries.*I can't help",
+    ):
+        _parse_srt_response(refusal, SAMPLE_SEGMENTS)
 
 
 def test_parse_srt_response_skips_preamble_and_commentary() -> None:
@@ -205,7 +214,7 @@ def test_parse_srt_response_rejects_missing_entry_id() -> None:
     """Tests that an incomplete translation response fails validation."""
     response = "1\n00:00:00,000 --> 00:00:06,360\nHello."
 
-    with pytest.raises(TranslationIntegrityError, match=r"missing entry IDs \[2\]"):
+    with pytest.raises(TranslationIntegrityError, match="missing entry IDs 2"):
         _parse_srt_response(response, SAMPLE_SEGMENTS)
 
 
@@ -218,9 +227,32 @@ def test_parse_srt_response_rejects_unexpected_entry_id() -> None:
 
     with pytest.raises(
         TranslationIntegrityError,
-        match=r"unexpected entry IDs \[3\]",
+        match="unexpected entry IDs 3",
     ):
         _parse_srt_response(response, SAMPLE_SEGMENTS)
+
+
+@pytest.mark.parametrize(
+    ("translated_entry", "expected_ranges"),
+    [
+        pytest.param(2, "1, 3-4", id="singleton-then-range"),
+        pytest.param(3, "1-2, 4", id="range-then-singleton"),
+    ],
+)
+def test_validate_translation_entries_compresses_id_ranges(
+    translated_entry: int,
+    expected_ranges: str,
+) -> None:
+    """Tests that missing entry IDs are reported as compact ranges."""
+    with pytest.raises(
+        TranslationIntegrityError,
+        match=rf"missing entry IDs {expected_ranges}\.$",
+    ):
+        _validate_translation_entries(
+            {translated_entry: "ok"},
+            start_entry=1,
+            entry_count=4,
+        )
 
 
 def test_translate_single_chunk(mocker: MockerFixture) -> None:

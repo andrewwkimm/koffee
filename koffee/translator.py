@@ -409,6 +409,12 @@ def _parse_srt_response(
         block.strip() for block in re.split(r"\n{2,}", sanitized) if block.strip()
     ]
     translation_map = _blocks_to_translation_map(blocks)
+    if not translation_map:
+        error_message = (
+            "Translation response contains no SRT entries. "
+            f"Response begins: {sanitized[:200]!r}"
+        )
+        raise TranslationIntegrityError(error_message)
     _validate_translation_entries(
         translation_map,
         start_entry=start_entry,
@@ -504,15 +510,31 @@ def _validate_translation_entries(
 
     problems = []
     if missing_entries:
-        problems.append(f"missing entry IDs {missing_entries}")
+        problems.append(f"missing entry IDs {_format_entry_ranges(missing_entries)}")
     if unexpected_entries:
-        problems.append(f"unexpected entry IDs {unexpected_entries}")
+        problems.append(
+            f"unexpected entry IDs {_format_entry_ranges(unexpected_entries)}"
+        )
     if not missing_entries and not unexpected_entries and entries_are_reordered:
         problems.append("entry IDs are not in ascending order")
     if problems:
         details = "; ".join(problems)
         error_message = f"Translation response failed integrity validation: {details}."
         raise TranslationIntegrityError(error_message)
+
+
+def _format_entry_ranges(entries: list[int]) -> str:
+    """Formats sorted entry IDs as compact ranges, e.g. '1-3, 7, 9-12'."""
+    ranges = []
+    start = previous = entries[0]
+    for entry in entries[1:]:
+        if entry == previous + 1:
+            previous = entry
+            continue
+        ranges.append(f"{start}-{previous}" if previous > start else str(start))
+        start = previous = entry
+    ranges.append(f"{start}-{previous}" if previous > start else str(start))
+    return ", ".join(ranges)
 
 
 def _merge_translated_segments(
