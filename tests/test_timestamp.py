@@ -3,7 +3,11 @@
 import pytest
 
 from koffee.exceptions import InvalidSubtitleFormatError
-from koffee.subtitle import convert_to_timestamp
+from koffee.subtitle import (
+    _ass_timestamp_to_seconds,
+    _timestamp_to_seconds,
+    convert_to_timestamp,
+)
 
 
 @pytest.mark.parametrize(
@@ -25,6 +29,38 @@ def test_convert_to_timestamp(
 ) -> None:
     """Tests that float values are formatted to timestamp."""
     assert convert_to_timestamp(value, subtitle_format) == expected
+
+
+@pytest.mark.parametrize(
+    ("timestamp", "expected_seconds"),
+    [
+        pytest.param("00:00:07,800", 7.8, id="srt-comma"),
+        pytest.param("00:00:07.800", 7.8, id="vtt-dot"),
+        pytest.param("01:02:03,004", 3723.004, id="srt-hours"),
+        pytest.param("02:03.500", 123.5, id="vtt-no-hours"),
+    ],
+)
+def test_timestamp_to_seconds(timestamp: str, expected_seconds: float) -> None:
+    """Tests that SRT and WebVTT timestamps are parsed to seconds."""
+    assert _timestamp_to_seconds(timestamp) == expected_seconds
+
+
+@pytest.mark.parametrize(
+    ("timestamp", "expected_seconds"),
+    [
+        pytest.param("0:00:10.50", 10.5, id="centiseconds"),
+        pytest.param("1:02:03.04", 3723.04, id="hours"),
+    ],
+)
+def test_ass_timestamp_to_seconds(timestamp: str, expected_seconds: float) -> None:
+    """Tests that ASS timestamps are parsed to seconds."""
+    assert _ass_timestamp_to_seconds(timestamp) == expected_seconds
+
+
+def test_timestamp_to_seconds_rejects_invalid_timestamp() -> None:
+    """Tests that a timestamp without minute fields is rejected."""
+    with pytest.raises(InvalidSubtitleFormatError, match="Invalid subtitle timestamp"):
+        _timestamp_to_seconds("7.800")
 
 
 @pytest.mark.parametrize("subtitle_format", ["csv", "pdf", "txt"])

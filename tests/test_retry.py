@@ -54,6 +54,44 @@ def test_with_retries_retries_then_succeeds(
     mock_sleep.assert_called_once_with(2)
 
 
+def test_with_retries_defaults_to_three_retries_with_backoff(
+    mocker: MockerFixture,
+) -> None:
+    """Tests the default retry count and exponential backoff schedule."""
+    mock_sleep = mocker.patch("koffee._retry.time.sleep")
+    operation = mocker.Mock(side_effect=RetryableError("always failing"))
+
+    with pytest.raises(RetryableError):
+        with_retries(
+            operation,
+            RetryableError,
+            _is_retryable,
+        )
+
+    initial_attempt_plus_three_retries = 4
+    assert operation.call_count == initial_attempt_plus_three_retries
+    assert [call.args[0] for call in mock_sleep.call_args_list] == [2, 4, 8]
+
+
+def test_with_retries_zero_retries_attempts_once(
+    mocker: MockerFixture,
+) -> None:
+    """Tests that max_retries=0 is valid and makes exactly one attempt."""
+    mock_sleep = mocker.patch("koffee._retry.time.sleep")
+    operation = mocker.Mock(side_effect=RetryableError("always failing"))
+
+    with pytest.raises(RetryableError):
+        with_retries(
+            operation,
+            RetryableError,
+            _is_retryable,
+            max_retries=0,
+        )
+
+    operation.assert_called_once()
+    mock_sleep.assert_not_called()
+
+
 def test_with_retries_does_not_catch_unrelated_error(
     mocker: MockerFixture,
 ) -> None:

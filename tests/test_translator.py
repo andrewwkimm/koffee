@@ -291,6 +291,28 @@ def test_translate_does_not_retry_refusals(mocker: MockerFixture) -> None:
     mock_retry_sleep.assert_not_called()
 
 
+def test_translate_retries_malformed_responses_three_times(
+    mocker: MockerFixture,
+) -> None:
+    """Tests that recoverable integrity failures are retried exactly three times."""
+    mock_client = mocker.MagicMock()
+    mocker.patch.object(google, "create_client", return_value=mock_client)
+    mocker.patch("koffee.translator.time.sleep")
+    mocker.patch("koffee._retry.time.sleep")
+    mock_client.models.generate_content.return_value.text = (
+        "1\n00:00:00,000 --> 00:00:06,360\nHello."
+    )
+
+    with pytest.raises(TranslationIntegrityError, match="missing entry IDs 2"):
+        translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="google")
+
+    initial_attempt_plus_three_retries = 4
+    assert (
+        mock_client.models.generate_content.call_count
+        == initial_attempt_plus_three_retries
+    )
+
+
 def test_translate_sleeps_between_chunks(mocker: MockerFixture) -> None:
     """Tests that translate sleeps between chunks and stops at last entry."""
     mock_client = mocker.MagicMock()
