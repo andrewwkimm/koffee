@@ -4,6 +4,7 @@
 /.env
 /.nox
 /.pytest_cache
+/mutants
 /.venv
 /dist
 /venv

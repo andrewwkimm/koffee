@@ -23,6 +23,9 @@ setup:
 test:
 	uv run pytest --cov -m "not integration"
 
+mutate:
+	uv run mutmut run
+
 integration-test:
 	uv run pytest -m integration
 
@@ -74,6 +77,7 @@ ship:
 	help \
 	integration-test \
 	lint \
+	mutate \
 	reformat \
 	serve \
 	setup \
