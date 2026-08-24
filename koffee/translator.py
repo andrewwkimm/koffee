@@ -448,7 +448,11 @@ def _sanitize_response(response_text: str | None) -> str:
 
 
 def _blocks_to_translation_map(blocks: list[str]) -> dict[int, str]:
-    """Parses structurally valid SRT blocks into translated text by entry ID."""
+    """Parses SRT entry blocks into translated text by entry ID.
+
+    Blocks that are not SRT entries (model preamble or commentary) are skipped;
+    entry validation afterward still requires every requested ID exactly once.
+    """
     translation_map: dict[int, str] = {}
     minimum_header_lines = 2
     timestamp_pattern = re.compile(
@@ -456,29 +460,18 @@ def _blocks_to_translation_map(blocks: list[str]) -> dict[int, str]:
         r"\d{2}:\d{2}:\d{2}[,.]\d{3}"
     )
 
-    for block_number, block in enumerate(blocks, start=1):
+    for block in blocks:
         lines = block.split("\n")
-        if len(lines) < minimum_header_lines:
-            error_message = (
-                f"Translation response block {block_number} is malformed: "
-                "expected an entry ID, timestamp, and translated text."
-            )
-            raise TranslationIntegrityError(error_message)
+        is_entry_block = (
+            len(lines) >= minimum_header_lines
+            and lines[0].strip().isdecimal()
+            and timestamp_pattern.fullmatch(lines[1].strip()) is not None
+        )
+        if not is_entry_block:
+            log.debug(f"Skipping non-SRT response block: {block!r}")
+            continue
 
-        try:
-            entry_number = int(lines[0].strip())
-        except ValueError as exc:
-            error_message = (
-                f"Translation response block {block_number} has an invalid entry ID."
-            )
-            raise TranslationIntegrityError(error_message) from exc
-
-        if timestamp_pattern.fullmatch(lines[1].strip()) is None:
-            error_message = (
-                f"Translation response entry {entry_number} has an invalid timestamp."
-            )
-            raise TranslationIntegrityError(error_message)
-
+        entry_number = int(lines[0].strip())
         translated_text = " ".join(line.strip() for line in lines[2:] if line.strip())
         if not translated_text:
             error_message = (

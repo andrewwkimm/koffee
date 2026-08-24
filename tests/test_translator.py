@@ -124,15 +124,32 @@ def test_parse_srt_response_preserves_original_timestamps() -> None:
     assert result[1].end == SAMPLE_SEGMENTS[1].end
 
 
-def test_parse_srt_response_rejects_malformed_block() -> None:
-    """Tests that a malformed SRT block fails integrity validation."""
-    malformed_block_with_missing_timestamp = "1\nHello."
+def test_parse_srt_response_reports_block_without_timestamp_as_missing() -> None:
+    """Tests that a block without a timestamp is skipped and reported missing."""
+    block_with_missing_timestamp = "1\nHello."
 
-    with pytest.raises(TranslationIntegrityError, match="invalid timestamp"):
+    with pytest.raises(TranslationIntegrityError, match=r"missing entry IDs \[1\]"):
         _parse_srt_response(
-            malformed_block_with_missing_timestamp,
+            block_with_missing_timestamp,
             SAMPLE_SEGMENTS[:1],
         )
+
+
+def test_parse_srt_response_skips_preamble_and_commentary() -> None:
+    """Tests that non-SRT blocks around valid entries are ignored."""
+    response = (
+        "Here is the translation:\n\n"
+        "1\n00:00:00,000 --> 00:00:06,360\nHello.\n\n"
+        "2\n00:00:07,800 --> 00:00:10,740\nHow have you been?\n\n"
+        "Let me know if you need any adjustments!"
+    )
+
+    result = _parse_srt_response(response, SAMPLE_SEGMENTS)
+
+    assert [segment.text for segment in result] == [
+        "Hello.",
+        "How have you been?",
+    ]
 
 
 def test_build_prompt_uses_global_entry_ids() -> None:
