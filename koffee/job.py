@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -16,6 +17,8 @@ from koffee.schemas.domain import (
     Segment,
     Transcript,
 )
+
+log = logging.getLogger(__name__)
 
 _SAMPLE_BYTES = 1_048_576
 _JOB_ID_LENGTH = 24
@@ -112,14 +115,17 @@ class JobStore:
         if manifest_path.is_file():
             manifest = JobManifest.model_validate_json(manifest_path.read_text())
             if manifest.fingerprint != fingerprint:
-                raise ValueError(
-                    "The input file changed after its checkpoint was created."
+                log.warning(
+                    "The input file changed after its checkpoint was created; "
+                    "discarding the stale checkpoint and starting over."
                 )
-            if manifest.transcription != expected_settings:
+                shutil.rmtree(directory, ignore_errors=True)
+            elif manifest.transcription != expected_settings:
                 raise ValueError(
                     "The transcription settings do not match the existing checkpoint."
                 )
-            return cls(directory, manifest)
+            else:
+                return cls(directory, manifest)
 
         manifest = JobManifest(
             fingerprint=fingerprint,

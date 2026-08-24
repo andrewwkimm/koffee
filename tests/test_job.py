@@ -77,21 +77,20 @@ def test_checkpoint_excludes_api_key(
     assert "api_key" not in json.loads(manifest_text)["saved_config"]
 
 
-def test_changed_input_is_rejected(
+def test_changed_input_discards_stale_checkpoint(
     tmp_path: Path,
 ) -> None:
-    """Tests stale checkpoint rejection."""
+    """Tests that a changed input starts a fresh job instead of failing."""
     media = tmp_path / "movie.mp4"
     media.write_bytes(b"first")
-    JobStore.open(media, KoffeeConfig())
+    job = JobStore.open(media, KoffeeConfig())
+    job.save_transcript(_transcript())
 
     media.write_bytes(b"second")
+    reopened = JobStore.open(media, KoffeeConfig())
 
-    with pytest.raises(
-        ValueError,
-        match="input file changed",
-    ):
-        JobStore.open(media, KoffeeConfig())
+    assert reopened.load_transcript() is None
+    assert reopened.manifest.fingerprint == fingerprint_input(media)
 
 
 def test_fingerprint_uses_content(
