@@ -59,6 +59,8 @@ markers = [
 [tool.mutmut]
 source_paths = ["koffee"]
 only_mutate = [
+    "koffee/_retry.py",
+    "koffee/job.py",
     "koffee/subtitle.py",
     "koffee/translator.py",
 ]
