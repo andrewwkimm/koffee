@@ -55,6 +55,7 @@ def cli(
     on_translation_failure: Annotated[
         str | None, Parameter(name=("--on-translation-failure",))
     ] = None,
+    on_collision: Annotated[str | None, Parameter(name=("--on-collision",))] = None,
     config: Annotated[Path, Parameter(name=("--config",), group=options_group)]
     | None = None,
     vad_filter: Annotated[
@@ -123,6 +124,10 @@ def cli(
         What to do when LLM translation fails: prompt (default; ask y/n to save
         the raw transcription), save (save without asking), or abort (skip the
         save). When stdin is not a TTY, prompt falls back to save.
+    on_collision: str
+        What to do when the output file already exists: prompt (default; ask y/n
+        to overwrite), overwrite, skip, or abort. When stdin is not a TTY,
+        prompt falls back to abort.
     vad_filter: bool
         Voice activity detection filtering during transcription (enabled by default;
         pass `--no-vad-filter` to disable)
@@ -159,6 +164,7 @@ def cli(
         "translator": translator,
         "prompt": prompt,
         "on_translation_failure": on_translation_failure,
+        "on_collision": on_collision,
         "vad_filter": vad_filter,
     }
     config = _resolve_config(config, cli_args)

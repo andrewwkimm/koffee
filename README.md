@@ -102,6 +102,7 @@ Refer below for a list of all arguments, commands, parameters, and options.
     --prompt                    Custom system prompt for the LLM translation model
     --api-key                   API key for an LLM service
     --on-translation-failure    What to do when LLM translation fails: prompt (default), save, or abort. Non-TTY stdin falls back to save
+    --on-collision              What to do when the output file already exists: prompt (default), overwrite, skip, or abort. Non-TTY stdin falls back to abort
 
 ### Options
 

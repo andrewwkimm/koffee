@@ -314,6 +314,110 @@ def test_batch_summary_on_partial_failure(
     assert any("boom" in msg for msg in error_messages)
 
 
+def _existing_output(tmp_path: Path) -> Path:
+    """Creates the output file the sample video would publish to."""
+    existing = tmp_path / "sample_korean_video.vtt"
+    existing.touch()
+    return existing
+
+
+def test_collision_prompt_yes_overwrites(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Tests that answering yes at the collision prompt overwrites the file."""
+    _existing_output(tmp_path)
+    mock_translate = mocker.patch("koffee.cli.batch.run")
+    mocker.patch("koffee.cli.batch.Confirm.ask", return_value=True)
+    mocker.patch("koffee.cli.batch.sys.stdin.isatty", return_value=True)
+
+    cli(korean_video_path, output_dir=tmp_path)
+
+    mock_translate.assert_called_once()
+    assert mock_translate.call_args.kwargs["config"].overwrite is True
+
+
+def test_collision_prompt_no_skips_file(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Tests that answering no at the collision prompt skips the file."""
+    _existing_output(tmp_path)
+    mock_translate = mocker.patch("koffee.cli.batch.run")
+    mocker.patch("koffee.cli.batch.Confirm.ask", return_value=False)
+    mocker.patch("koffee.cli.batch.sys.stdin.isatty", return_value=True)
+
+    cli(korean_video_path, output_dir=tmp_path)
+
+    mock_translate.assert_not_called()
+
+
+def test_collision_non_tty_fails_without_prompting(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests that a non-TTY collision fails the file instead of prompting."""
+    _existing_output(tmp_path)
+    mock_translate = mocker.patch("koffee.cli.batch.run")
+    mock_confirm = mocker.patch("koffee.cli.batch.Confirm.ask")
+    mocker.patch("koffee.cli.batch.sys.stdin.isatty", return_value=False)
+
+    cli(korean_video_path, output_dir=tmp_path)
+
+    mock_translate.assert_not_called()
+    mock_confirm.assert_not_called()
+
+
+def test_collision_skip_skips_without_prompting(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests that on_collision=skip skips the file without prompting."""
+    _existing_output(tmp_path)
+    mock_translate = mocker.patch("koffee.cli.batch.run")
+    mock_confirm = mocker.patch("koffee.cli.batch.Confirm.ask")
+
+    cli(korean_video_path, output_dir=tmp_path, on_collision="skip")
+
+    mock_translate.assert_not_called()
+    mock_confirm.assert_not_called()
+
+
+def test_collision_overwrite_proceeds_without_prompting(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests that on_collision=overwrite overwrites without prompting."""
+    _existing_output(tmp_path)
+    mock_translate = mocker.patch("koffee.cli.batch.run")
+    mock_confirm = mocker.patch("koffee.cli.batch.Confirm.ask")
+
+    cli(korean_video_path, output_dir=tmp_path, on_collision="overwrite")
+
+    mock_translate.assert_called_once()
+    assert mock_translate.call_args.kwargs["config"].overwrite is True
+    mock_confirm.assert_not_called()
+
+
+def test_collision_abort_fails_without_prompting(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests that on_collision=abort fails the file without prompting."""
+    _existing_output(tmp_path)
+    mock_translate = mocker.patch("koffee.cli.batch.run")
+    mock_confirm = mocker.patch("koffee.cli.batch.Confirm.ask")
+
+    cli(korean_video_path, output_dir=tmp_path, on_collision="abort")
+
+    mock_translate.assert_not_called()
+    mock_confirm.assert_not_called()
+
+
+def test_no_collision_processes_without_prompting(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests that a fresh output path is processed without prompting."""
+    mock_translate = mocker.patch("koffee.cli.batch.run")
+    mock_confirm = mocker.patch("koffee.cli.batch.Confirm.ask")
+
+    cli(korean_video_path, output_dir=tmp_path)
+
+    mock_translate.assert_called_once()
+    assert mock_translate.call_args.kwargs["config"].overwrite is False
+    mock_confirm.assert_not_called()
+
+
 def test_translation_failure_prompt_yes_saves(
     mocker: MockerFixture, tmp_path: Path
 ) -> None:

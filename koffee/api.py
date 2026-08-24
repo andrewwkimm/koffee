@@ -285,6 +285,22 @@ def _get_output_path(
     return output_path
 
 
+def _resolve_output_path(
+    input_path: Path | str,
+    config: KoffeeConfig,
+) -> Path:
+    """Returns the output path the given input will publish to."""
+    is_video = Path(input_path).suffix.lower() in VIDEO_EXTENSIONS
+    has_embed = is_video and config.embed != "none"
+    base_path = _get_output_path(
+        input_path, config.output_dir, config.output_name, date_suffix=has_embed
+    )
+    resolved_path = (
+        base_path if has_embed else base_path.with_suffix(f".{config.subtitle_format}")
+    )
+    return resolved_path
+
+
 def _translate(
     transcript: Transcript,
     config: KoffeeConfig,
@@ -464,14 +480,7 @@ def _check_preconditions(input_path: Path | str, config: KoffeeConfig) -> None:
         raise MissingApiKeyError(error_message)
 
     # Output Path Must Not Already Exist (or Overwrite Must Be Set)
-    has_embed = is_video and config.embed != "none"
-    base_path = _get_output_path(
-        input_path, config.output_dir, config.output_name, date_suffix=has_embed
-    )
-    output_path = (
-        base_path if has_embed else base_path.with_suffix(f".{config.subtitle_format}")
-    )
-    _check_output_collision(output_path, config.overwrite)
+    _check_output_collision(_resolve_output_path(input_path, config), config.overwrite)
 
 
 def _check_subtitle_provider(

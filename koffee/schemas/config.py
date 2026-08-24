@@ -154,6 +154,7 @@ class KoffeeConfig(BaseModel):
     subtitle_track: int = 0
     use_embedded_subtitles: bool = False
     on_translation_failure: Literal["prompt", "save", "abort"] = "prompt"
+    on_collision: Literal["prompt", "overwrite", "skip", "abort"] = "prompt"
 
     @model_validator(mode="before")
     @classmethod

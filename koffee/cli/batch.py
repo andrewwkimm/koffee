@@ -11,6 +11,7 @@ from rich.prompt import Confirm
 
 from koffee.api import (
     SUPPORTED_EXTENSIONS,
+    _resolve_output_path,
     _write_output,
     run,
 )
@@ -124,9 +125,12 @@ def _run_batch(
                 log.info(f"[{position}/{total}] Processing {input_path.name}")
 
             try:
+                resolved_config = _resolve_collision(input_path, config, progress)
+                if resolved_config is None:
+                    continue
                 _translate_with_progress(
                     input_path,
-                    config,
+                    resolved_config,
                     progress,
                 )
             except TranslationPausedError as error:
@@ -156,6 +160,48 @@ def _run_batch(
         log.info(f"Batch complete: {succeeded}/{total} succeeded.")
         for failed_path in failed:
             log.info(f"  failed: {failed_path.name}")
+
+
+def _resolve_collision(
+    input_path: Path,
+    config: KoffeeConfig,
+    progress: Progress,
+) -> KoffeeConfig | None:
+    """Applies the collision policy when the output file already exists.
+
+    Returns the config to process the file with, or None to skip the file.
+    Raises FileExistsError when the policy is to fail the file.
+    """
+    output_path = _resolve_output_path(input_path, config)
+    if config.overwrite or not output_path.exists():
+        return config
+
+    decision = config.on_collision
+    if decision == "prompt" and not sys.stdin.isatty():
+        log.info("stdin is not a TTY; failing on collision instead of prompting.")
+        decision = "abort"
+
+    if decision == "abort":
+        error_message = (
+            f"Output file already exists: {output_path}. Use --overwrite to replace it."
+        )
+        raise FileExistsError(error_message)
+
+    if decision == "prompt":
+        progress.stop()
+        overwrite = Confirm.ask(
+            f"Output file {output_path} already exists. Overwrite?",
+            default=False,
+            console=progress.console,
+        )
+        progress.start()
+        decision = "overwrite" if overwrite else "skip"
+
+    if decision == "skip":
+        log.info(f"Skipping {input_path.name}: output file already exists.")
+        return None
+
+    return config.model_copy(update={"overwrite": True})
 
 
 def _translate_with_progress(
