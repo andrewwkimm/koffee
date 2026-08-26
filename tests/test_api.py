@@ -1,8 +1,6 @@
 """Tests for the koffee API."""
 
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
@@ -13,6 +11,7 @@ from koffee.api import (
     _check_output_collision,
     _check_preconditions,
     _get_output_path,
+    _resolve_output_path,
     _route_output,
     _translate,
     _translate_embedded_subtitles,
@@ -67,22 +66,25 @@ def test_get_output_path_no_output_name() -> None:
     assert result.suffix == ".mp3"
 
 
-def test_get_output_path_date_suffix(mocker: MockerFixture) -> None:
-    """Tests that date_suffix adds a date stamp to the filename."""
-    mocker.patch("koffee.api.datetime").now.return_value = datetime(2026, 1, 15)
-
-    result = _get_output_path(
-        "video/track.mp4", output_dir=None, output_name=None, date_suffix=True
+def test_resolve_output_path_uses_language_and_mode() -> None:
+    """Tests deterministic translated output names without date suffixes."""
+    subtitle = _resolve_output_path(
+        "video/track.mp4",
+        KoffeeConfig(translator="ollama", target_language="ko", subtitle_format="srt"),
+    )
+    embedded = _resolve_output_path(
+        "video/track.mp4",
+        KoffeeConfig(translator="ollama", target_language="ko", embed="soft"),
     )
 
-    assert result.stem == "track_01-15-2026"
-    assert result.suffix == ".mp4"
+    assert subtitle == Path("video/track.ko.srt")
+    assert embedded == Path("video/track.ko.soft.mp4")
 
 
 def test_get_output_path_with_output_name() -> None:
     """Tests that a provided output name is used as-is."""
     result = _get_output_path("video/track.mp4", output_dir=None, output_name="custom")
-    assert result.stem == "custom"
+    assert result == Path("video/custom")
 
 
 def test_get_output_path_with_output_dir() -> None:
@@ -96,8 +98,10 @@ def test_get_output_path_with_output_dir() -> None:
 def test_translate_whisper_returns_raw_segments(mocker: MockerFixture) -> None:
     """Tests that whisper backend uses raw segments without calling translate."""
     mock_translate = mocker.patch.object(api_module, "translate")
-    mocker.patch.object(api_module, "generate_subtitles", return_value=MagicMock())
-    config = MagicMock(spec=KoffeeConfig)
+    mocker.patch.object(
+        api_module, "generate_subtitles", return_value=mocker.MagicMock()
+    )
+    config = mocker.MagicMock(spec=KoffeeConfig)
     config.translator = "whisper"
     config.subtitle_format = "srt"
     transcript: Transcript = Transcript(
@@ -121,7 +125,7 @@ def test_translate_non_whisper_calls_translate(
     mocker.patch.object(
         api_module,
         "generate_subtitles",
-        return_value=MagicMock(),
+        return_value=mocker.MagicMock(),
     )
     config = KoffeeConfig(
         translator="google",
@@ -346,13 +350,14 @@ def test_run_subtitle_file_input(
         subtitle,
         config=KoffeeConfig(
             output_dir=tmp_path,
+            output_name="exact-name",
             translator="google",
             api_key="test-key",
             overwrite=True,
         ),
     )
 
-    assert result == tmp_path / "test.vtt"
+    assert result == tmp_path / "exact-name"
     assert result.read_text() == "WEBVTT\n"
     assert not generated.exists()
     mock_parse.assert_called_once()
@@ -410,7 +415,7 @@ def test_check_preconditions_rejects_no_embedded_tracks(
     mocker.patch("koffee.api.shutil.which", return_value="/usr/bin/ffmpeg")
     mocker.patch("koffee.api.get_subtitle_tracks", return_value=[])
 
-    with pytest.raises(IncompatibleOptionsError, match="No embedded subtitle tracks"):
+    with pytest.raises(IncompatibleOptionsError, match="No text subtitle tracks"):
         _check_preconditions(video, KoffeeConfig(use_embedded_subtitles=True))
 
 
@@ -429,7 +434,7 @@ def test_check_preconditions_rejects_existing_output(tmp_path: Path) -> None:
     """Tests that an existing output file raises FileExistsError upfront."""
     audio = tmp_path / "track.mp3"
     audio.touch()
-    existing_output = tmp_path / "track.vtt"
+    existing_output = tmp_path / "track.en.vtt"
     existing_output.touch()
 
     with pytest.raises(FileExistsError, match="Output file already exists"):
@@ -442,7 +447,7 @@ def test_check_preconditions_allows_existing_output_with_overwrite(
     """Tests that an existing output is tolerated when overwrite is enabled."""
     audio = tmp_path / "track.mp3"
     audio.touch()
-    existing_output = tmp_path / "track.vtt"
+    existing_output = tmp_path / "track.en.vtt"
     existing_output.touch()
 
     _check_preconditions(audio, KoffeeConfig(overwrite=True))
@@ -466,8 +471,7 @@ def test_check_preconditions_embed_checks_video_suffix_collision(
     video = tmp_path / "clip.mp4"
     video.touch()
     mocker.patch("koffee.api.shutil.which", return_value="/usr/bin/ffmpeg")
-    mocker.patch("koffee.api.datetime").now.return_value = datetime(2026, 1, 15)
-    colliding = tmp_path / "clip_01-15-2026.mp4"
+    colliding = tmp_path / "clip.en.soft.mp4"
     colliding.touch()
 
     with pytest.raises(FileExistsError, match="Output file already exists"):
@@ -526,7 +530,8 @@ def test_embedded_translation_routes_from_original_video(
 
     assert result == output
     working_directory = mock_extract.call_args.kwargs["output_dir"]
-    assert mock_extract.call_args.args == (video, 0)
+    assert mock_extract.call_args.args == (video,)
+    assert mock_extract.call_args.kwargs["subtitle_ordinal"] == 0
     assert mock_translate.call_args.kwargs["output_dir"] == working_directory
     mock_route.assert_called_once_with(video, generated, config)
     assert not working_directory.exists()
@@ -681,7 +686,7 @@ def test_run_dry_run_returns_plan_without_job(
 
     result = run(video, config=KoffeeConfig(dry_run=True))
 
-    assert result == tmp_path / "clip.vtt"
+    assert result == tmp_path / "clip.en.vtt"
     mock_open.assert_not_called()
 
 
@@ -691,7 +696,7 @@ def test_preconditions_reject_hard_link_output(
     """Tests output aliases cannot overwrite the input."""
     subtitle = tmp_path / "input.srt"
     subtitle.touch()
-    alias = tmp_path / "alias.vtt"
+    alias = tmp_path / "alias"
     alias.hardlink_to(subtitle)
     config = KoffeeConfig(
         translator="ollama",
@@ -704,3 +709,87 @@ def test_preconditions_reject_hard_link_output(
         match="must differ",
     ):
         _check_preconditions(subtitle, config)
+
+
+def test_run_rejects_soft_container_before_job_or_processing(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests unsupported soft output fails before persistent or model work."""
+    video = tmp_path / "clip.avi"
+    video.touch()
+    mocker.patch("koffee.api.shutil.which", return_value="/usr/bin/ffmpeg")
+    open_job = mocker.patch.object(api_module.JobStore, "open")
+    transcribe_media = mocker.patch.object(api_module, "transcribe")
+    translate_segments = mocker.patch.object(api_module, "translate")
+
+    with pytest.raises(SubtitleEmbedError, match="Unsupported video container"):
+        run(video, config=KoffeeConfig(embed="soft"))
+
+    open_job.assert_not_called()
+    transcribe_media.assert_not_called()
+    translate_segments.assert_not_called()
+
+
+def test_run_rejects_missing_libass_before_job_or_processing(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests unavailable hard embedding fails before persistent or model work."""
+    video = tmp_path / "clip.mp4"
+    video.touch()
+    mocker.patch("koffee.api.shutil.which", return_value="/usr/bin/ffmpeg")
+    mocker.patch("koffee.embed._ffmpeg_supports_subtitles_filter", return_value=False)
+    open_job = mocker.patch.object(api_module.JobStore, "open")
+    transcribe_media = mocker.patch.object(api_module, "transcribe")
+    translate_segments = mocker.patch.object(api_module, "translate")
+
+    with pytest.raises(SubtitleEmbedError, match="libass"):
+        run(video, config=KoffeeConfig(embed="hard"))
+
+    open_job.assert_not_called()
+    transcribe_media.assert_not_called()
+    translate_segments.assert_not_called()
+
+
+def test_route_output_preserves_explicit_output_name(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests routing publishes an explicit output name without a suffix."""
+    source = tmp_path / "temporary.srt"
+    source.write_text("translated")
+    input_path = tmp_path / "clip.mp4"
+    config = KoffeeConfig(output_name="exact-name")
+
+    result = _route_output(input_path, source, config)
+
+    assert result == tmp_path / "exact-name"
+    assert result.read_text() == "translated"
+
+
+def test_bitmap_first_ordinal_passes_preconditions_and_reaches_extraction(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests a text track after a bitmap stream keeps ordinal one end to end."""
+    video = tmp_path / "movie.mkv"
+    video.touch()
+    track = mocker.MagicMock(subtitle_ordinal=1)
+    config = KoffeeConfig(
+        use_embedded_subtitles=True,
+        subtitle_track=1,
+        translator="ollama",
+    )
+    mocker.patch("koffee.api.shutil.which", return_value="/usr/bin/ffmpeg")
+    mocker.patch("koffee.api.get_subtitle_tracks", return_value=[track])
+
+    _check_preconditions(video, config)
+
+    extracted = tmp_path / "embedded_subtitle_1.srt"
+    generated = tmp_path / "translated.srt"
+    extract = mocker.patch.object(
+        api_module, "extract_subtitle_track", return_value=extracted
+    )
+    mocker.patch.object(api_module, "_translate_subtitle_file", return_value=generated)
+    mocker.patch.object(api_module, "_route_output", return_value=tmp_path / "out")
+
+    _translate_embedded_subtitles(video, config, None)
+
+    assert extract.call_args.kwargs["subtitle_ordinal"] == 1

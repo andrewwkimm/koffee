@@ -3,7 +3,6 @@
 import logging
 import shutil
 from collections.abc import Callable
-from datetime import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import Any
@@ -13,7 +12,7 @@ from google.genai.errors import APIError as GeminiAPIError
 from openai import OpenAIError
 
 from koffee.asr import transcribe
-from koffee.embed import embed_subtitles
+from koffee.embed import embed_subtitles, validate_embedding
 from koffee.exceptions import (
     IncompatibleOptionsError,
     InvalidVideoFileError,
@@ -25,6 +24,14 @@ from koffee.exceptions import (
     UnsupportedFileError,
 )
 from koffee.job import JobStore
+from koffee.media import (
+    AUDIO_EXTENSIONS,
+    SUPPORTED_EXTENSIONS,
+    VIDEO_EXTENSIONS,
+    OutputPolicy,
+    classify_media,
+    resolve_output_path,
+)
 from koffee.schemas.config import KoffeeConfig
 from koffee.schemas.domain import Transcript
 from koffee.subtitle import (
@@ -37,10 +44,6 @@ from koffee.subtitle import (
 from koffee.translator import translate
 
 log = logging.getLogger(__name__)
-
-AUDIO_EXTENSIONS = {".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a"}
-VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".flv", ".wmv"}
-SUPPORTED_EXTENSIONS = AUDIO_EXTENSIONS | VIDEO_EXTENSIONS
 
 
 def run(
@@ -140,9 +143,7 @@ def _route_output(
     is_audio = Path(input_path).suffix.lower() in AUDIO_EXTENSIONS
     has_embed = not is_audio and config.embed != "none"
 
-    output_path = _get_output_path(
-        input_path, config.output_dir, config.output_name, date_suffix=has_embed
-    )
+    output_path = _resolve_output_path(input_path, config)
 
     if has_embed:
         _check_output_collision(output_path, config.overwrite)
@@ -158,8 +159,8 @@ def _route_output(
             subtitle_path,
             input_path,
             subtitle_format=config.subtitle_format,
-            output_dir=config.output_dir,
-            output_name=config.output_name,
+            output_dir=output_path.parent,
+            output_name=output_path.name,
             overwrite=config.overwrite,
         )
 
@@ -172,6 +173,8 @@ def _write_embedded_video(
     output_path: Path,
     embed_mode: str = "soft",
     language: str = "en",
+    *,
+    delete_subtitle: bool = True,
 ) -> Path:
     """Publishes an embedded video only after FFmpeg succeeds."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -205,7 +208,8 @@ def _write_embedded_video(
         if not published:
             temporary_path.unlink(missing_ok=True)
 
-    subtitle_path.unlink()
+    if delete_subtitle:
+        subtitle_path.unlink()
     log.info("Finished processing video!")
     return output_path
 
@@ -225,7 +229,11 @@ def _write_output(
         output_dir,
         output_name,
     )
-    target_path = base_path.with_suffix(f".{subtitle_format}")
+    target_path = (
+        base_path
+        if output_name is not None
+        else base_path.with_suffix(f".{subtitle_format}")
+    )
 
     try:
         _check_output_collision(target_path, overwrite)
@@ -270,39 +278,34 @@ def _get_output_path(
     output_name: str | None,
     date_suffix: bool = False,
 ) -> Path:
-    """Gets the output path for the translated output file."""
-    log.debug(f"output_name: {output_name!r}")
-
+    """Returns a compatibility base path without clock-dependent naming."""
+    del date_suffix
     file_path = Path(input_path)
     file_dir = output_dir if output_dir is not None else file_path.parent
-
-    if output_name is not None:
-        file_name = output_name
-    elif date_suffix:
-        file_name = f"{file_path.stem}_{datetime.now().strftime('%m-%d-%Y')}"
-    else:
-        file_name = file_path.stem
-
-    output_path = file_dir / (file_name + file_path.suffix)
-    log.debug(f"output_dir: {output_path!r}")
-
-    return output_path
+    file_name = output_name if output_name is not None else file_path.stem
+    output_filename = (
+        file_name if output_name is not None else file_name + file_path.suffix
+    )
+    return file_dir / output_filename
 
 
 def _resolve_output_path(
     input_path: Path | str,
     config: KoffeeConfig,
 ) -> Path:
-    """Returns the output path the given input will publish to."""
-    is_video = Path(input_path).suffix.lower() in VIDEO_EXTENSIONS
-    has_embed = is_video and config.embed != "none"
-    base_path = _get_output_path(
-        input_path, config.output_dir, config.output_name, date_suffix=has_embed
+    """Returns the deterministic translated publication path."""
+    media = classify_media(input_path)
+    embed_mode = config.embed if media is not None and media.kind == "video" else "none"
+    return resolve_output_path(
+        OutputPolicy(
+            input_path=Path(input_path),
+            output_dir=config.output_dir,
+            output_name=config.output_name,
+            target_language=config.target_language,
+            subtitle_format=config.subtitle_format,
+            embed_mode=embed_mode,
+        )
     )
-    resolved_path = (
-        base_path if has_embed else base_path.with_suffix(f".{config.subtitle_format}")
-    )
-    return resolved_path
 
 
 def _translate(
@@ -354,7 +357,7 @@ def _translate_embedded_subtitles(
         working_directory = Path(temporary_directory)
         extracted_path = extract_subtitle_track(
             input_path,
-            config.subtitle_track,
+            subtitle_ordinal=config.subtitle_track,
             output_dir=working_directory,
         )
         subtitle_path = _translate_subtitle_file(
@@ -422,69 +425,44 @@ def _translate_with_failure_context(
         ) from error
 
 
-def _check_preconditions(input_path: Path | str, config: KoffeeConfig) -> None:
+def _check_preconditions(
+    input_path: Path | str,
+    config: KoffeeConfig,
+) -> None:
     """Checks all preconditions before processing begins."""
-    # File Must Exist and Be a Valid File
-    if not Path(input_path).exists() or not Path(input_path).is_file():
+    input_file = Path(input_path)
+    if not input_file.exists() or not input_file.is_file():
         error_message = "Input file is not valid or does not exist."
         log.error(error_message)
         raise InvalidVideoFileError(error_message)
 
-    # File Extension Must Be a Supported Type
-    suffix = Path(input_path).suffix.lower()
-    allowed = SUPPORTED_EXTENSIONS | SUBTITLE_EXTENSIONS
-    if suffix not in allowed:
+    suffix = input_file.suffix.lower()
+    allowed_extensions = SUPPORTED_EXTENSIONS | SUBTITLE_EXTENSIONS
+    if suffix not in allowed_extensions:
         error_message = (
             f"Unsupported file type: {suffix!r}. "
-            f"Supported extensions: {', '.join(sorted(allowed))}"
+            f"Supported extensions: "
+            f"{', '.join(sorted(allowed_extensions))}"
         )
         raise UnsupportedFileError(error_message)
 
-    is_video = suffix in VIDEO_EXTENSIONS
     _check_subtitle_provider(suffix, config)
+    _check_media_options(
+        input_file,
+        config,
+        is_video=suffix in VIDEO_EXTENSIONS,
+    )
 
-    # Embed and Use-Embedded-Subtitles Are Video-Only Options
-    if config.embed != "none" and not is_video:
-        error_message = "--embed is only supported for video file inputs."
-        raise IncompatibleOptionsError(error_message)
-
-    if config.use_embedded_subtitles and not is_video:
-        error_message = (
-            "--use-embedded-subtitles is only supported for video file inputs."
-        )
-        raise IncompatibleOptionsError(error_message)
-
-    # ffmpeg and ffprobe Must Be Installed for Embed/Subtitle Extraction
-    needs_ffmpeg = config.embed != "none" or config.use_embedded_subtitles
-    if needs_ffmpeg and shutil.which("ffmpeg") is None:
-        error_message = (
-            "ffmpeg was not found on PATH. Install ffmpeg to use --embed or "
-            "--use-embedded-subtitles."
-        )
-        raise MissingDependencyError(error_message)
-
-    if config.use_embedded_subtitles:
-        if shutil.which("ffprobe") is None:
-            error_message = (
-                "ffprobe was not found on PATH. Install ffmpeg to use "
-                "--use-embedded-subtitles."
-            )
-            raise MissingDependencyError(error_message)
-        if not get_subtitle_tracks(input_path):
-            error_message = f"No embedded subtitle tracks found in {input_path}."
-            raise IncompatibleOptionsError(error_message)
-
-    # LLM Backends Require an API Key
     if config.translator not in ("whisper", "ollama") and not config.api_key:
         error_message = (
-            f"An API key is required when using the {config.translator} "
-            "translation backend. Provide one with --api-key or set the appropriate "
-            "environment variable."
+            f"An API key is required when using the "
+            f"{config.translator} translation backend. Provide one with "
+            "--api-key or set the appropriate environment variable."
         )
         raise MissingApiKeyError(error_message)
 
-    output_path = _resolve_output_path(input_path, config)
-    _check_distinct_output(input_path, output_path)
+    output_path = _resolve_output_path(input_file, config)
+    _check_distinct_output(input_file, output_path)
     _check_output_collision(output_path, config.overwrite)
 
 
@@ -508,5 +486,82 @@ def _check_subtitle_provider(
         error_message = (
             "The whisper provider cannot translate "
             "subtitle files. Choose an LLM provider."
+        )
+        raise IncompatibleOptionsError(error_message)
+
+
+def _check_media_options(
+    input_path: Path,
+    config: KoffeeConfig,
+    *,
+    is_video: bool,
+) -> None:
+    """Checks options that require video media or FFmpeg."""
+    _check_video_only_options(config, is_video=is_video)
+
+    needs_ffmpeg = config.embed != "none" or config.use_embedded_subtitles
+    if not needs_ffmpeg:
+        return
+
+    if shutil.which("ffmpeg") is None:
+        error_message = (
+            "ffmpeg was not found on PATH. Install ffmpeg to use "
+            "--embed or --use-embedded-subtitles."
+        )
+        raise MissingDependencyError(error_message)
+
+    if config.use_embedded_subtitles:
+        _check_embedded_subtitle_track(
+            input_path,
+            config.subtitle_track,
+        )
+
+    if config.embed != "none":
+        validate_embedding(
+            _resolve_output_path(input_path, config),
+            config.embed,
+        )
+
+
+def _check_video_only_options(
+    config: KoffeeConfig,
+    *,
+    is_video: bool,
+) -> None:
+    """Checks that video-only options receive video input."""
+    if config.embed != "none" and not is_video:
+        error_message = "--embed is only supported for video file inputs."
+        raise IncompatibleOptionsError(error_message)
+
+    if config.use_embedded_subtitles and not is_video:
+        error_message = (
+            "--use-embedded-subtitles is only supported for video file inputs."
+        )
+        raise IncompatibleOptionsError(error_message)
+
+
+def _check_embedded_subtitle_track(
+    input_path: Path,
+    subtitle_ordinal: int,
+) -> None:
+    """Checks that one requested text subtitle track is available."""
+    if shutil.which("ffprobe") is None:
+        error_message = (
+            "ffprobe was not found on PATH. Install ffmpeg to use "
+            "--use-embedded-subtitles."
+        )
+        raise MissingDependencyError(error_message)
+
+    subtitle_tracks = get_subtitle_tracks(input_path)
+    if not subtitle_tracks:
+        error_message = f"No text subtitle tracks found in {input_path}."
+        raise IncompatibleOptionsError(error_message)
+
+    available_ordinals = {track.subtitle_ordinal for track in subtitle_tracks}
+    if subtitle_ordinal not in available_ordinals:
+        error_message = (
+            f"Subtitle track ordinal {subtitle_ordinal} is unavailable. "
+            f"Available text subtitle ordinals: "
+            f"{sorted(available_ordinals)}."
         )
         raise IncompatibleOptionsError(error_message)

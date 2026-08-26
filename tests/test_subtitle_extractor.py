@@ -15,7 +15,11 @@ def test_get_subtitle_tracks_returns_streams(mocker: MockerFixture) -> None:
     ffprobe_output = json.dumps(
         {
             "streams": [
-                {"index": 2, "tags": {"language": "jpn", "title": "Japanese"}},
+                {
+                    "index": 2,
+                    "codec_name": "subrip",
+                    "tags": {"language": "jpn", "title": "Japanese"},
+                },
             ]
         }
     )
@@ -29,6 +33,10 @@ def test_get_subtitle_tracks_returns_streams(mocker: MockerFixture) -> None:
     result = get_subtitle_tracks("video.mkv")
 
     assert len(result) == 1
+    expected_absolute_stream_index = 2
+    assert result[0].absolute_stream_index == expected_absolute_stream_index
+    assert result[0].subtitle_ordinal == 0
+    assert result[0].codec_name == "subrip"
     assert result[0].language == "jpn"
 
 
@@ -76,12 +84,48 @@ def test_extract_subtitle_track(
 
     result = extract_subtitle_track(
         video,
+        subtitle_ordinal=0,
         output_dir=output_dir,
     )
 
     assert result == expected_output
     assert output_dir.is_dir()
     assert str(expected_output) in mock_run.call_args.args[0]
+
+
+def test_extract_subtitle_track_accepts_legacy_track_index(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """Tests that the legacy keyword selects the same subtitle ordinal."""
+    mock_run = mocker.patch(
+        "koffee.subtitle.subprocess.run",
+        return_value=subprocess.CompletedProcess(args=[], returncode=0),
+    )
+
+    result = extract_subtitle_track(
+        tmp_path / "video.mkv",
+        output_dir=tmp_path,
+        track_index=2,
+    )
+
+    assert result == tmp_path / "embedded_subtitle_2.srt"
+    assert "0:s:2" in mock_run.call_args.args[0]
+
+
+def test_extract_subtitle_track_rejects_conflicting_track_selectors(
+    tmp_path: Path,
+) -> None:
+    """Tests that conflicting current and legacy selectors are rejected."""
+    with pytest.raises(
+        ValueError,
+        match="subtitle_ordinal and legacy track_index cannot both select",
+    ):
+        extract_subtitle_track(
+            tmp_path / "video.mkv",
+            subtitle_ordinal=1,
+            track_index=2,
+        )
 
 
 def test_extract_subtitle_track_failure(mocker: MockerFixture, tmp_path: Path) -> None:
@@ -137,3 +181,30 @@ def test_extract_subtitle_track_timeout(mocker: MockerFixture, tmp_path: Path) -
 
     with pytest.raises(subprocess.TimeoutExpired):
         extract_subtitle_track(video)
+
+
+def test_get_subtitle_tracks_filters_bitmap_codecs_without_renumbering(
+    mocker: MockerFixture,
+) -> None:
+    """Tests that text tracks retain their original subtitle ordinals."""
+    ffprobe_output = json.dumps(
+        {
+            "streams": [
+                {"index": 2, "codec_name": "hdmv_pgs_subtitle"},
+                {"index": 5, "codec_name": "subrip", "tags": {"language": "eng"}},
+            ]
+        }
+    )
+    mocker.patch(
+        "koffee.subtitle.subprocess.run",
+        return_value=subprocess.CompletedProcess(
+            args=[], returncode=0, stdout=ffprobe_output
+        ),
+    )
+
+    result = get_subtitle_tracks("video.mkv")
+
+    assert len(result) == 1
+    expected_absolute_stream_index = 5
+    assert result[0].absolute_stream_index == expected_absolute_stream_index
+    assert result[0].subtitle_ordinal == 1

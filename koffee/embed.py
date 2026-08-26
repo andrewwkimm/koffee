@@ -5,17 +5,11 @@ import subprocess
 from pathlib import Path
 
 from koffee.exceptions import SubtitleEmbedError
+from koffee.media import soft_subtitle_codec
 
 log = logging.getLogger(__name__)
 
 EMBED_MODES = frozenset({"soft", "hard"})
-SUBTITLE_CODECS = {
-    ".mkv": "srt",
-    ".webm": "webvtt",
-    ".mp4": "mov_text",
-    ".m4v": "mov_text",
-    ".mov": "mov_text",
-}
 ISO_639_2_CODE_LENGTH = 3
 ISO_639_2_CODES = {
     "ar": "ara",
@@ -45,6 +39,58 @@ ISO_639_2_CODES = {
 }
 FFMPEG_TIMEOUT_SECONDS = 600
 FFPROBE_TIMEOUT_SECONDS = 30
+FFMPEG_FILTER_MINIMUM_FIELD_COUNT = 2
+FFMPEG_FILTER_NAME_FIELD_INDEX = 1
+
+
+def validate_embedding(output_path: Path | str, mode: str) -> None:
+    """Raises SubtitleEmbedError when the requested embed cannot be produced."""
+    if mode not in EMBED_MODES:
+        error_message = f"Unsupported subtitle embed mode: {mode!r}."
+        raise SubtitleEmbedError(error_message)
+    if mode == "soft":
+        _subtitle_codec(Path(output_path).suffix)
+    elif not _ffmpeg_supports_subtitles_filter():
+        error_message = (
+            "Hard subtitle burn-in requires an ffmpeg subtitles filter backed by "
+            "libass. On macOS, install it with `brew install ffmpeg-full`."
+        )
+        raise SubtitleEmbedError(error_message)
+
+
+def _subtitle_codec(output_suffix: str) -> str:
+    """Returns the subtitle codec required by the container."""
+    codec = soft_subtitle_codec(Path(f"output{output_suffix}"))
+    if codec is None:
+        error_message = f"Unsupported video container for subtitles: {output_suffix!r}."
+        raise SubtitleEmbedError(error_message)
+    return codec
+
+
+def _ffmpeg_supports_subtitles_filter() -> bool:
+    """Returns whether FFmpeg provides the exact subtitles filter."""
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-filters"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=FFPROBE_TIMEOUT_SECONDS,
+        )
+    except FileNotFoundError:
+        raise
+    except subprocess.TimeoutExpired:
+        raise
+    except subprocess.CalledProcessError as error:
+        error_message = error.stderr or "FFmpeg filter probe failed."
+        raise SubtitleEmbedError(error_message) from error
+
+    return any(
+        len(fields) >= FFMPEG_FILTER_MINIMUM_FIELD_COUNT
+        and fields[FFMPEG_FILTER_NAME_FIELD_INDEX] == "subtitles"
+        for line in result.stdout.splitlines()
+        if (fields := line.split())
+    )
 
 
 def embed_subtitles(
@@ -55,9 +101,7 @@ def embed_subtitles(
     language: str = "eng",
 ) -> Path:
     """Embeds subtitles using a validated embedding mode."""
-    if mode not in EMBED_MODES:
-        error_message = f"Unsupported subtitle embed mode: {mode!r}."
-        raise SubtitleEmbedError(error_message)
+    validate_embedding(output_path, mode)
 
     if mode == "hard":
         return _burn_in_subtitles(
@@ -82,13 +126,6 @@ def _burn_in_subtitles(
     """Burns subtitles into the primary video stream."""
     log.info("Burning in subtitles (hard).")
 
-    if not _ffmpeg_supports_subtitles_filter():
-        error_message = (
-            "Hard subtitle burn-in requires an ffmpeg built with libass. "
-            "On macOS, install it with `brew install ffmpeg-full`."
-        )
-        raise SubtitleEmbedError(error_message)
-
     command = [
         "ffmpeg",
         "-i",
@@ -110,17 +147,6 @@ def _burn_in_subtitles(
     ]
     _run_ffmpeg(command, "burning in subtitles")
     return Path(output_path)
-
-
-def _ffmpeg_supports_subtitles_filter() -> bool:
-    """Returns whether FFmpeg provides the libass subtitle filter."""
-    result = subprocess.run(
-        ["ffmpeg", "-hide_banner", "-filters"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return "subtitles" in result.stdout
 
 
 def _escape_subtitle_filter_path(
@@ -209,15 +235,6 @@ def _count_subtitle_streams(
         raise SubtitleEmbedError(error.stderr or str(error)) from error
 
     return len([line for line in result.stdout.splitlines() if line.strip()])
-
-
-def _subtitle_codec(output_suffix: str) -> str:
-    """Returns the subtitle codec required by the container."""
-    codec = SUBTITLE_CODECS.get(output_suffix.lower())
-    if codec is None:
-        error_message = f"Unsupported video container for subtitles: {output_suffix!r}."
-        raise SubtitleEmbedError(error_message)
-    return codec
 
 
 def _normalize_language(language: str) -> str:

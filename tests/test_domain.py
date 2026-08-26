@@ -65,7 +65,7 @@ def test_translation_chunk_requires_positive_start_entry() -> None:
 def test_subtitle_track_rejects_negative_index() -> None:
     """Tests rejection of negative stream indexes."""
     with pytest.raises(ValidationError, match="nonnegative"):
-        SubtitleTrack(index=-1)
+        SubtitleTrack(absolute_stream_index=-1, subtitle_ordinal=0, codec_name="subrip")
 
 
 def test_transcript_rejects_empty_language() -> None:

@@ -15,6 +15,11 @@ from koffee.schemas.domain import Segment, SubtitleTrack
 log = logging.getLogger(__name__)
 
 SUBTITLE_EXTENSIONS = frozenset({".ass", ".srt", ".ssa", ".vtt"})
+BITMAP_SUBTITLE_CODECS = frozenset(
+    {"dvb_subtitle", "dvd_subtitle", "hdmv_pgs_subtitle", "xsub"}
+)
+FFMPEG_TIMEOUT_SECONDS = 600
+FFPROBE_TIMEOUT_SECONDS = 30
 
 _STYLE_FORMAT = (
     "Format: Name, Fontname, Fontsize, PrimaryColour, "
@@ -167,13 +172,24 @@ def convert_to_timestamp(seconds: float | int, subtitle_format: str) -> str:
 
 def extract_subtitle_track(
     video_path: Path | str,
-    track_index: int = 0,
+    subtitle_ordinal: int = 0,
     output_dir: Path | None = None,
+    *,
+    track_index: int | None = None,
 ) -> Path:
     """Extracts a subtitle track into the caller-owned directory."""
+    if track_index is not None:
+        if subtitle_ordinal != 0:
+            error_message = (
+                "subtitle_ordinal and legacy track_index cannot both select "
+                "a subtitle track."
+            )
+            raise ValueError(error_message)
+        subtitle_ordinal = track_index
+
     destination = output_dir if output_dir is not None else Path(video_path).parent
     destination.mkdir(parents=True, exist_ok=True)
-    output_path = destination / f"embedded_subtitle_{track_index}.srt"
+    output_path = destination / f"embedded_subtitle_{subtitle_ordinal}.srt"
 
     try:
         subprocess.run(
@@ -182,7 +198,7 @@ def extract_subtitle_track(
                 "-i",
                 str(video_path),
                 "-map",
-                f"0:s:{track_index}",
+                f"0:s:{subtitle_ordinal}",
                 "-f",
                 "srt",
                 "-y",
@@ -191,7 +207,7 @@ def extract_subtitle_track(
             capture_output=True,
             text=True,
             check=True,
-            timeout=600,
+            timeout=FFMPEG_TIMEOUT_SECONDS,
         )
     except FileNotFoundError:
         log.error("ffmpeg not found. Please install ffmpeg to use this feature.")
@@ -219,7 +235,7 @@ def get_subtitle_tracks(
                 "-select_streams",
                 "s",
                 "-show_entries",
-                "stream=index:stream_tags=language,title",
+                "stream=index,codec_name:stream_tags=language,title",
                 "-of",
                 "json",
                 str(video_path),
@@ -227,7 +243,7 @@ def get_subtitle_tracks(
             capture_output=True,
             text=True,
             check=True,
-            timeout=30,
+            timeout=FFPROBE_TIMEOUT_SECONDS,
         )
     except FileNotFoundError:
         log.error("ffprobe not found. Please install ffmpeg to use this feature.")
@@ -239,11 +255,14 @@ def get_subtitle_tracks(
     streams = json.loads(result.stdout).get("streams", [])
     return [
         SubtitleTrack(
-            index=stream["index"],
+            absolute_stream_index=stream["index"],
+            subtitle_ordinal=subtitle_ordinal,
+            codec_name=stream["codec_name"],
             language=stream.get("tags", {}).get("language"),
             title=stream.get("tags", {}).get("title"),
         )
-        for stream in streams
+        for subtitle_ordinal, stream in enumerate(streams)
+        if stream["codec_name"] not in BITMAP_SUBTITLE_CODECS
     ]
 
 

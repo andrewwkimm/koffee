@@ -43,12 +43,14 @@ def _apply_subtitle_track(
 def _select_subtitle_track(tracks: list[SubtitleTrack]) -> tuple[int, str | None]:
     """Returns the selected subtitle-relative ordinal and language."""
     if len(tracks) == 1:
-        return 0, tracks[0].language
+        return tracks[0].subtitle_ordinal, tracks[0].language
 
     log.info("Available subtitle tracks:")
     for position, track in enumerate(tracks):
         language = track.language or "unknown"
         label = f"  [{position}] {language}"
+        if position != track.subtitle_ordinal:
+            label += f" (subtitle ordinal {track.subtitle_ordinal})"
         if track.title:
             label += f" — {track.title}"
         log.info(label)
@@ -56,7 +58,7 @@ def _select_subtitle_track(tracks: list[SubtitleTrack]) -> tuple[int, str | None
     user_input = input(f"Select track [0-{len(tracks) - 1}] (default 0): ")
     position = int(user_input.strip()) if user_input.strip().isdigit() else 0
     position = max(0, min(position, len(tracks) - 1))
-    return position, tracks[position].language
+    return tracks[position].subtitle_ordinal, tracks[position].language
 
 
 def _detect_embedded_subtitles(video_path: Path) -> list[SubtitleTrack]:

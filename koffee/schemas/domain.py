@@ -70,19 +70,21 @@ class TranslationChunk(BaseModel):
 
 
 class SubtitleTrack(BaseModel):
-    """Validated metadata for one embedded subtitle stream."""
+    """Validated identity and metadata for one text subtitle stream."""
 
     model_config = ConfigDict(frozen=True)
 
-    index: int
+    absolute_stream_index: int
+    subtitle_ordinal: int
+    codec_name: str
     language: str | None = None
     title: str | None = None
 
-    @field_validator("index")
+    @field_validator("absolute_stream_index", "subtitle_ordinal")
     @classmethod
-    def _validate_index(cls, value: int) -> int:
-        """Rejects negative stream indexes."""
+    def _validate_stream_index(cls, value: int) -> int:
+        """Rejects negative stream indexes and ordinals."""
         if value < 0:
-            error_message = "Subtitle-track index must be nonnegative."
+            error_message = "Subtitle stream indexes must be nonnegative."
             raise ValueError(error_message)
         return value

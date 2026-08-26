@@ -5,9 +5,10 @@ from typing import Annotated
 
 from cyclopts import Parameter, validators
 
-from koffee.api import _write_output
+from koffee.api import _check_output_collision, _write_embedded_video, _write_output
 from koffee.cli.app import app, log, options_group
-from koffee.embed import embed_subtitles
+from koffee.embed import validate_embedding
+from koffee.exceptions import IncompatibleOptionsError
 from koffee.subtitle import (
     generate_subtitles,
     get_subtitle_tracks,
@@ -83,13 +84,16 @@ def embed(
     if output_path is None:
         output_path = video_path.with_stem(f"{video_path.stem}_embed")
 
-    if output_path.exists() and not overwrite:
-        error_message = (
-            f"Output file already exists: {output_path}. Use --overwrite to replace it."
-        )
-        raise FileExistsError(error_message)
-
-    result = embed_subtitles(subtitle_path, video_path, output_path, mode=mode)
+    _check_standalone_embed_output(output_path, video_path, subtitle_path)
+    _check_output_collision(output_path, overwrite)
+    validate_embedding(output_path, mode)
+    result = _write_embedded_video(
+        subtitle_path,
+        video_path,
+        output_path,
+        embed_mode=mode,
+        delete_subtitle=False,
+    )
     log.info(f"Output saved to {result}")
 
 
@@ -101,13 +105,29 @@ def tracks(
     track_list = get_subtitle_tracks(file_path)
 
     if not track_list:
-        log.info(f"No subtitle tracks found in {file_path.name}.")
+        log.info(f"No text subtitle tracks found in {file_path.name}.")
         return
 
     log.info(f"Subtitle tracks in {file_path.name}:")
-    for position, track in enumerate(track_list):
+    for track in track_list:
         language = track.language or "unknown"
-        label = f"  [{position}] {language}"
+        label = f"  [{track.subtitle_ordinal}] {language}"
         if track.title:
             label += f" — {track.title}"
         log.info(label)
+
+
+def _check_standalone_embed_output(
+    output_path: Path,
+    video_path: Path,
+    subtitle_path: Path,
+) -> None:
+    """Rejects an output path that identifies either standalone input."""
+    for input_path in (video_path, subtitle_path):
+        try:
+            aliases_input = output_path.exists() and input_path.samefile(output_path)
+        except OSError:
+            aliases_input = False
+        if aliases_input or input_path.resolve() == output_path.resolve():
+            error_message = f"Output file must differ from input file: {input_path}."
+            raise IncompatibleOptionsError(error_message)

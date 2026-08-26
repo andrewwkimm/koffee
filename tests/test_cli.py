@@ -31,6 +31,13 @@ korean_video_path = Path("examples/videos/sample_korean_video.mp4")
 output_file_name = "cli_output_video_file"
 
 
+def _existing_output(tmp_path: Path) -> Path:
+    """Creates the output file the sample video would publish to."""
+    existing = tmp_path / "sample_korean_video.en.vtt"
+    existing.touch()
+    return existing
+
+
 def test_cli(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that CLI processes a valid video file."""
     mock_translate = mocker.patch("koffee.cli.batch.run")
@@ -214,7 +221,15 @@ def test_handle_embedded_subtitles_user_accepts(
     mocker: MockerFixture,
 ) -> None:
     """Tests that accepting embedded subtitles updates config."""
-    track_list = [SubtitleTrack(index=0, language="ko", title=None)]
+    track_list = [
+        SubtitleTrack(
+            absolute_stream_index=0,
+            subtitle_ordinal=0,
+            codec_name="subrip",
+            language="ko",
+            title=None,
+        )
+    ]
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=track_list)
     mocker.patch("koffee.cli.embedded.sys.stdin.isatty", return_value=True)
     mocker.patch("builtins.input", return_value="y")
@@ -314,13 +329,6 @@ def test_batch_summary_on_partial_failure(
     assert any("1/2 succeeded" in msg for msg in info_messages)
     assert any("failed" in msg for msg in info_messages)
     assert any("boom" in msg for msg in error_messages)
-
-
-def _existing_output(tmp_path: Path) -> Path:
-    """Creates the output file the sample video would publish to."""
-    existing = tmp_path / "sample_korean_video.vtt"
-    existing.touch()
-    return existing
 
 
 def test_collision_prompt_yes_overwrites(mocker: MockerFixture, tmp_path: Path) -> None:
@@ -579,7 +587,15 @@ def test_config_flag_loads_file(mocker: MockerFixture, tmp_path: Path) -> None:
 
 def test_select_subtitle_track_single() -> None:
     """Tests that a single track is selected automatically."""
-    track_list = [SubtitleTrack(index=0, language="ja", title=None)]
+    track_list = [
+        SubtitleTrack(
+            absolute_stream_index=0,
+            subtitle_ordinal=0,
+            codec_name="subrip",
+            language="ja",
+            title=None,
+        )
+    ]
 
     index, lang = _select_subtitle_track(track_list)
 
@@ -590,8 +606,20 @@ def test_select_subtitle_track_single() -> None:
 def test_select_subtitle_track_multiple(mocker: MockerFixture) -> None:
     """Tests that user can select from multiple tracks."""
     track_list = [
-        SubtitleTrack(index=0, language="ja", title="Japanese"),
-        SubtitleTrack(index=1, language="ko", title="Korean"),
+        SubtitleTrack(
+            absolute_stream_index=0,
+            subtitle_ordinal=0,
+            codec_name="subrip",
+            language="ja",
+            title="Japanese",
+        ),
+        SubtitleTrack(
+            absolute_stream_index=1,
+            subtitle_ordinal=1,
+            codec_name="subrip",
+            language="ko",
+            title="Korean",
+        ),
     ]
     mocker.patch("builtins.input", return_value="1")
 
@@ -604,8 +632,20 @@ def test_select_subtitle_track_multiple(mocker: MockerFixture) -> None:
 def test_select_subtitle_track_default_on_empty_input(mocker: MockerFixture) -> None:
     """Tests that empty input defaults to track 0."""
     track_list = [
-        SubtitleTrack(index=0, language="ja", title=None),
-        SubtitleTrack(index=1, language="ko", title=None),
+        SubtitleTrack(
+            absolute_stream_index=0,
+            subtitle_ordinal=0,
+            codec_name="subrip",
+            language="ja",
+            title=None,
+        ),
+        SubtitleTrack(
+            absolute_stream_index=1,
+            subtitle_ordinal=1,
+            codec_name="subrip",
+            language="ko",
+            title=None,
+        ),
     ]
     mocker.patch("builtins.input", return_value="")
 
@@ -617,7 +657,15 @@ def test_select_subtitle_track_default_on_empty_input(mocker: MockerFixture) -> 
 
 def test_select_subtitle_track_missing_language_tag() -> None:
     """Tests that a track without language tag returns None."""
-    track_list = [SubtitleTrack(index=0, language=None, title=None)]
+    track_list = [
+        SubtitleTrack(
+            absolute_stream_index=0,
+            subtitle_ordinal=0,
+            codec_name="subrip",
+            language=None,
+            title=None,
+        )
+    ]
 
     index, lang = _select_subtitle_track(track_list)
 
@@ -658,8 +706,20 @@ def test_tracks_command(mocker: MockerFixture) -> None:
     mocker.patch(
         "koffee.cli.subtitles.get_subtitle_tracks",
         return_value=[
-            SubtitleTrack(index=0, language="ja", title="Japanese"),
-            SubtitleTrack(index=1, language="en", title=None),
+            SubtitleTrack(
+                absolute_stream_index=0,
+                subtitle_ordinal=0,
+                codec_name="subrip",
+                language="ja",
+                title="Japanese",
+            ),
+            SubtitleTrack(
+                absolute_stream_index=1,
+                subtitle_ordinal=1,
+                codec_name="subrip",
+                language="en",
+                title=None,
+            ),
         ],
     )
     mock_log = mocker.patch("koffee.cli.subtitles.log")
@@ -679,7 +739,7 @@ def test_tracks_command_no_tracks(mocker: MockerFixture) -> None:
     tracks(korean_video_path)
 
     log_messages = [call.args[0] for call in mock_log.info.call_args_list]
-    assert any("No subtitle tracks found" in msg for msg in log_messages)
+    assert any("No text subtitle tracks found" in msg for msg in log_messages)
 
 
 def test_find_config_path_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -700,13 +760,16 @@ def test_embed_command(mocker: MockerFixture, tmp_path: Path) -> None:
     sub.touch()
     output = tmp_path / "out.mp4"
 
-    mock_embed = mocker.patch(
-        "koffee.cli.subtitles.embed_subtitles", return_value=output
+    mocker.patch("koffee.cli.subtitles.validate_embedding")
+    publish = mocker.patch(
+        "koffee.cli.subtitles._write_embedded_video", return_value=output
     )
 
     embed(video, sub, output_path=output)
 
-    mock_embed.assert_called_once_with(sub, video, output, mode="soft")
+    publish.assert_called_once_with(
+        sub, video, output, embed_mode="soft", delete_subtitle=False
+    )
 
 
 def test_embed_command_hard_mode(mocker: MockerFixture, tmp_path: Path) -> None:
@@ -717,13 +780,16 @@ def test_embed_command_hard_mode(mocker: MockerFixture, tmp_path: Path) -> None:
     sub.touch()
     output = tmp_path / "out.mp4"
 
-    mock_embed = mocker.patch(
-        "koffee.cli.subtitles.embed_subtitles", return_value=output
+    mocker.patch("koffee.cli.subtitles.validate_embedding")
+    publish = mocker.patch(
+        "koffee.cli.subtitles._write_embedded_video", return_value=output
     )
 
     embed(video, sub, output_path=output, mode="hard")
 
-    mock_embed.assert_called_once_with(sub, video, output, mode="hard")
+    publish.assert_called_once_with(
+        sub, video, output, embed_mode="hard", delete_subtitle=False
+    )
 
 
 def test_embed_command_default_output(mocker: MockerFixture, tmp_path: Path) -> None:
@@ -734,13 +800,16 @@ def test_embed_command_default_output(mocker: MockerFixture, tmp_path: Path) -> 
     sub.touch()
     expected_output = tmp_path / "video_embed.mp4"
 
-    mock_embed = mocker.patch(
-        "koffee.cli.subtitles.embed_subtitles", return_value=expected_output
+    mocker.patch("koffee.cli.subtitles.validate_embedding")
+    publish = mocker.patch(
+        "koffee.cli.subtitles._write_embedded_video", return_value=expected_output
     )
 
     embed(video, sub)
 
-    mock_embed.assert_called_once_with(sub, video, expected_output, mode="soft")
+    publish.assert_called_once_with(
+        sub, video, expected_output, embed_mode="soft", delete_subtitle=False
+    )
 
 
 def test_embed_command_collision(tmp_path: Path) -> None:
@@ -1049,8 +1118,20 @@ def test_selected_embedded_track_uses_configured_field(
 ) -> None:
     """Tests track selection stores the subtitle-relative ordinal."""
     tracks = [
-        SubtitleTrack(index=3, language="ja", title=None),
-        SubtitleTrack(index=7, language="ko", title=None),
+        SubtitleTrack(
+            absolute_stream_index=3,
+            subtitle_ordinal=0,
+            codec_name="subrip",
+            language="ja",
+            title=None,
+        ),
+        SubtitleTrack(
+            absolute_stream_index=7,
+            subtitle_ordinal=1,
+            codec_name="subrip",
+            language="ko",
+            title=None,
+        ),
     ]
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=tracks)
     mocker.patch("koffee.cli.embedded.sys.stdin.isatty", return_value=True)
@@ -1110,3 +1191,122 @@ def test_rescue_failure_does_not_stop_later_file(
     assert translate.call_count == expected_translation_count
     assert outcome.failed == (first,)
     assert outcome.succeeded == (second,)
+
+
+def test_embed_command_atomically_publishes_and_preserves_subtitle(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests standalone success publishes only completed output."""
+    video = tmp_path / "video.mp4"
+    video.write_text("video")
+    subtitle = tmp_path / "sub.srt"
+    subtitle.write_text("subtitle")
+    output = tmp_path / "out.mp4"
+
+    def write_completed_output(
+        subtitle_path: Path,
+        video_path: Path,
+        temporary_path: Path,
+        **kwargs: object,
+    ) -> Path:
+        del subtitle_path, video_path, kwargs
+        assert temporary_path.parent == output.parent
+        assert not output.exists()
+        temporary_path.write_text("complete")
+        return temporary_path
+
+    mocker.patch("koffee.api.embed_subtitles", side_effect=write_completed_output)
+
+    embed(video, subtitle, output_path=output)
+
+    assert output.read_text() == "complete"
+    assert subtitle.read_text() == "subtitle"
+
+
+def test_embed_command_failure_leaves_no_output_and_preserves_subtitle(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests standalone failure cleans temporary output without publishing."""
+    video = tmp_path / "video.mp4"
+    video.touch()
+    subtitle = tmp_path / "sub.srt"
+    subtitle.write_text("subtitle")
+    output = tmp_path / "out.mp4"
+
+    mocker.patch(
+        "koffee.api.embed_subtitles",
+        side_effect=RuntimeError("ffmpeg failed"),
+    )
+
+    with pytest.raises(RuntimeError, match="ffmpeg failed"):
+        embed(video, subtitle, output_path=output)
+
+    assert not output.exists()
+    assert subtitle.read_text() == "subtitle"
+    assert list(tmp_path.glob(".out.*.mp4")) == []
+
+
+@pytest.mark.parametrize("input_kind", ["video", "subtitle"])
+def test_embed_command_rejects_output_aliases(input_kind: str, tmp_path: Path) -> None:
+    """Tests standalone output cannot alias either supplied input."""
+    video = tmp_path / "video.mp4"
+    video.touch()
+    subtitle = tmp_path / "sub.srt"
+    subtitle.write_text("subtitle")
+    aliased_input = video if input_kind == "video" else subtitle
+    output = tmp_path / "alias.mp4"
+    output.hardlink_to(aliased_input)
+
+    with pytest.raises(IncompatibleOptionsError, match="must differ"):
+        embed(video, subtitle, output_path=output, overwrite=True)
+
+    assert video.exists()
+    assert subtitle.read_text() == "subtitle"
+
+
+def test_tracks_command_displays_actual_subtitle_ordinal(
+    mocker: MockerFixture,
+) -> None:
+    """Tests filtered tracks display their source subtitle ordinal."""
+    track = SubtitleTrack(
+        absolute_stream_index=5,
+        subtitle_ordinal=1,
+        codec_name="subrip",
+        language="en",
+    )
+    mocker.patch("koffee.cli.subtitles.get_subtitle_tracks", return_value=[track])
+    command_log = mocker.patch("koffee.cli.subtitles.log")
+
+    tracks(korean_video_path)
+
+    assert any("[1] en" in call.args[0] for call in command_log.info.call_args_list)
+
+
+def test_select_subtitle_track_shows_position_and_actual_ordinal(
+    mocker: MockerFixture,
+) -> None:
+    """Tests bitmap filtering remains visible in interactive selection."""
+    track_list = [
+        SubtitleTrack(
+            absolute_stream_index=5,
+            subtitle_ordinal=1,
+            codec_name="subrip",
+            language="en",
+        ),
+        SubtitleTrack(
+            absolute_stream_index=7,
+            subtitle_ordinal=2,
+            codec_name="ass",
+            language="ko",
+        ),
+    ]
+    mocker.patch("builtins.input", return_value="0")
+    selection_log = mocker.patch("koffee.cli.embedded.log")
+
+    ordinal, language = _select_subtitle_track(track_list)
+
+    assert (ordinal, language) == (1, "en")
+    assert any(
+        "[0] en (subtitle ordinal 1)" in call.args[0]
+        for call in selection_log.info.call_args_list
+    )

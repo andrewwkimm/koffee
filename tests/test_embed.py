@@ -71,7 +71,9 @@ def test_ffmpeg_supports_subtitles_filter_when_present(mocker: MockerFixture) ->
         return_value=subprocess.CompletedProcess(
             args=["ffmpeg"],
             returncode=0,
-            stdout=" T.. subtitles    V->V  Render text subtitles onto input video.\n",
+            stdout=(
+                " T.. subtitles    V->V  Render text subtitles onto input video.\n"
+            ),
             stderr="",
         ),
     )
@@ -244,3 +246,55 @@ def test_webm_uses_webvtt_subtitle_codec(
     command = mock_run.call_args.args[0]
     codec_index = command.index("-c:s:0")
     assert command[codec_index + 1] == "webvtt"
+
+
+def test_ffmpeg_filter_probe_uses_timeout_and_exact_name(
+    mocker: MockerFixture,
+) -> None:
+    """Tests probe timeout configuration and exact filter-name matching."""
+    run_probe = mocker.patch(
+        "koffee.embed.subprocess.run",
+        return_value=subprocess.CompletedProcess(
+            args=["ffmpeg"],
+            returncode=0,
+            stdout=" T.. subtitles_extra V->V Similar filter.\n",
+            stderr="",
+        ),
+    )
+
+    assert _ffmpeg_supports_subtitles_filter() is False
+    expected_timeout_seconds = 30
+    assert run_probe.call_args.kwargs["timeout"] == expected_timeout_seconds
+    assert run_probe.call_args.kwargs["check"] is True
+
+
+def test_ffmpeg_filter_probe_translates_nonzero_exit(
+    mocker: MockerFixture,
+) -> None:
+    """Tests nonzero probe failures retain their subprocess cause."""
+    failure = subprocess.CalledProcessError(
+        1, ["ffmpeg", "-filters"], stderr="probe failed"
+    )
+    mocker.patch("koffee.embed.subprocess.run", side_effect=failure)
+
+    with pytest.raises(SubtitleEmbedError, match="probe failed") as exc_info:
+        _ffmpeg_supports_subtitles_filter()
+
+    assert exc_info.value.__cause__ is failure
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        FileNotFoundError(),
+        subprocess.TimeoutExpired(cmd="ffmpeg", timeout=30),
+    ],
+)
+def test_ffmpeg_filter_probe_preserves_environment_failures(
+    failure: Exception, mocker: MockerFixture
+) -> None:
+    """Tests missing binaries and timeouts preserve their exception families."""
+    mocker.patch("koffee.embed.subprocess.run", side_effect=failure)
+
+    with pytest.raises(type(failure)):
+        _ffmpeg_supports_subtitles_filter()
