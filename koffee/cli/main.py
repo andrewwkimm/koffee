@@ -1,6 +1,7 @@
 """Root CLI command and executable entry point."""
 
 import logging
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -12,6 +13,7 @@ from koffee.cli.app import (
     options_group,
 )
 from koffee.cli.batch import (
+    BatchResult,
     _BatchItem,
     _print_dry_run,
     _resolve_paths,
@@ -77,7 +79,7 @@ def cli(
     verbose: Annotated[
         bool, Parameter(name=("--verbose", "-v"), group=options_group)
     ] = False,
-) -> None:
+) -> BatchResult | None:
     """Automatic video translation and subtitling tool.
 
     Parameters
@@ -183,10 +185,12 @@ def cli(
         _print_dry_run(batch_items)
         return
 
-    _run_batch(batch_items)
+    return _run_batch(batch_items)
 
 
 def main() -> None:
     """Configures and runs the command-line application."""
     _configure_logging()
-    app()
+    outcome = app()
+    if isinstance(outcome, BatchResult) and outcome.failed:
+        sys.exit(1)

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from pytest_mock import MockerFixture
 
-from koffee.cli.batch import _resolve_paths
+from koffee.cli.batch import _BatchItem, _resolve_paths, _run_batch
 from koffee.cli.commands import (
     cli,
     convert,
@@ -216,6 +216,7 @@ def test_handle_embedded_subtitles_user_accepts(
     """Tests that accepting embedded subtitles updates config."""
     track_list = [SubtitleTrack(index=0, language="ko", title=None)]
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=track_list)
+    mocker.patch("koffee.cli.embedded.sys.stdin.isatty", return_value=True)
     mocker.patch("builtins.input", return_value="y")
     config = KoffeeConfig()
 
@@ -233,6 +234,7 @@ def test_handle_embedded_subtitles_user_declines(
         "koffee.cli.embedded.get_subtitle_tracks",
         return_value=[{"index": 0, "codec": "srt"}],
     )
+    mocker.patch("koffee.cli.embedded.sys.stdin.isatty", return_value=True)
     mocker.patch("builtins.input", return_value="n")
     config = KoffeeConfig()
 
@@ -559,7 +561,7 @@ def test_prompt_flag(mocker: MockerFixture, tmp_path: Path) -> None:
 def test_config_flag_loads_file(mocker: MockerFixture, tmp_path: Path) -> None:
     """Tests that --config loads the specified config file."""
     config_file = tmp_path / "custom.toml"
-    config_file.write_text('target_language = "fr"\n')
+    config_file.write_text('target_language = "fr"\ntranslator = "ollama"\n')
 
     mock_translate = mocker.patch("koffee.cli.batch.run")
     mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=[])
@@ -1012,3 +1014,99 @@ def test_cli_rejects_output_name_for_multiple_inputs(
         )
 
     mock_run.assert_not_called()
+
+
+def test_dry_run_does_not_probe_embedded_subtitles(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests dry-run avoids implicit embedded discovery."""
+    video = tmp_path / "clip.mp4"
+    video.touch()
+    probe = mocker.patch("koffee.cli.embedded.get_subtitle_tracks")
+
+    cli(video, dry_run=True)
+
+    probe.assert_not_called()
+
+
+def test_non_tty_does_not_probe_embedded_subtitles(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests automation avoids implicit embedded discovery."""
+    video = tmp_path / "clip.mp4"
+    video.touch()
+    mocker.patch("koffee.cli.embedded.sys.stdin.isatty", return_value=False)
+    probe = mocker.patch("koffee.cli.embedded.get_subtitle_tracks")
+    mocker.patch("koffee.cli.batch.run")
+
+    cli(video)
+
+    probe.assert_not_called()
+
+
+def test_selected_embedded_track_uses_configured_field(
+    mocker: MockerFixture,
+) -> None:
+    """Tests track selection stores the subtitle-relative ordinal."""
+    tracks = [
+        SubtitleTrack(index=3, language="ja", title=None),
+        SubtitleTrack(index=7, language="ko", title=None),
+    ]
+    mocker.patch("koffee.cli.embedded.get_subtitle_tracks", return_value=tracks)
+    mocker.patch("koffee.cli.embedded.sys.stdin.isatty", return_value=True)
+    mocker.patch("builtins.input", side_effect=["y", "1"])
+
+    result = _handle_embedded_subtitles(korean_video_path, KoffeeConfig())
+
+    assert result.subtitle_track == 1
+    assert "subtitle_track_index" not in result.model_fields_set
+
+
+def test_rescued_translation_is_failed_outcome(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests raw transcript rescue does not count as translation success."""
+    video = tmp_path / "clip.mp4"
+    video.touch()
+    config = KoffeeConfig(on_translation_failure="save")
+    mocker.patch(
+        "koffee.cli.batch._translate_with_progress",
+        side_effect=TranslationError("boom", segments=[]),
+    )
+    mocker.patch("koffee.cli.batch._save_raw_transcription")
+
+    outcome = _run_batch([_BatchItem(input_path=video, config=config)])
+
+    assert outcome.failed == (video,)
+    assert not outcome.succeeded
+
+
+def test_rescue_failure_does_not_stop_later_file(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests expected rescue failures remain within the per-file boundary."""
+    first = tmp_path / "first.mp4"
+    second = tmp_path / "second.mp4"
+    first.touch()
+    second.touch()
+    config = KoffeeConfig(on_translation_failure="save")
+    translate = mocker.patch(
+        "koffee.cli.batch._translate_with_progress",
+        side_effect=[TranslationError("boom", segments=[]), None],
+    )
+    mocker.patch(
+        "koffee.cli.batch._save_raw_transcription",
+        side_effect=FileExistsError("collision"),
+    )
+
+    outcome = _run_batch(
+        [
+            _BatchItem(input_path=first, config=config),
+            _BatchItem(input_path=second, config=config),
+        ]
+    )
+
+    expected_translation_count = 2
+    assert translate.call_count == expected_translation_count
+    assert outcome.failed == (first,)
+    assert outcome.succeeded == (second,)

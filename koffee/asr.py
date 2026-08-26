@@ -5,6 +5,7 @@ import subprocess
 from collections.abc import Callable
 from dataclasses import asdict
 from pathlib import Path
+from typing import Literal
 
 from faster_whisper import WhisperModel
 
@@ -19,7 +20,7 @@ def transcribe(
     compute_type: str,
     device: str,
     model: str,
-    task: str,
+    task: Literal["transcribe", "translate"],
     on_progress: Callable[[float], None] | None = None,
     vad_filter: bool = True,
     language: str | None = None,

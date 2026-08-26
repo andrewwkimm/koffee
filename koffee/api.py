@@ -50,7 +50,7 @@ def run(
     on_translate_progress: Callable[[float], None] | None = None,
     job: JobStore | None = None,
     **kwargs: Any,
-) -> Path | str:
+) -> Path:
     """Processes one media or subtitle file into translated output."""
     log.info("Translating file...")
 
@@ -65,6 +65,10 @@ def run(
         )
 
     _check_preconditions(input_path, config)
+    output_path = _resolve_output_path(input_path, config)
+    if config.dry_run:
+        return output_path
+
     current_job = job or JobStore.open(input_path, config)
 
     suffix = Path(input_path).suffix.lower()
@@ -229,6 +233,7 @@ def _write_output(
         source_path.unlink(missing_ok=True)
         raise
 
+    target_path.parent.mkdir(parents=True, exist_ok=True)
     with NamedTemporaryFile(
         prefix=f".{target_path.name}.",
         dir=target_path.parent,
@@ -270,7 +275,6 @@ def _get_output_path(
 
     file_path = Path(input_path)
     file_dir = output_dir if output_dir is not None else file_path.parent
-    file_dir.mkdir(parents=True, exist_ok=True)
 
     if output_name is not None:
         file_name = output_name
@@ -479,8 +483,20 @@ def _check_preconditions(input_path: Path | str, config: KoffeeConfig) -> None:
         )
         raise MissingApiKeyError(error_message)
 
-    # Output Path Must Not Already Exist (or Overwrite Must Be Set)
-    _check_output_collision(_resolve_output_path(input_path, config), config.overwrite)
+    output_path = _resolve_output_path(input_path, config)
+    _check_distinct_output(input_path, output_path)
+    _check_output_collision(output_path, config.overwrite)
+
+
+def _check_distinct_output(input_path: Path | str, output_path: Path) -> None:
+    """Rejects output paths that identify the input file."""
+    input_file = Path(input_path)
+    try:
+        aliases_input = output_path.exists() and input_file.samefile(output_path)
+    except OSError:
+        aliases_input = False
+    if aliases_input or input_file.resolve() == output_path.resolve():
+        raise IncompatibleOptionsError("Output file must differ from the input file.")
 
 
 def _check_subtitle_provider(

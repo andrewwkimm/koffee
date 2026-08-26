@@ -33,6 +33,16 @@ from koffee.subtitle import (
 )
 
 
+class BatchResult(BaseModel):
+    """Immutable paths classified by batch result."""
+
+    model_config = ConfigDict(frozen=True)
+
+    succeeded: tuple[Path, ...] = ()
+    skipped: tuple[Path, ...] = ()
+    failed: tuple[Path, ...] = ()
+
+
 class _BatchItem(BaseModel):
     """Binds one input path to its independently resolved configuration."""
 
@@ -40,16 +50,6 @@ class _BatchItem(BaseModel):
 
     input_path: Path
     config: KoffeeConfig
-
-
-def _validate_batch_options(
-    input_paths: list[Path],
-    config: KoffeeConfig,
-) -> None:
-    """Rejects options that collide across inputs."""
-    if len(input_paths) > 1 and config.output_name is not None:
-        error_message = "--output-name cannot be used with multiple input files."
-        raise IncompatibleOptionsError(error_message)
 
 
 def _print_dry_run(batch_items: list[_BatchItem]) -> None:
@@ -106,45 +106,33 @@ def _resolve_paths(
     return resolved_paths
 
 
-def _run_batch(
-    batch_items: list[_BatchItem],
-) -> None:
-    """Processes configured inputs without aborting."""
+def _run_batch(batch_items: list[_BatchItem]) -> BatchResult:
+    """Processes configured inputs and returns immutable classifications."""
     total = len(batch_items)
-    failed = []
+    succeeded: list[Path] = []
+    skipped: list[Path] = []
+    failed: list[Path] = []
 
     with _create_progress_bar() as progress:
-        for position, item in enumerate(
-            batch_items,
-            start=1,
-        ):
+        for position, item in enumerate(batch_items, start=1):
             input_path = item.input_path
-            config = item.config
-
             if total > 1:
                 log.info(f"[{position}/{total}] Processing {input_path.name}")
 
             try:
-                resolved_config = _resolve_collision(input_path, config, progress)
+                resolved_config = _resolve_collision(input_path, item.config, progress)
                 if resolved_config is None:
+                    skipped.append(input_path)
                     continue
-                _translate_with_progress(
-                    input_path,
-                    resolved_config,
-                    progress,
-                )
+                _translate_with_progress(input_path, resolved_config, progress)
             except TranslationPausedError as error:
                 log.error(f"Translation paused for {input_path.name}: {error}")
                 failed.append(input_path)
             except TranslationError as error:
-                handled = _handle_translation_failure(
-                    error,
-                    input_path,
-                    config,
-                    progress,
+                _handle_translation_failure(
+                    error, input_path, resolved_config, progress
                 )
-                if not handled:
-                    failed.append(input_path)
+                failed.append(input_path)
             except (
                 FileExistsError,
                 FileNotFoundError,
@@ -154,12 +142,19 @@ def _run_batch(
             ) as error:
                 log.error(f"Failed to process {input_path.name}: {error}")
                 failed.append(input_path)
+            else:
+                succeeded.append(input_path)
 
     if total > 1:
-        succeeded = total - len(failed)
-        log.info(f"Batch complete: {succeeded}/{total} succeeded.")
+        log.info(f"Batch complete: {len(succeeded)}/{total} succeeded.")
         for failed_path in failed:
             log.info(f"  failed: {failed_path.name}")
+
+    return BatchResult(
+        succeeded=tuple(succeeded),
+        skipped=tuple(skipped),
+        failed=tuple(failed),
+    )
 
 
 def _resolve_collision(
@@ -167,11 +162,7 @@ def _resolve_collision(
     config: KoffeeConfig,
     progress: Progress,
 ) -> KoffeeConfig | None:
-    """Applies the collision policy when the output file already exists.
-
-    Returns the config to process the file with, or None to skip the file.
-    Raises FileExistsError when the policy is to fail the file.
-    """
+    """Applies the collision policy when the output file already exists."""
     output_path = _resolve_output_path(input_path, config)
     if config.overwrite or not output_path.exists():
         return config
@@ -201,7 +192,7 @@ def _resolve_collision(
         log.info(f"Skipping {input_path.name}: output file already exists.")
         return None
 
-    return config.model_copy(update={"overwrite": True})
+    return KoffeeConfig.model_validate(config.model_dump() | {"overwrite": True})
 
 
 def _translate_with_progress(
@@ -260,17 +251,13 @@ def _translate_with_progress(
 
 
 def _handle_translation_failure(
-    exc: TranslationError,
+    error: TranslationError,
     video_path: Path,
     config: KoffeeConfig,
     progress: Progress,
-) -> bool:
-    """Decides whether to save the raw transcription after a translation failure.
-
-    Returns True if the failure was handled (saved or explicitly skipped) so the
-    batch can continue cleanly; returns False to mark the file as failed.
-    """
-    log.error(f"Translation failed: {exc}")
+) -> None:
+    """Handles raw-transcript recovery after a translation failure."""
+    log.error(f"Translation failed: {error}")
 
     decision = config.on_translation_failure
     if decision == "prompt" and not sys.stdin.isatty():
@@ -278,7 +265,7 @@ def _handle_translation_failure(
         decision = "save"
 
     if decision == "abort":
-        return False
+        return
 
     if decision == "prompt":
         progress.stop()
@@ -289,10 +276,16 @@ def _handle_translation_failure(
         )
         progress.start()
         if not save:
-            return False
+            return
 
-    _save_raw_transcription(exc, video_path, config)
-    return True
+    try:
+        _save_raw_transcription(error, video_path, config)
+    except (
+        KoffeeError,
+        OSError,
+        subprocess.SubprocessError,
+    ) as save_error:
+        log.error(f"Failed to save transcription for {video_path.name}: {save_error}")
 
 
 def _save_raw_transcription(
@@ -315,3 +308,13 @@ def _save_raw_transcription(
         f"Retry: koffee {shlex.quote(str(output_path))} "
         f"--translator={config.translator}"
     )
+
+
+def _validate_batch_options(
+    input_paths: list[Path],
+    config: KoffeeConfig,
+) -> None:
+    """Rejects options that collide across inputs."""
+    if len(input_paths) > 1 and config.output_name is not None:
+        error_message = "--output-name cannot be used with multiple input files."
+        raise IncompatibleOptionsError(error_message)

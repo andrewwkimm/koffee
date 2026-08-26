@@ -189,15 +189,21 @@ class KoffeeConfig(BaseModel):
 
     @field_validator("target_language")
     @classmethod
-    def _validate_target_language(
-        cls,
-        value: str,
-    ) -> str:
-        """Validates an explicit target language."""
-        return _validate_language_code(
-            value,
-            allow_auto=False,
-        )
+    def _validate_target_language(cls, value: str) -> str:
+        """Requires an explicit target language name or code."""
+        if not value or value == "auto":
+            raise ValueError("target_language must name an explicit language.")
+        return value
+
+    @model_validator(mode="after")
+    def _validate_whisper_target(self) -> "KoffeeConfig":
+        """Keeps Whisper's speech translation limited to English."""
+        if self.translator == "whisper" and self.target_language.lower() not in {
+            "en",
+            "english",
+        }:
+            raise ValueError("The whisper backend only supports English targets.")
+        return self
 
     @field_validator("transcription_model")
     @classmethod

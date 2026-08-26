@@ -448,15 +448,15 @@ def test_check_preconditions_allows_existing_output_with_overwrite(
     _check_preconditions(audio, KoffeeConfig(overwrite=True))
 
 
-def test_check_preconditions_creates_missing_output_dir(tmp_path: Path) -> None:
-    """Tests that a missing output_dir is created during validation."""
+def test_check_preconditions_does_not_create_missing_output_dir(tmp_path: Path) -> None:
+    """Tests validation does not create a missing output directory."""
     audio = tmp_path / "track.mp3"
     audio.touch()
     new_dir = tmp_path / "nested" / "out"
 
     _check_preconditions(audio, KoffeeConfig(output_dir=new_dir))
 
-    assert new_dir.is_dir()
+    assert not new_dir.exists()
 
 
 def test_check_preconditions_embed_checks_video_suffix_collision(
@@ -669,3 +669,38 @@ def test_write_embedded_video_preserves_output_on_failure(
 
     assert output.read_text() == "existing"
     assert subtitle.exists()
+
+
+def test_run_dry_run_returns_plan_without_job(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests Python dry-run planning before checkpoint side effects."""
+    video = tmp_path / "clip.mp4"
+    video.touch()
+    mock_open = mocker.patch.object(api_module.JobStore, "open")
+
+    result = run(video, config=KoffeeConfig(dry_run=True))
+
+    assert result == tmp_path / "clip.vtt"
+    mock_open.assert_not_called()
+
+
+def test_preconditions_reject_hard_link_output(
+    tmp_path: Path,
+) -> None:
+    """Tests output aliases cannot overwrite the input."""
+    subtitle = tmp_path / "input.srt"
+    subtitle.touch()
+    alias = tmp_path / "alias.vtt"
+    alias.hardlink_to(subtitle)
+    config = KoffeeConfig(
+        translator="ollama",
+        output_name="alias",
+        overwrite=True,
+    )
+
+    with pytest.raises(
+        IncompatibleOptionsError,
+        match="must differ",
+    ):
+        _check_preconditions(subtitle, config)

@@ -60,10 +60,10 @@ def test_config_file_values_apply_to_koffee_config(
     assert config.device == "auto"
 
 
-def test_invalid_language_code_raises() -> None:
-    """Tests that an invalid language code raises a validation error."""
-    with pytest.raises(ValueError, match="Unsupported language code"):
-        KoffeeConfig(target_language="enn")
+def test_llm_accepts_broad_target_code() -> None:
+    """Tests that LLM backends accept target codes beyond Whisper's list."""
+    config = KoffeeConfig(translator="ollama", target_language="enn")
+    assert config.target_language == "enn"
 
 
 def test_invalid_source_language_code_raises() -> None:
@@ -230,7 +230,7 @@ def test_auto_target_language_raises() -> None:
     """Tests that targets require a language code."""
     with pytest.raises(
         ValueError,
-        match="Unsupported language code",
+        match="must name an explicit language",
     ):
         KoffeeConfig(target_language="auto")
 
@@ -242,3 +242,15 @@ def test_negative_subtitle_track_index_raises() -> None:
         match="must be non-negative",
     ):
         KoffeeConfig(subtitle_track=-1)
+
+
+def test_llm_accepts_explicit_target_name() -> None:
+    """Tests that LLM backends accept broad target names."""
+    config = KoffeeConfig(translator="ollama", target_language="Brazilian Portuguese")
+    assert config.target_language == "Brazilian Portuguese"
+
+
+def test_whisper_rejects_non_english_target() -> None:
+    """Tests that Whisper speech translation remains English-only."""
+    with pytest.raises(ValueError, match="only supports English"):
+        KoffeeConfig(target_language="ko")
