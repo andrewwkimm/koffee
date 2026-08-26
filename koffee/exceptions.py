@@ -9,6 +9,34 @@ class KoffeeError(Exception):
     """Base class for all koffee-specific errors."""
 
 
+class CheckpointError(KoffeeError):
+    """Base class for checkpoint lifecycle and validation failures."""
+
+
+class CheckpointChunkError(CheckpointError):
+    """Saved translation chunks violate checkpoint invariants."""
+
+
+class CheckpointCorruptError(CheckpointError):
+    """Checkpoint JSON cannot be read or validated."""
+
+
+class CheckpointLockedError(CheckpointError):
+    """Another process owns the checkpoint writer lock."""
+
+
+class CheckpointNotFoundError(CheckpointError):
+    """No checkpoint exists for the requested input."""
+
+
+class CheckpointSettingsError(CheckpointError):
+    """Current settings are incompatible with saved checkpoint state."""
+
+
+class CheckpointSourceError(CheckpointError):
+    """Current source content is incompatible with saved checkpoint state."""
+
+
 class IncompatibleOptionsError(KoffeeError):
     """Config options incompatible with the input file."""
 

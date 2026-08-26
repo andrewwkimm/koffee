@@ -8,6 +8,7 @@ from http import HTTPStatus
 
 from koffee._retry import with_retries
 from koffee.exceptions import (
+    CheckpointSourceError,
     TranslationIntegrityError,
     TranslationPausedError,
     TranslationRefusedError,
@@ -138,7 +139,7 @@ def translate(
             ),
             translator,
             model,
-            allow_mixed_translation,
+            allow_mixed_translation=allow_mixed_translation,
         )
 
     client = backend.create_client(api_key)
@@ -231,7 +232,7 @@ def _translate_chunks(
 
         if saved is not None:
             if saved.source_segments != source_segments:
-                raise ValueError(
+                raise CheckpointSourceError(
                     "Saved translation chunk does not match the current source."
                 )
             translated_chunk = list(saved.translated_segments)
@@ -420,10 +421,10 @@ def _parse_srt_response(
     translation_map = _blocks_to_translation_map(blocks)
     if not translation_map:
         error_message = (
-            "Translation response contains no SRT entries; the model may have "
-            f"declined to translate. Response begins: {sanitized[:200]!r}"
+            "Translation response contains no SRT entries. "
+            f"Response begins: {sanitized[:200]!r}"
         )
-        raise TranslationRefusedError(error_message)
+        raise TranslationIntegrityError(error_message)
     _validate_translation_entries(
         translation_map,
         start_entry=start_entry,
@@ -463,11 +464,7 @@ def _sanitize_response(response_text: str | None) -> str:
 
 
 def _blocks_to_translation_map(blocks: list[str]) -> dict[int, str]:
-    """Parses SRT entry blocks into translated text by entry ID.
-
-    Blocks that are not SRT entries (model preamble or commentary) are skipped;
-    entry validation afterward still requires every requested ID exactly once.
-    """
+    """Parses SRT entry blocks into translated text by entry ID."""
     translation_map: dict[int, str] = {}
     minimum_header_lines = 2
     timestamp_pattern = re.compile(

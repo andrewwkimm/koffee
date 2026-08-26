@@ -793,3 +793,44 @@ def test_bitmap_first_ordinal_passes_preconditions_and_reaches_extraction(
     _translate_embedded_subtitles(video, config, None)
 
     assert extract.call_args.kwargs["subtitle_ordinal"] == 1
+
+
+def test_run_closes_internally_opened_job_on_failure(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests API-owned checkpoint resources close on exceptional exit."""
+    subtitle = tmp_path / "input.srt"
+    subtitle.write_text("bad", encoding="utf-8")
+    opened_job = mocker.MagicMock()
+    mocker.patch.object(api_module, "_check_preconditions")
+    mocker.patch.object(api_module.JobStore, "open", return_value=opened_job)
+    mocker.patch.object(
+        api_module, "_translate_subtitle_file", side_effect=RuntimeError("failed")
+    )
+
+    with pytest.raises(RuntimeError, match="failed"):
+        run(subtitle, config=KoffeeConfig(translator="ollama"))
+
+    opened_job.close.assert_called_once_with()
+
+
+def test_run_leaves_caller_owned_job_open_on_failure(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Tests caller-owned checkpoint resources retain their original lifetime."""
+    subtitle = tmp_path / "input.srt"
+    subtitle.write_text("bad", encoding="utf-8")
+    caller_job = mocker.MagicMock()
+    mocker.patch.object(api_module, "_check_preconditions")
+    mocker.patch.object(
+        api_module, "_translate_subtitle_file", side_effect=RuntimeError("failed")
+    )
+
+    with pytest.raises(RuntimeError, match="failed"):
+        run(
+            subtitle,
+            config=KoffeeConfig(translator="ollama"),
+            job=caller_job,
+        )
+
+    caller_job.close.assert_not_called()

@@ -72,59 +72,63 @@ def run(
     if config.dry_run:
         return output_path
 
+    owns_job = job is None
     current_job = job or JobStore.open(input_path, config)
+    try:
+        suffix = Path(input_path).suffix.lower()
+        if suffix in SUBTITLE_EXTENSIONS:
+            subtitle_path = _translate_subtitle_file(
+                input_path,
+                config,
+                on_translate_progress,
+                job=current_job,
+            )
+        elif config.use_embedded_subtitles:
+            output_path = _translate_embedded_subtitles(
+                input_path,
+                config,
+                on_translate_progress,
+                job=current_job,
+            )
+            current_job.delete()
+            return output_path
+        else:
+            transcript = current_job.load_transcript()
+            if transcript is None:
+                task = "translate" if config.translator == "whisper" else "transcribe"
+                transcript = transcribe(
+                    str(input_path),
+                    compute_type=config.compute_type,
+                    device=config.device,
+                    model=config.transcription_model,
+                    task=task,
+                    on_progress=on_asr_progress,
+                    vad_filter=config.vad_filter,
+                    language=_resolve_asr_language(config.source_language),
+                )
+                current_job.save_transcript(transcript)
+            elif on_asr_progress is not None:
+                # A resumed transcript skips ASR, so the caller's progress
+                # display would otherwise never advance past transcription.
+                on_asr_progress(1.0)
 
-    suffix = Path(input_path).suffix.lower()
-    if suffix in SUBTITLE_EXTENSIONS:
-        subtitle_path = _translate_subtitle_file(
+            subtitle_path = _translate_with_failure_context(
+                transcript,
+                config,
+                on_translate_progress,
+                job=current_job,
+            )
+
+        output_path = _route_output(
             input_path,
+            subtitle_path,
             config,
-            on_translate_progress,
-            job=current_job,
-        )
-    elif config.use_embedded_subtitles:
-        output_path = _translate_embedded_subtitles(
-            input_path,
-            config,
-            on_translate_progress,
-            job=current_job,
         )
         current_job.delete()
         return output_path
-    else:
-        transcript = current_job.load_transcript()
-        if transcript is None:
-            task = "translate" if config.translator == "whisper" else "transcribe"
-            transcript = transcribe(
-                str(input_path),
-                compute_type=config.compute_type,
-                device=config.device,
-                model=config.transcription_model,
-                task=task,
-                on_progress=on_asr_progress,
-                vad_filter=config.vad_filter,
-                language=_resolve_asr_language(config.source_language),
-            )
-            current_job.save_transcript(transcript)
-        elif on_asr_progress is not None:
-            # A resumed transcript skips ASR, so the caller's progress
-            # display would otherwise never advance past transcription.
-            on_asr_progress(1.0)
-
-        subtitle_path = _translate_with_failure_context(
-            transcript,
-            config,
-            on_translate_progress,
-            job=current_job,
-        )
-
-    output_path = _route_output(
-        input_path,
-        subtitle_path,
-        config,
-    )
-    current_job.delete()
-    return output_path
+    finally:
+        if owns_job:
+            current_job.close()
 
 
 def _resolve_asr_language(

@@ -1,11 +1,15 @@
 """Tests for text translation."""
 
+from pathlib import Path
+
 import pytest
 from google.genai.errors import APIError, ClientError
 from pytest_mock import MockerFixture
 
 from koffee.exceptions import TranslationIntegrityError, TranslationRefusedError
+from koffee.job import JobStore
 from koffee.llm import anthropic, google, ollama, openai
+from koffee.schemas.config import KoffeeConfig
 from koffee.schemas.domain import Segment, Transcript
 from koffee.translator import (
     SYSTEM_PROMPT,
@@ -138,7 +142,7 @@ def test_parse_srt_response_reports_response_without_entries() -> None:
     refusal = "I can't help with translating this content."
 
     with pytest.raises(
-        TranslationRefusedError,
+        TranslationIntegrityError,
         match=r"no SRT entries.*I can't help",
     ):
         _parse_srt_response(refusal, SAMPLE_SEGMENTS)
@@ -274,8 +278,25 @@ def test_translate_single_chunk(mocker: MockerFixture) -> None:
     mock_client.models.generate_content.assert_called_once()
 
 
-def test_translate_does_not_retry_refusals(mocker: MockerFixture) -> None:
-    """Tests that a refusal-shaped response fails after a single attempt."""
+def test_translate_does_not_retry_provider_refusals(mocker: MockerFixture) -> None:
+    """Tests an explicit provider refusal fails after a single attempt."""
+    mock_client = mocker.MagicMock()
+    mocker.patch.object(google, "create_client", return_value=mock_client)
+    mock_retry_sleep = mocker.patch("koffee._retry.time.sleep")
+    response = mocker.MagicMock()
+    response.candidates = []
+    response.prompt_feedback.block_reason = "SAFETY"
+    mock_client.models.generate_content.return_value = response
+
+    with pytest.raises(TranslationRefusedError):
+        translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="google")
+
+    mock_client.models.generate_content.assert_called_once()
+    mock_retry_sleep.assert_not_called()
+
+
+def test_translate_retries_nonentry_text(mocker: MockerFixture) -> None:
+    """Tests that generic non-SRT text is a retryable integrity failure."""
     mock_client = mocker.MagicMock()
     mocker.patch.object(google, "create_client", return_value=mock_client)
     mocker.patch("koffee.translator.time.sleep")
@@ -284,11 +305,16 @@ def test_translate_does_not_retry_refusals(mocker: MockerFixture) -> None:
         "I can't help with translating this content."
     )
 
-    with pytest.raises(TranslationRefusedError):
+    with pytest.raises(TranslationIntegrityError):
         translate(SAMPLE_TRANSCRIPT, "en", api_key=None, translator="google")
 
-    mock_client.models.generate_content.assert_called_once()
-    mock_retry_sleep.assert_not_called()
+    initial_attempt_plus_three_retries = 4
+    assert (
+        mock_client.models.generate_content.call_count
+        == initial_attempt_plus_three_retries
+    )
+    expected_retry_sleep_count = 3
+    assert mock_retry_sleep.call_count == expected_retry_sleep_count
 
 
 def test_translate_retries_malformed_responses_three_times(
@@ -1184,3 +1210,56 @@ def test_translate_uses_default_context_size_for_unknown_model(
     default_context_size = 20
     _, kwargs = mock_build.call_args
     assert len(kwargs["context_segments"]) <= default_context_size
+
+
+def test_translate_restarts_from_saved_chunk(
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Tests translation restart validates and reuses the durable chunk prefix."""
+    monkeypatch.setenv("KOFFEE_STATE_DIR", str(tmp_path / "state"))
+    media = tmp_path / "movie.mp4"
+    media.write_bytes(b"video")
+    mock_client = mocker.MagicMock()
+    mocker.patch.object(google, "create_client", return_value=mock_client)
+    mocker.patch("koffee._retry.time.sleep")
+    first_response = mocker.MagicMock(text="1\n00:00:00,000 --> 00:00:06,360\nHello.")
+    malformed = mocker.MagicMock(text="not SRT")
+    mock_client.models.generate_content.side_effect = [first_response] + [malformed] * 4
+
+    with (
+        JobStore.open(media, KoffeeConfig()) as job,
+        pytest.raises(TranslationIntegrityError),
+    ):
+        translate(
+            SAMPLE_TRANSCRIPT,
+            "en",
+            api_key=None,
+            translator="google",
+            chunk_size=1,
+            context_size=0,
+            sleep_seconds=0,
+            job=job,
+        )
+
+    resumed_response = mocker.MagicMock(
+        text="2\n00:00:07,800 --> 00:00:10,740\nHow have you been?"
+    )
+    mock_client.models.generate_content.side_effect = None
+    mock_client.models.generate_content.return_value = resumed_response
+    mock_client.models.generate_content.reset_mock()
+    with JobStore.open(media, KoffeeConfig()) as job:
+        result = translate(
+            SAMPLE_TRANSCRIPT,
+            "en",
+            api_key=None,
+            translator="google",
+            chunk_size=1,
+            context_size=0,
+            sleep_seconds=0,
+            job=job,
+        )
+
+    assert [segment.text for segment in result] == ["Hello.", "How have you been?"]
+    mock_client.models.generate_content.assert_called_once()

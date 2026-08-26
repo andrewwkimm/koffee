@@ -269,72 +269,120 @@ def get_subtitle_tracks(
 def parse_subtitle_file(
     file_path: Path | str,
 ) -> list[Segment]:
-    """Parses supported subtitles and rejects unusable content."""
+    """Parses supported subtitles and rejects empty or malformed content."""
     subtitle_path = Path(file_path)
     text = subtitle_path.read_text(encoding="utf-8")
     if not text.strip():
-        return []
+        raise InvalidSubtitleFormatError(
+            f"Subtitle file {subtitle_path.name} is empty or whitespace-only."
+        )
 
-    if subtitle_path.suffix.lower() in (".ass", ".ssa"):
+    suffix = subtitle_path.suffix.lower()
+    if suffix in (".ass", ".ssa"):
         segments = _parse_ass(text, subtitle_path)
+    elif suffix == ".vtt":
+        segments = _parse_srt_or_vtt(text, subtitle_path, is_vtt=True)
     else:
-        segments = _parse_srt_or_vtt(text)
+        segments = _parse_srt_or_vtt(text, subtitle_path, is_vtt=False)
 
     if not segments:
-        error_message = f"No valid subtitle cues found in {subtitle_path.name}."
-        raise InvalidSubtitleFormatError(error_message)
-
+        raise InvalidSubtitleFormatError(
+            f"No valid subtitle cues found in {subtitle_path.name}."
+        )
     log.debug(f"Parsed {len(segments)} segments from {subtitle_path.name}")
     return segments
 
 
-def _parse_srt_or_vtt(text: str) -> list[Segment]:
-    """Returns valid cues from SRT or WebVTT text."""
+def _parse_srt_or_vtt(text: str, file_path: Path, *, is_vtt: bool) -> list[Segment]:
+    """Returns cues only when every cue-like block is valid."""
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n").lstrip("\ufeff")
+    blocks = list(re.split(r"\n[ \t]*\n+", normalized.strip()))
     segments = []
-    for block in re.split(r"\n\n+", text.strip()):
-        lines = block.strip().split("\n")
-        match = _find_timestamp_line(lines)
-        if match is None:
+    for block_number, block in enumerate(blocks, 1):
+        lines = block.splitlines()
+        if is_vtt and _is_vtt_metadata_block(lines, block_number):
             continue
-
-        timestamp_index, start_timestamp, end_timestamp = match
+        timestamp_index = 1 if len(lines) > 1 and "-->" not in lines[0] else 0
+        if timestamp_index >= len(lines) or "-->" not in lines[timestamp_index]:
+            raise _subtitle_block_error(file_path, block_number, "missing timestamp")
+        timestamp_line = lines[timestamp_index].strip()
+        match = TIMESTAMP_PATTERN.match(timestamp_line)
+        valid_suffix = timestamp_line[match.end() :] if match is not None else ""
+        has_invalid_suffix = (
+            bool(valid_suffix.strip())
+            if not is_vtt
+            else bool(valid_suffix) and not valid_suffix.startswith(" ")
+        )
+        if match is None or has_invalid_suffix:
+            raise _subtitle_block_error(file_path, block_number, "malformed timestamp")
         text_lines = [
             line.strip() for line in lines[timestamp_index + 1 :] if line.strip()
         ]
         if not text_lines:
-            continue
-
-        segments.append(
-            Segment(
-                start=_timestamp_to_seconds(start_timestamp),
-                end=_timestamp_to_seconds(end_timestamp),
+            raise _subtitle_block_error(file_path, block_number, "missing cue text")
+        try:
+            segment = Segment(
+                start=_timestamp_to_seconds(match.group(1)),
+                end=_timestamp_to_seconds(match.group(2)),
                 text=" ".join(text_lines),
             )
-        )
-
+        except (ValueError, TypeError) as error:
+            raise _subtitle_block_error(
+                file_path, block_number, "invalid timestamp values"
+            ) from error
+        segments.append(segment)
     return segments
 
 
+def _is_vtt_metadata_block(lines: list[str], block_number: int) -> bool:
+    """Returns whether a block is valid preserved WebVTT metadata."""
+    first = lines[0].strip()
+    if block_number == 1 and first.startswith("WEBVTT"):
+        return True
+    if first in {"STYLE", "REGION"}:
+        return True
+    return first == "NOTE" or first.startswith("NOTE ")
+
+
+def _subtitle_block_error(
+    file_path: Path, block_number: int, problem: str
+) -> InvalidSubtitleFormatError:
+    """Returns a contextual whole-file parse failure."""
+    return InvalidSubtitleFormatError(
+        f"Malformed subtitle cue in {file_path.name}, block {block_number}: {problem}."
+    )
+
+
 def _parse_ass(text: str, file_path: Path) -> list[Segment]:
-    """Parses ASS/SSA formatted text into segment dicts."""
+    """Returns ASS/SSA cues only when every dialogue line is valid."""
     segments = []
-    for line in text.splitlines():
-        match = ASS_DIALOGUE_PATTERN.match(line)
-        if not match:
+    for line_number, line in enumerate(text.splitlines(), 1):
+        if not line.lstrip().startswith("Dialogue:"):
             continue
-        start_ts, end_ts, dialogue = match.groups()
+        match = ASS_DIALOGUE_PATTERN.fullmatch(line)
+        if match is None:
+            raise InvalidSubtitleFormatError(
+                f"Malformed ASS dialogue in {file_path.name}, line {line_number}."
+            )
+        start_timestamp, end_timestamp, dialogue = match.groups()
         clean_text = re.sub(r"\{[^}]*\}", "", dialogue).strip()
         if not clean_text:
-            continue
-        segments.append(
-            Segment(
-                start=_ass_timestamp_to_seconds(start_ts),
-                end=_ass_timestamp_to_seconds(end_ts),
+            raise InvalidSubtitleFormatError(
+                f"Malformed ASS dialogue in {file_path.name}, line {line_number}: "
+                "missing cue text."
+            )
+        try:
+            segment = Segment(
+                start=_ass_timestamp_to_seconds(start_timestamp),
+                end=_ass_timestamp_to_seconds(end_timestamp),
                 text=clean_text.replace("\\N", " "),
             )
-        )
-
-    log.debug(f"Parsed {len(segments)} segments from {file_path.name}")
+        except (ValueError, TypeError) as error:
+            raise InvalidSubtitleFormatError(
+                f"Malformed ASS dialogue in {file_path.name}, line {line_number}: "
+                "invalid timestamp values."
+            ) from error
+        segments.append(segment)
     return segments
 
 
@@ -345,15 +393,6 @@ def _ass_timestamp_to_seconds(timestamp: str) -> float:
     return (
         int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(centiseconds) / 100
     )
-
-
-def _find_timestamp_line(lines: list[str]) -> tuple[int, str, str] | None:
-    """Finds the timestamp line in a block and returns (index, start, end)."""
-    for i, line in enumerate(lines):
-        match = TIMESTAMP_PATTERN.search(line)
-        if match:
-            return i, match.group(1), match.group(2)
-    return None
 
 
 def _timestamp_to_seconds(timestamp: str) -> float:

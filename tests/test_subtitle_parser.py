@@ -61,14 +61,14 @@ def test_parse_multiline_text(tmp_path: Path) -> None:
     assert result[0].text == "Line one Line two"
 
 
-def test_parse_empty_file(tmp_path: Path) -> None:
-    """Tests that an empty file returns no segments."""
+@pytest.mark.parametrize("content", ["", "  \n\t"])
+def test_parse_empty_file(tmp_path: Path, content: str) -> None:
+    """Tests that empty and whitespace-only subtitle input is rejected."""
     srt = tmp_path / "test.srt"
-    srt.write_text("", encoding="utf-8")
+    srt.write_text(content, encoding="utf-8")
 
-    result = parse_subtitle_file(srt)
-
-    assert result == []
+    with pytest.raises(InvalidSubtitleFormatError, match="empty or whitespace-only"):
+        parse_subtitle_file(srt)
 
 
 def test_parse_ass_file(tmp_path: Path) -> None:
@@ -122,8 +122,8 @@ def test_parse_ass_replaces_newlines(tmp_path: Path) -> None:
     assert result[0].text == "Line one Line two"
 
 
-def test_parse_srt_skips_empty_text_blocks(tmp_path: Path) -> None:
-    """Tests that SRT blocks with no text lines are skipped."""
+def test_parse_srt_rejects_empty_text_blocks(tmp_path: Path) -> None:
+    """Tests that one malformed SRT block fails the whole parse."""
     srt = tmp_path / "test.srt"
     srt.write_text(
         "1\n00:00:01,000 --> 00:00:04,500\n\n\n"
@@ -131,14 +131,12 @@ def test_parse_srt_skips_empty_text_blocks(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    result = parse_subtitle_file(srt)
-
-    assert len(result) == 1
-    assert result[0].text == "Hello."
+    with pytest.raises(InvalidSubtitleFormatError, match=r"block 1: missing cue text"):
+        parse_subtitle_file(srt)
 
 
-def test_parse_ass_skips_empty_dialogue(tmp_path: Path) -> None:
-    """Tests that ASS dialogue lines with only style tags are skipped."""
+def test_parse_ass_rejects_empty_dialogue(tmp_path: Path) -> None:
+    """Tests that one empty ASS dialogue fails the whole parse."""
     ass = tmp_path / "test.ass"
     ass.write_text(
         "[Events]\n"
@@ -148,10 +146,8 @@ def test_parse_ass_skips_empty_dialogue(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    result = parse_subtitle_file(ass)
-
-    assert len(result) == 1
-    assert result[0].text == "Hello."
+    with pytest.raises(InvalidSubtitleFormatError, match=r"line 3: missing cue text"):
+        parse_subtitle_file(ass)
 
 
 def test_parse_vtt_hourless_timestamps(
@@ -181,6 +177,42 @@ def test_parse_nonempty_malformed_file_raises(
 
     with pytest.raises(
         InvalidSubtitleFormatError,
-        match="No valid subtitle cues",
+        match=r"broken.srt, block 1: missing timestamp",
     ):
+        parse_subtitle_file(subtitle)
+
+
+def test_parse_srt_rejects_malformed_cue_among_valid_blocks(tmp_path: Path) -> None:
+    """Tests that a malformed cue-like block fails the whole SRT parse."""
+    subtitle = tmp_path / "broken.srt"
+    subtitle.write_text(
+        "1\n00:00:01,000 --> 00:00:02,000\nGood.\n\n2\nnot a timestamp\nBad.\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(InvalidSubtitleFormatError, match=r"broken.srt, block 2"):
+        parse_subtitle_file(subtitle)
+
+
+def test_parse_vtt_preserves_metadata_while_parsing_cues(tmp_path: Path) -> None:
+    """Tests valid WebVTT metadata blocks do not become malformed cues."""
+    subtitle = tmp_path / "metadata.vtt"
+    subtitle.write_text(
+        "WEBVTT - Example\nLanguage: en\n\n"
+        "NOTE explanatory text\ncontinues here\n\n"
+        "STYLE\n::cue { color: lime; }\n\n"
+        "REGION\nid:fred\nwidth:40%\n\n"
+        "cue-id\n00:01.000 --> 00:02.000 align:start\nHello.\n",
+        encoding="utf-8",
+    )
+
+    assert parse_subtitle_file(subtitle) == [Segment(start=1.0, end=2.0, text="Hello.")]
+
+
+def test_parse_ass_rejects_malformed_dialogue_with_line_context(tmp_path: Path) -> None:
+    """Tests malformed ASS dialogue reports its source line."""
+    subtitle = tmp_path / "broken.ass"
+    subtitle.write_text("[Events]\nDialogue: malformed\n", encoding="utf-8")
+
+    with pytest.raises(InvalidSubtitleFormatError, match=r"broken.ass, line 2"):
         parse_subtitle_file(subtitle)
