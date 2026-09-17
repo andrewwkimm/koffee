@@ -38,7 +38,7 @@ def test_api() -> None:
     """Tests that the API call successfully outputs a subtitle file."""
     video_path = Path("examples/videos/sample_korean_video.mp4")
     output_directory_path = Path("scratch")
-    output_file_name = "python_output_video_file"
+    output_file_name = "python_output_video_file.srt"
 
     output_file = koffee.run(
         input_path=video_path,
